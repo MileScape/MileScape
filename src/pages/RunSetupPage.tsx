@@ -5,13 +5,12 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { RouteArtwork } from "../components/route/RouteArtwork";
 import { Button } from "../components/ui/Button";
 import { useAppState } from "../hooks/useAppState";
-import { formatDistance, getRouteProgress } from "../utils/progress";
 
 export const RunSetupPage = () => {
   const navigate = useNavigate();
   const { routes, state, completeRun, selectRoute } = useAppState();
   const route = routes.find((entry) => entry.id === state.selectedRouteId) ?? routes[0];
-  const [selectedDistance, setSelectedDistance] = useState(3);
+  const [selectedDistance, setSelectedDistance] = useState(2.6);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -21,9 +20,9 @@ export const RunSetupPage = () => {
     return <Navigate to="/explore" replace />;
   }
 
-  const progress = getRouteProgress(route.id, state);
-  const remainingDistance = Math.max(0, route.totalDistanceKm - progress.completedDistanceKm);
-  const afterRunDistance = Math.min(route.totalDistanceKm, progress.completedDistanceKm + effectiveDistance);
+  const progress = state.routeProgress.find((entry) => entry.routeId === route.id);
+  const completedDistanceKm = progress?.completedDistanceKm ?? 0;
+  const afterRunDistance = Math.min(route.totalDistanceKm, completedDistanceKm + effectiveDistance);
 
   const handleStartRun = () => {
     setIsSubmitting(true);
@@ -36,90 +35,77 @@ export const RunSetupPage = () => {
 
   return (
     <>
-      <div className="space-y-5 pb-4">
-        <section className="rounded-[36px] bg-white px-4 pb-5 pt-5 shadow-card ring-1 ring-sage-100">
-          <button
-            type="button"
-            onClick={() => setPickerOpen(true)}
-            className="w-full rounded-[30px] text-left"
-          >
-            <RouteArtwork routeId={route.id} label={route.city} />
-          </button>
+      <div className="pb-4">
+        <section className="overflow-hidden rounded-[42px] bg-gradient-to-b from-white via-white to-sage-50/70 shadow-card ring-1 ring-white/80">
+          <div className="px-4 pt-5">
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="w-full rounded-[30px] text-left"
+            >
+              <RouteArtwork routeId={route.id} label={route.city} />
+            </button>
 
-          <div className="mt-3 flex items-center justify-center gap-1 text-[11px] uppercase tracking-[0.2em] text-sage-500">
-            <span>Tap to switch</span>
-            <ChevronDown className="h-4 w-4" />
-          </div>
-
-          <div className="mt-4 text-center">
-            <p className="text-xs uppercase tracking-[0.2em] text-sage-500">
-              {route.city}, {route.country}
-            </p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-ink">{route.name}</h2>
-          </div>
-
-          <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-[24px] bg-sage-50 p-4">
-              <p className="text-sage-500">Done</p>
-              <p className="mt-2 font-semibold text-ink">{formatDistance(progress.completedDistanceKm)}</p>
+            <div className="mt-3 flex justify-center">
+              <div className="inline-flex items-center justify-center rounded-full bg-white/80 p-2 shadow-sm ring-1 ring-sage-100">
+                <ChevronDown className="h-4 w-4 text-sage-500" />
+              </div>
             </div>
-            <div className="rounded-[24px] bg-sage-50 p-4">
-              <p className="text-sage-500">Left</p>
-              <p className="mt-2 font-semibold text-ink">{formatDistance(remainingDistance)}</p>
-            </div>
-          </div>
-        </section>
 
-        <section className="rounded-[32px] bg-white p-5 shadow-card ring-1 ring-sage-100">
-          <p className="text-xs uppercase tracking-[0.2em] text-sage-500">Distance</p>
-          <p className="mt-2 text-4xl font-semibold tracking-tight text-ink">
-            {effectiveDistance.toFixed(1)}K
-          </p>
-
-          <div className="mt-6">
-            <input
-              type="range"
-              min="1"
-              max="5"
-              step="0.5"
-              value={selectedDistance}
-              onChange={(event) => setSelectedDistance(Number(event.target.value))}
-              className="h-2 w-full cursor-pointer appearance-none rounded-full bg-sage-100 accent-sage-700"
-            />
-            <div className="mt-3 flex justify-between text-xs font-medium text-sage-500">
-              {[1, 2, 3, 4, 5].map((value) => (
-                <span key={value}>{value}K</span>
-              ))}
+            <div className="pb-4 pt-4 text-center">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-sage-500">
+                {route.city}, {route.country}
+              </p>
+              <h2 className="mt-2 text-[2.15rem] font-semibold leading-[1.02] tracking-[-0.04em] text-ink">
+                {route.name}
+              </h2>
             </div>
           </div>
 
-          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
-            {[1, 2, 3, 5].map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setSelectedDistance(value)}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  selectedDistance === value
-                    ? "bg-sage-700 text-white"
-                    : "bg-sage-50 text-sage-700"
-                }`}
+          <div className="px-5 pb-6 pt-2">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-sage-500">Distance</p>
+                <p className="mt-2 text-5xl font-semibold tracking-tight text-ink">
+                  {effectiveDistance.toFixed(1)}K
+                </p>
+              </div>
+              <div className="pb-2 text-right">
+                <p className="text-xs uppercase tracking-[0.2em] text-sage-500">Progress</p>
+                <p className="mt-2 text-sm font-medium text-sage-700">
+                  {afterRunDistance.toFixed(1)} / {route.totalDistanceKm} km
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-8 rounded-[28px] bg-white/75 px-4 py-5 ring-1 ring-sage-100/80 backdrop-blur">
+              <input
+                type="range"
+                min="0.5"
+                max="8"
+                step="0.1"
+                value={selectedDistance}
+                onChange={(event) => setSelectedDistance(Number(event.target.value))}
+                className="ios-slider h-2.5 w-full cursor-pointer appearance-none rounded-full bg-sage-100"
+              />
+              <div className="mt-3 flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-sage-400">
+                <span>Short</span>
+                <span>Long</span>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <Button
+                fullWidth
+                className="bg-ink py-4 text-base text-white hover:bg-sage-900"
+                onClick={handleStartRun}
+                disabled={isSubmitting || effectiveDistance <= 0}
               >
-                {value}K
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-5 rounded-[24px] bg-sage-50 px-4 py-3 text-center text-sm font-medium text-sage-700">
-            {afterRunDistance.toFixed(1)} / {route.totalDistanceKm} km
+                {isSubmitting ? "Simulating run..." : "Start run"}
+              </Button>
+            </div>
           </div>
         </section>
-
-        <motion.div layout>
-          <Button fullWidth onClick={handleStartRun} disabled={isSubmitting || effectiveDistance <= 0}>
-            {isSubmitting ? "Simulating run..." : "Start run"}
-          </Button>
-        </motion.div>
       </div>
 
       {pickerOpen ? (
@@ -130,7 +116,12 @@ export const RunSetupPage = () => {
             className="absolute inset-0 bg-black/18"
             aria-label="Close route picker"
           />
-          <div className="absolute bottom-0 left-0 right-0 rounded-t-[32px] bg-white px-4 pb-8 pt-4 shadow-2xl">
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            className="absolute bottom-0 left-0 right-0 rounded-t-[32px] bg-white px-4 pb-8 pt-4 shadow-2xl"
+          >
             <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-sage-200" />
             <div className="space-y-3">
               {routes.map((item) => {
@@ -152,14 +143,14 @@ export const RunSetupPage = () => {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold">{item.name}</p>
                       <p className={`mt-1 text-xs ${active ? "text-white/80" : "text-sage-500"}`}>
-                        {item.city} · {item.totalDistanceKm} km
+                        {item.city}
                       </p>
                     </div>
                   </button>
                 );
               })}
             </div>
-          </div>
+          </motion.div>
         </div>
       ) : null}
     </>

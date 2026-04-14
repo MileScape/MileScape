@@ -37,6 +37,26 @@ input {
   font: inherit;
 }
 
+.ios-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 28px;
+  width: 28px;
+  border-radius: 9999px;
+  background: #243228;
+  border: 6px solid #ffffff;
+  box-shadow: 0 10px 24px rgba(36, 50, 40, 0.16);
+}
+
+.ios-slider::-moz-range-thumb {
+  height: 28px;
+  width: 28px;
+  border-radius: 9999px;
+  background: #243228;
+  border: 6px solid #ffffff;
+  box-shadow: 0 10px 24px rgba(36, 50, 40, 0.16);
+}
+
 ::selection {
   background: rgba(120, 146, 132, 0.22);
 }
