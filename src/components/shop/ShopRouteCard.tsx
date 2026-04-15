@@ -69,7 +69,7 @@ export const ShopRouteCard = ({
           disabled={!owned && !purchasable}
           onClick={() => onPurchase(route.id)}
         >
-          {owned ? "Owned" : purchasable ? `Unlock for ${route.priceStamps} Stamps` : "Insufficient Stamps"}
+          {owned ? "Owned" : purchasable ? `Unlock destination for ${route.priceStamps}` : "Insufficient Stamps"}
         </Button>
       </div>
     </article>

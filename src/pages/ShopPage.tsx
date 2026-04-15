@@ -29,8 +29,8 @@ export const ShopPage = () => {
       <section className="space-y-4">
         <SectionHeader
           eyebrow="Shop"
-          title="Unlock new route maps"
-          description="Earn Stamps by running, then spend them on new route collections grouped by difficulty and scale."
+          title="Unlock new destinations"
+          description="Earn Stamps by running, then spend them on new destinations grouped by Starter, Standard, Advanced, and Premium."
         />
 
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -60,7 +60,7 @@ export const ShopPage = () => {
           <section key={group.tier} className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-ink">{group.tier}</h2>
-              <p className="text-sm text-sage-500">{group.routes.length} maps</p>
+              <p className="text-sm text-sage-500">{group.routes.length} destinations</p>
             </div>
             <div className="grid gap-4">
               {group.routes.map((route) => (

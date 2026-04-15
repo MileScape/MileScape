@@ -6,6 +6,7 @@ import { buttonStyles } from "../components/ui/Button";
 import { ProgressBar } from "../components/ui/ProgressBar";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { useAppState } from "../hooks/useAppState";
+import { achievementLabel } from "../pages/PaceportDetailPage";
 import { formatDistance, getProgressPercent } from "../utils/progress";
 
 export const RunResultPage = () => {
@@ -19,7 +20,7 @@ export const RunResultPage = () => {
   const route = routes.find((entry) => entry.id === summary.routeId);
 
   if (!route) {
-    return <Navigate to="/explore" replace />;
+    return <Navigate to="/paceport" replace />;
   }
 
   const progressPercent = getProgressPercent(route, summary.updatedDistanceKm);
@@ -37,19 +38,50 @@ export const RunResultPage = () => {
           </span>
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-ink">
-              {formatDistance(summary.distanceAddedKm)} added to {route.name}
+              You ran {formatDistance(summary.runDistanceKm)}
             </h1>
             <p className="mt-3 text-sm leading-6 text-sage-700">
-              You have now explored {formatDistance(summary.updatedDistanceKm)} of{" "}
-              {formatDistance(route.totalDistanceKm)} on this route.
+              Applied to {route.name}: {formatDistance(summary.appliedDistanceKm)}. Current destination progress is now{" "}
+              {formatDistance(summary.updatedDistanceKm)} of {formatDistance(route.totalDistanceKm)}.
             </p>
           </div>
-          <div className="rounded-[24px] bg-sage-50 p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-sage-500">Stamps earned</p>
-            <div className="mt-2 flex items-end justify-between gap-4">
-              <p className="text-3xl font-semibold text-ink">+{summary.earnedStamps}</p>
-              <p className="text-sm font-medium text-sage-700">
-                Balance: {summary.updatedStampsBalance}
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-[24px] bg-sage-50 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-sage-500">Overflow</p>
+              <p className="mt-2 text-2xl font-semibold text-ink">
+                {formatDistance(summary.overflowDistanceKm)}
+              </p>
+              <p className="mt-2 text-sm text-sage-700">
+                {summary.overflowDistanceKm > 0
+                  ? "Extra distance did not increase this destination’s progress."
+                  : "No overflow on this run."}
+              </p>
+            </div>
+            <div className="rounded-[24px] bg-sage-50 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-sage-500">Stamps earned</p>
+              <div className="mt-2 flex items-end justify-between gap-4">
+                <p className="text-3xl font-semibold text-ink">+{summary.earnedStamps}</p>
+                <p className="text-sm font-medium text-sage-700">
+                  Balance: {summary.updatedStampsBalance}
+                </p>
+              </div>
+            </div>
+            <div className="rounded-[24px] bg-sage-50 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-sage-500">Run count</p>
+              <p className="mt-2 text-2xl font-semibold text-ink">{summary.updatedRunCount}</p>
+              <p className="mt-2 text-sm text-sage-700">
+                Achievement tier: {achievementLabel[summary.updatedAchievementTier]}
+              </p>
+            </div>
+            <div className="rounded-[24px] bg-sage-50 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-sage-500">Destination status</p>
+              <p className="mt-2 text-2xl font-semibold text-ink">
+                {summary.destinationCompletedAfterRun ? "Completed" : "Active"}
+              </p>
+              <p className="mt-2 text-sm text-sage-700">
+                {summary.destinationCompletedAfterRun
+                  ? "This destination reached its total route distance."
+                  : "Keep running to finish the remaining distance."}
               </p>
             </div>
           </div>
@@ -109,7 +141,7 @@ export const RunResultPage = () => {
         </AnimatePresence>
       </section>
 
-      {summary.routeCompleted ? (
+      {summary.destinationCompletedAfterRun ? (
         <section className="rounded-[30px] bg-sage-700 p-5 text-white shadow-card">
           <p className="text-xs uppercase tracking-[0.2em] text-white/70">Route completed</p>
           <h2 className="mt-2 text-2xl font-semibold">Journey complete</h2>
@@ -120,14 +152,14 @@ export const RunResultPage = () => {
       ) : null}
 
       <div className="grid grid-cols-2 gap-3">
-        <Link to={`/routes/${route.id}`} className={buttonStyles({ fullWidth: true })}>
-          Back to route
+        <Link to={`/paceport/${route.id}`} className={buttonStyles({ fullWidth: true })}>
+          Open Paceport
         </Link>
         <Link
-          to="/achievements"
+          to="/paceport"
           className={buttonStyles({ fullWidth: true, variant: "secondary" })}
         >
-          View collection
+          View Paceport
         </Link>
       </div>
       <Link to="/shop" className={buttonStyles({ fullWidth: true, variant: "secondary" })}>

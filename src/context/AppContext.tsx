@@ -73,6 +73,12 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
         return { success: true, message: `${route.name} unlocked` };
       },
+      setSliderMaxDistanceKm: (distanceKm) => {
+        setState((current) => ({
+          ...current,
+          sliderMaxDistanceKm: Math.min(100, Math.max(1, distanceKm))
+        }));
+      },
       resetDemo: () => {
         clearState();
         setState(createInitialState());

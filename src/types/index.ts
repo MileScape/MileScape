@@ -7,6 +7,8 @@ export interface Landmark {
 }
 
 export type RouteTier = "Starter" | "Standard" | "Advanced" | "Premium";
+export type AchievementTier = "none" | "bronze" | "silver" | "gold" | "prism";
+export type PaceportStatus = "locked" | "owned" | "in_progress" | "completed";
 
 export interface Route {
   id: string;
@@ -26,6 +28,8 @@ export interface RouteProgress {
   routeId: string;
   completedDistanceKm: number;
   unlockedLandmarkIds: string[];
+  runCount: number;
+  achievementTier: AchievementTier;
   completed: boolean;
 }
 
@@ -38,13 +42,17 @@ export interface RunHistoryItem {
 
 export interface RunResultSummary {
   routeId: string;
-  distanceAddedKm: number;
+  runDistanceKm: number;
+  appliedDistanceKm: number;
+  overflowDistanceKm: number;
   previousDistanceKm: number;
   updatedDistanceKm: number;
   earnedStamps: number;
   updatedStampsBalance: number;
+  updatedRunCount: number;
+  updatedAchievementTier: AchievementTier;
   newlyUnlockedLandmarks: Landmark[];
-  routeCompleted: boolean;
+  destinationCompletedAfterRun: boolean;
 }
 
 export interface AppState {
@@ -54,6 +62,7 @@ export interface AppState {
   currentStamps: number;
   totalStampsEarned: number;
   purchasedRouteIds: string[];
+  sliderMaxDistanceKm: number;
   lastRunResult: RunResultSummary | null;
 }
 
@@ -64,5 +73,6 @@ export interface AppContextValue {
   selectRoute: (routeId: string) => void;
   completeRun: (routeId: string, distanceKm: number) => RunResultSummary;
   purchaseRoute: (routeId: string) => { success: boolean; message: string };
+  setSliderMaxDistanceKm: (distanceKm: number) => void;
   resetDemo: () => void;
 }

@@ -5,11 +5,10 @@ import { SideDrawer } from "./SideDrawer";
 
 const pageTitles: Record<string, string> = {
   "/": "Welcome",
-  "/explore": "Destinations",
+  "/paceport": "Paceport",
   "/run/setup": "Choose Journey",
   "/run/result": "Run Result",
   "/shop": "Shop",
-  "/achievements": "Collection",
   "/dashboard": "Profile"
 };
 
@@ -18,8 +17,8 @@ export const AppShell = () => {
   const location = useLocation();
 
   const title = useMemo(() => {
-    if (location.pathname.startsWith("/routes/")) {
-      return "Route Story";
+    if (location.pathname.startsWith("/paceport/")) {
+      return "Paceport Detail";
     }
 
     return pageTitles[location.pathname] ?? "MileScape";

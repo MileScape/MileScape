@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { RouteArtwork } from "../components/route/RouteArtwork";
 import { Button } from "../components/ui/Button";
@@ -10,19 +10,30 @@ export const RunSetupPage = () => {
   const navigate = useNavigate();
   const { playableRoutes, state, completeRun, selectRoute } = useAppState();
   const route = playableRoutes.find((entry) => entry.id === state.selectedRouteId) ?? playableRoutes[0];
-  const [selectedDistance, setSelectedDistance] = useState(2.6);
+  const [selectedDistance, setSelectedDistance] = useState(Math.min(5, state.sliderMaxDistanceKm));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const effectiveDistance = useMemo(() => selectedDistance, [selectedDistance]);
+  useEffect(() => {
+    setSelectedDistance((current) => Math.min(current, state.sliderMaxDistanceKm));
+  }, [state.sliderMaxDistanceKm]);
 
   if (!route) {
     return <Navigate to="/shop" replace />;
   }
 
+  const effectiveDistance = selectedDistance;
   const progress = state.routeProgress.find((entry) => entry.routeId === route.id);
   const completedDistanceKm = progress?.completedDistanceKm ?? 0;
   const afterRunDistance = Math.min(route.totalDistanceKm, completedDistanceKm + effectiveDistance);
+  const hasOverflowPreview = completedDistanceKm + effectiveDistance > route.totalDistanceKm;
+  const rawPreviewProgressKm = completedDistanceKm + effectiveDistance;
+  const progressCycleCount = hasOverflowPreview
+    ? Math.floor((rawPreviewProgressKm - 0.0001) / route.totalDistanceKm) + 1
+    : 1;
+  const previewProgressKm = hasOverflowPreview
+    ? rawPreviewProgressKm % route.totalDistanceKm
+    : afterRunDistance;
 
   const handleStartRun = () => {
     setIsSubmitting(true);
@@ -72,17 +83,24 @@ export const RunSetupPage = () => {
               </div>
               <div className="pb-2 text-right">
                 <p className="text-xs uppercase tracking-[0.2em] text-sage-500">Progress</p>
-                <p className="mt-2 text-sm font-medium text-sage-700">
-                  {afterRunDistance.toFixed(1)} / {route.totalDistanceKm} km
-                </p>
+                <div className="mt-2 flex items-center justify-end gap-2">
+                  <p className="text-sm font-medium text-sage-700">
+                    {previewProgressKm.toFixed(1)} / {route.totalDistanceKm} km
+                  </p>
+                  {progressCycleCount > 1 ? (
+                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-sage-700 px-2 text-xs font-semibold text-white">
+                      {progressCycleCount}
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </div>
 
             <div className="mt-8 rounded-[28px] bg-white/75 px-4 py-5 ring-1 ring-sage-100/80 backdrop-blur">
               <input
                 type="range"
-                min="0.5"
-                max="8"
+                min="0"
+                max={state.sliderMaxDistanceKm}
                 step="0.1"
                 value={selectedDistance}
                 onChange={(event) => setSelectedDistance(Number(event.target.value))}

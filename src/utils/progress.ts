@@ -1,12 +1,14 @@
 import { routes } from "../data/routes";
 import type {
   AppState,
+  AchievementTier,
   Landmark,
   Route,
   RouteProgress,
   RunHistoryItem,
   RunResultSummary
 } from "../types";
+import { getAchievementTier } from "./achievement";
 import { calculateEarnedStamps } from "./stamps";
 
 const defaultPurchasedRouteIds = [
@@ -21,12 +23,15 @@ export const createInitialState = (): AppState => ({
     routeId: route.id,
     completedDistanceKm: 0,
     unlockedLandmarkIds: [],
+    runCount: 0,
+    achievementTier: "none" as AchievementTier,
     completed: false
   })),
   runHistory: [],
   currentStamps: 0,
   totalStampsEarned: 0,
   purchasedRouteIds: defaultPurchasedRouteIds,
+  sliderMaxDistanceKm: 20,
   lastRunResult: null
 });
 
@@ -39,11 +44,14 @@ export const normalizeState = (loadedState: Partial<AppState> | null): AppState 
 
   const mergedProgress = routes.map((route) => {
     const existing = loadedState.routeProgress?.find((entry) => entry.routeId === route.id);
-    return existing ?? {
+    return {
       routeId: route.id,
       completedDistanceKm: 0,
       unlockedLandmarkIds: [],
-      completed: false
+      runCount: 0,
+      achievementTier: "none" as AchievementTier,
+      completed: false,
+      ...existing
     };
   });
 
@@ -64,6 +72,10 @@ export const normalizeState = (loadedState: Partial<AppState> | null): AppState 
     currentStamps: loadedState.currentStamps ?? 0,
     totalStampsEarned: loadedState.totalStampsEarned ?? 0,
     purchasedRouteIds,
+    sliderMaxDistanceKm:
+      loadedState.sliderMaxDistanceKm && loadedState.sliderMaxDistanceKm > 0
+        ? Math.min(100, loadedState.sliderMaxDistanceKm)
+        : 20,
     lastRunResult: loadedState.lastRunResult ?? null
   };
 };
@@ -76,6 +88,8 @@ export const getRouteProgress = (
     routeId,
     completedDistanceKm: 0,
     unlockedLandmarkIds: [],
+    runCount: 0,
+    achievementTier: "none" as AchievementTier,
     completed: false
   };
 
@@ -98,7 +112,10 @@ export const applyRunToState = (
 ): { nextState: AppState; summary: RunResultSummary } => {
   const routeProgress = getRouteProgress(route.id, previousState);
   const previousDistanceKm = routeProgress.completedDistanceKm;
-  const updatedDistanceKm = Math.min(route.totalDistanceKm, previousDistanceKm + distanceKm);
+  const remainingDistanceKm = Math.max(0, route.totalDistanceKm - previousDistanceKm);
+  const appliedDistanceKm = Math.min(distanceKm, remainingDistanceKm);
+  const overflowDistanceKm = Math.max(0, distanceKm - remainingDistanceKm);
+  const updatedDistanceKm = Math.min(route.totalDistanceKm, previousDistanceKm + appliedDistanceKm);
   const earnedStamps = calculateEarnedStamps(distanceKm);
   const updatedStampsBalance = previousState.currentStamps + earnedStamps;
   const unlockedLandmarks = calculateUnlockedLandmarks(route, updatedDistanceKm);
@@ -106,11 +123,15 @@ export const applyRunToState = (
     (landmark) => !routeProgress.unlockedLandmarkIds.includes(landmark.id),
   );
   const completed = updatedDistanceKm >= route.totalDistanceKm;
+  const updatedRunCount = routeProgress.runCount + 1;
+  const updatedAchievementTier = getAchievementTier(updatedRunCount);
 
   const nextRouteProgress: RouteProgress = {
     routeId: route.id,
     completedDistanceKm: updatedDistanceKm,
     unlockedLandmarkIds: unlockedLandmarks.map((landmark) => landmark.id),
+    runCount: updatedRunCount,
+    achievementTier: updatedAchievementTier,
     completed
   };
 
@@ -123,13 +144,17 @@ export const applyRunToState = (
 
   const summary: RunResultSummary = {
     routeId: route.id,
-    distanceAddedKm: distanceKm,
+    runDistanceKm: distanceKm,
+    appliedDistanceKm,
+    overflowDistanceKm,
     previousDistanceKm,
     updatedDistanceKm,
     earnedStamps,
     updatedStampsBalance,
+    updatedRunCount,
+    updatedAchievementTier,
     newlyUnlockedLandmarks,
-    routeCompleted: completed
+    destinationCompletedAfterRun: completed
   };
 
   return {

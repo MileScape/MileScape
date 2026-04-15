@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Compass, Medal, Route, ShoppingBag, UserCircle2, X } from "lucide-react";
+import { Route, ShoppingBag, Sparkles, UserCircle2, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "../../utils/cn";
 
@@ -10,9 +10,8 @@ interface SideDrawerProps {
 
 const items = [
   { to: "/run/setup", label: "Start Run", icon: Route },
-  { to: "/explore", label: "Destinations", icon: Compass },
+  { to: "/paceport", label: "Paceport", icon: Sparkles },
   { to: "/shop", label: "Shop", icon: ShoppingBag },
-  { to: "/achievements", label: "Collection", icon: Medal },
   { to: "/dashboard", label: "Profile", icon: UserCircle2 }
 ];
 

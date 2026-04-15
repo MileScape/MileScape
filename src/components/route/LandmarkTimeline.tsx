@@ -38,7 +38,7 @@ export const LandmarkTimeline = ({
               <div>
                 <p className="text-sm font-semibold text-ink">{landmark.name}</p>
                 <p className="text-xs uppercase tracking-[0.2em] text-sage-500">
-                  {landmark.milestoneKm} km milestone
+                  {unlocked ? `${landmark.milestoneKm} km milestone` : `Unlock at ${landmark.milestoneKm} km`}
                 </p>
               </div>
               {unlocked ? (
