@@ -80,3 +80,4 @@ src/
 - Replace image URLs with local branded illustrations
 - Add richer simulated run states or real fitness tracker integration
 - Introduce backend sync and multi-user accounts when the product direction is stable
+- Add process reminders based on heart rate
