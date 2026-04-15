@@ -23,6 +23,7 @@ The current MVP is built for demo quality rather than backend complexity:
 - Framer Motion
 - Lucide React
 - localStorage
+- vercel
 
 ## Run Locally
 
