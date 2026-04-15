@@ -1,4 +1,4 @@
-import { MapPin } from "lucide-react";
+import { Lock, MapPin } from "lucide-react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { RouteArtwork } from "../components/route/RouteArtwork";
 import { LandmarkTimeline } from "../components/route/LandmarkTimeline";
@@ -19,6 +19,34 @@ export const RouteDetailPage = () => {
 
   const progress = getRouteProgress(route.id, state);
   const progressPercent = getProgressPercent(route, progress.completedDistanceKm);
+  const owned = state.purchasedRouteIds.includes(route.id);
+
+  if (!owned) {
+    return (
+      <div className="space-y-6">
+        <section className="rounded-[36px] bg-white p-6 shadow-card ring-1 ring-sage-100">
+          <div className="space-y-5">
+            <div className="flex justify-center">
+              <RouteArtwork routeId={route.id} label={route.city} />
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-sage-50 px-4 py-2 text-xs uppercase tracking-[0.2em] text-sage-700">
+              <Lock className="h-4 w-4" />
+              Locked route
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold tracking-tight text-ink">{route.name}</h1>
+              <p className="text-sm leading-6 text-sage-700">
+                Unlock this map in the shop for {route.priceStamps} Stamps.
+              </p>
+            </div>
+            <Link to="/shop" className={buttonStyles({ fullWidth: true })}>
+              Go to shop
+            </Link>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

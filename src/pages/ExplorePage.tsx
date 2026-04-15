@@ -6,7 +6,7 @@ import { useAppState } from "../hooks/useAppState";
 import { getRouteProgress } from "../utils/progress";
 
 export const ExplorePage = () => {
-  const { routes, state } = useAppState();
+  const { playableRoutes, state } = useAppState();
 
   return (
     <div className="space-y-6">
@@ -16,7 +16,7 @@ export const ExplorePage = () => {
         description="These route visuals are intentionally illustration-like so the app feels playful and symbolic instead of photo-real."
       />
       <div className="grid gap-5">
-        {routes.map((route) => (
+        {playableRoutes.map((route) => (
           <Link
             key={route.id}
             to={`/routes/${route.id}`}
@@ -40,6 +40,12 @@ export const ExplorePage = () => {
       </div>
       <Link to="/run/setup" className={buttonStyles({ fullWidth: true })}>
         Continue to run setup
+      </Link>
+      <Link
+        to="/shop"
+        className={buttonStyles({ fullWidth: true, variant: "secondary" })}
+      >
+        Visit shop
       </Link>
     </div>
   );

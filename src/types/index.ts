@@ -6,6 +6,8 @@ export interface Landmark {
   image: string;
 }
 
+export type RouteTier = "Starter" | "Standard" | "Advanced" | "Premium";
+
 export interface Route {
   id: string;
   name: string;
@@ -15,6 +17,8 @@ export interface Route {
   coverImage: string;
   description: string;
   motivation: string;
+  tier: RouteTier;
+  priceStamps: number;
   landmarks: Landmark[];
 }
 
@@ -37,6 +41,8 @@ export interface RunResultSummary {
   distanceAddedKm: number;
   previousDistanceKm: number;
   updatedDistanceKm: number;
+  earnedStamps: number;
+  updatedStampsBalance: number;
   newlyUnlockedLandmarks: Landmark[];
   routeCompleted: boolean;
 }
@@ -45,13 +51,18 @@ export interface AppState {
   selectedRouteId: string | null;
   routeProgress: RouteProgress[];
   runHistory: RunHistoryItem[];
+  currentStamps: number;
+  totalStampsEarned: number;
+  purchasedRouteIds: string[];
   lastRunResult: RunResultSummary | null;
 }
 
 export interface AppContextValue {
   routes: Route[];
+  playableRoutes: Route[];
   state: AppState;
   selectRoute: (routeId: string) => void;
   completeRun: (routeId: string, distanceKm: number) => RunResultSummary;
+  purchaseRoute: (routeId: string) => { success: boolean; message: string };
   resetDemo: () => void;
 }

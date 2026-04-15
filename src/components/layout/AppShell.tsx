@@ -8,6 +8,7 @@ const pageTitles: Record<string, string> = {
   "/explore": "Destinations",
   "/run/setup": "Choose Journey",
   "/run/result": "Run Result",
+  "/shop": "Shop",
   "/achievements": "Collection",
   "/dashboard": "Profile"
 };

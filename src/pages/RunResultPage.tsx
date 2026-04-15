@@ -44,6 +44,15 @@ export const RunResultPage = () => {
               {formatDistance(route.totalDistanceKm)} on this route.
             </p>
           </div>
+          <div className="rounded-[24px] bg-sage-50 p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-sage-500">Stamps earned</p>
+            <div className="mt-2 flex items-end justify-between gap-4">
+              <p className="text-3xl font-semibold text-ink">+{summary.earnedStamps}</p>
+              <p className="text-sm font-medium text-sage-700">
+                Balance: {summary.updatedStampsBalance}
+              </p>
+            </div>
+          </div>
           <ProgressBar value={progressPercent} />
         </div>
       </section>
@@ -121,6 +130,9 @@ export const RunResultPage = () => {
           View collection
         </Link>
       </div>
+      <Link to="/shop" className={buttonStyles({ fullWidth: true, variant: "secondary" })}>
+        Spend Stamps in shop
+      </Link>
     </div>
   );
 };

@@ -8,8 +8,8 @@ import { useAppState } from "../hooks/useAppState";
 
 export const RunSetupPage = () => {
   const navigate = useNavigate();
-  const { routes, state, completeRun, selectRoute } = useAppState();
-  const route = routes.find((entry) => entry.id === state.selectedRouteId) ?? routes[0];
+  const { playableRoutes, state, completeRun, selectRoute } = useAppState();
+  const route = playableRoutes.find((entry) => entry.id === state.selectedRouteId) ?? playableRoutes[0];
   const [selectedDistance, setSelectedDistance] = useState(2.6);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -17,7 +17,7 @@ export const RunSetupPage = () => {
   const effectiveDistance = useMemo(() => selectedDistance, [selectedDistance]);
 
   if (!route) {
-    return <Navigate to="/explore" replace />;
+    return <Navigate to="/shop" replace />;
   }
 
   const progress = state.routeProgress.find((entry) => entry.routeId === route.id);
@@ -124,7 +124,7 @@ export const RunSetupPage = () => {
           >
             <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-sage-200" />
             <div className="space-y-3">
-              {routes.map((item) => {
+              {playableRoutes.map((item) => {
                 const active = item.id === route.id;
 
                 return (

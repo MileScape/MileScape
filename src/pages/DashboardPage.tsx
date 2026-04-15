@@ -18,6 +18,7 @@ export const DashboardPage = () => {
     (sum, entry) => sum + entry.unlockedLandmarkIds.length,
     0,
   );
+  const ownedRoutes = state.purchasedRouteIds.length;
 
   return (
     <div className="space-y-6">
@@ -29,7 +30,9 @@ export const DashboardPage = () => {
 
       <div className="grid grid-cols-2 gap-4">
         <StatCard label="Total distance" value={formatDistance(totalDistance)} hint="Across all simulated runs" />
+        <StatCard label="Stamp balance" value={String(state.currentStamps)} hint="Spend these in the shop" />
         <StatCard label="Routes in progress" value={String(routesInProgress)} hint="Active travel stories" />
+        <StatCard label="Owned routes" value={String(ownedRoutes)} hint="Unlocked maps in collection" />
         <StatCard label="Completed routes" value={String(completedRoutes)} hint="Fully explored journeys" />
         <StatCard label="Landmarks unlocked" value={String(unlockedLandmarks)} hint="Collectible memories found" />
       </div>

@@ -13,30 +13,29 @@ export const routes: Route[] = [
       "A poetic lakeside route that turns short neighborhood runs into a slow unfolding travel story.",
     motivation:
       "Collect waterside memories one kilometer at a time and let every run reveal a calmer view.",
+    tier: "Advanced",
+    priceStamps: 140,
     landmarks: [
       {
         id: "broken-bridge",
         name: "Broken Bridge",
         milestoneKm: 3,
         description: "Your first iconic stop, where the route begins to feel real.",
-        image:
-          "https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=900&q=80"
+        image: ""
       },
       {
         id: "leifeng-pagoda",
         name: "Leifeng Pagoda",
         milestoneKm: 9,
         description: "A milestone with elevation, history, and a sense of earned momentum.",
-        image:
-          "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=900&q=80"
+        image: ""
       },
       {
         id: "three-pools",
         name: "Three Pools Mirroring the Moon",
         milestoneKm: 16,
         description: "A quiet late-route unlock that marks serious commitment.",
-        image:
-          "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80"
+        image: ""
       }
     ]
   },
@@ -52,30 +51,29 @@ export const routes: Route[] = [
       "A brisk city escape built for users who want fast progress and satisfying unlocks.",
     motivation:
       "Turn ordinary training days into a cinematic park circuit filled with familiar landmarks.",
+    tier: "Standard",
+    priceStamps: 70,
     landmarks: [
       {
         id: "bethesda-terrace",
         name: "Bethesda Terrace",
         milestoneKm: 2,
         description: "A quick early reward that makes the first run feel meaningful.",
-        image:
-          "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=900&q=80"
+        image: ""
       },
       {
         id: "bow-bridge",
         name: "Bow Bridge",
         milestoneKm: 5,
         description: "The midpoint unlock where consistency starts looking beautiful.",
-        image:
-          "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?auto=format&fit=crop&w=900&q=80"
+        image: ""
       },
       {
         id: "belvedere-castle",
         name: "Belvedere Castle",
         milestoneKm: 8,
         description: "A near-finish reward that reframes the route as an adventure.",
-        image:
-          "https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=900&q=80"
+        image: ""
       }
     ]
   },
@@ -91,30 +89,219 @@ export const routes: Route[] = [
       "A neon-to-tranquil city journey that rewards persistence with memorable urban scenes.",
     motivation:
       "Build a personal travel diary through repeated short runs and unlock Tokyo piece by piece.",
+    tier: "Advanced",
+    priceStamps: 130,
     landmarks: [
       {
         id: "shibuya-crossing",
         name: "Shibuya Crossing",
         milestoneKm: 4,
         description: "The energy-packed first reveal that turns progress into place.",
-        image:
-          "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=900&q=80"
+        image: ""
       },
       {
         id: "meiji-shrine",
         name: "Meiji Shrine",
         milestoneKm: 10,
         description: "A calm, reflective midpoint reward that slows the rhythm beautifully.",
-        image:
-          "https://images.unsplash.com/photo-1526481280695-3c4691d4b375?auto=format&fit=crop&w=900&q=80"
+        image: ""
       },
       {
         id: "tokyo-tower",
         name: "Tokyo Tower",
         milestoneKm: 17,
         description: "The final dramatic unlock before full route completion.",
-        image:
-          "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?auto=format&fit=crop&w=900&q=80"
+        image: ""
+      }
+    ]
+  },
+  {
+    id: "lisbon-tram-route",
+    name: "Lisbon Tram Route",
+    city: "Lisbon",
+    country: "Portugal",
+    totalDistanceKm: 7,
+    coverImage:
+      "https://images.unsplash.com/photo-1513735492246-483525079686?auto=format&fit=crop&w=1200&q=80",
+    description:
+      "A short scenic climb through bright streets and postcard turns, ideal for first shop unlocks.",
+    motivation:
+      "A compact route that gives fast payoff and makes even a short run feel collectible.",
+    tier: "Starter",
+    priceStamps: 50,
+    landmarks: [
+      {
+        id: "alfama-view",
+        name: "Alfama Viewpoint",
+        milestoneKm: 2,
+        description: "A quick panoramic unlock above the city roofs.",
+        image: ""
+      },
+      {
+        id: "yellow-tram",
+        name: "Historic Tram",
+        milestoneKm: 4,
+        description: "A route memory that turns progress into a recognizable city icon.",
+        image: ""
+      },
+      {
+        id: "commerce-square",
+        name: "Commerce Square",
+        milestoneKm: 6,
+        description: "A late-route reward before full completion.",
+        image: ""
+      }
+    ]
+  },
+  {
+    id: "seoul-river-route",
+    name: "Seoul River Route",
+    city: "Seoul",
+    country: "South Korea",
+    totalDistanceKm: 12,
+    coverImage:
+      "https://images.unsplash.com/photo-1549693578-d683be217e58?auto=format&fit=crop&w=1200&q=80",
+    description:
+      "A balanced urban route with riverfront momentum and landmark pacing that fits routine training.",
+    motivation:
+      "Stack everyday runs into a smooth city journey with clear mid-length milestones.",
+    tier: "Standard",
+    priceStamps: 80,
+    landmarks: [
+      {
+        id: "banpo-bridge",
+        name: "Banpo Bridge",
+        milestoneKm: 3,
+        description: "A calm early unlock over the river.",
+        image: ""
+      },
+      {
+        id: "namsan-view",
+        name: "Namsan View",
+        milestoneKm: 7,
+        description: "A midpoint reward that makes the route feel expansive.",
+        image: ""
+      },
+      {
+        id: "dongdaemun-design",
+        name: "Dongdaemun Design Plaza",
+        milestoneKm: 11,
+        description: "A near-finish reveal with a futuristic feel.",
+        image: ""
+      }
+    ]
+  },
+  {
+    id: "manhattan-landmark-route",
+    name: "Manhattan Landmark Route",
+    city: "New York",
+    country: "United States",
+    totalDistanceKm: 22,
+    coverImage:
+      "https://images.unsplash.com/photo-1485875437342-9b39470b3d95?auto=format&fit=crop&w=1200&q=80",
+    description:
+      "A longer city route stitched through iconic Manhattan stops for users chasing bigger progression.",
+    motivation:
+      "Build a serious travel arc through repeated sessions and visible achievement pacing.",
+    tier: "Advanced",
+    priceStamps: 150,
+    landmarks: [
+      {
+        id: "flatiron-building",
+        name: "Flatiron Building",
+        milestoneKm: 5,
+        description: "A recognizable early unlock that makes the route feel ambitious.",
+        image: ""
+      },
+      {
+        id: "times-square",
+        name: "Times Square",
+        milestoneKm: 12,
+        description: "A bright midpoint reward for sustained consistency.",
+        image: ""
+      },
+      {
+        id: "brooklyn-view",
+        name: "Brooklyn Bridge View",
+        milestoneKm: 19,
+        description: "A late-route landmark before full completion.",
+        image: ""
+      }
+    ]
+  },
+  {
+    id: "paris-eiffel-route",
+    name: "Eiffel Tower Route",
+    city: "Paris",
+    country: "France",
+    totalDistanceKm: 30,
+    coverImage:
+      "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80",
+    description:
+      "A premium city journey for long-term players who want a more aspirational map to unlock.",
+    motivation:
+      "Save stamps, unlock Paris, and turn consistency into a richer destination chase.",
+    tier: "Premium",
+    priceStamps: 210,
+    landmarks: [
+      {
+        id: "louvre-courtyard",
+        name: "Louvre Courtyard",
+        milestoneKm: 8,
+        description: "An elegant early landmark that sets the tone for the route.",
+        image: ""
+      },
+      {
+        id: "eiffel-tower",
+        name: "Eiffel Tower",
+        milestoneKm: 16,
+        description: "The route’s central reward and emotional midpoint.",
+        image: ""
+      },
+      {
+        id: "arc-de-triomphe",
+        name: "Arc de Triomphe",
+        milestoneKm: 27,
+        description: "A premium late-route reveal before the final push.",
+        image: ""
+      }
+    ]
+  },
+  {
+    id: "mount-fuji-route",
+    name: "Mount Fuji Route",
+    city: "Shizuoka",
+    country: "Japan",
+    totalDistanceKm: 35,
+    coverImage:
+      "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1200&q=80",
+    description:
+      "A high-value premium route that frames long-term effort as a slow ascent toward a legendary view.",
+    motivation:
+      "Reserve this for players who want their next major unlock target to feel special.",
+    tier: "Premium",
+    priceStamps: 250,
+    landmarks: [
+      {
+        id: "torii-gate",
+        name: "Torii Gate",
+        milestoneKm: 9,
+        description: "A quiet early unlock that signals the route’s atmosphere.",
+        image: ""
+      },
+      {
+        id: "fuji-base-camp",
+        name: "Fuji Base Camp",
+        milestoneKm: 18,
+        description: "The midpoint checkpoint where the route starts feeling substantial.",
+        image: ""
+      },
+      {
+        id: "fuji-summit-view",
+        name: "Summit View",
+        milestoneKm: 32,
+        description: "A premium late-route memory before completion.",
+        image: ""
       }
     ]
   }
