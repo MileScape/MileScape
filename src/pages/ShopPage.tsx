@@ -6,7 +6,7 @@ import { useAppState } from "../hooks/useAppState";
 import { groupRoutesByTier, tierOrder } from "../utils/shop";
 
 export const ShopPage = () => {
-  const { routes, state, purchaseRoute } = useAppState();
+  const { routes, state, purchaseRoute, t } = useAppState();
   const [activeTier, setActiveTier] = useState<(typeof tierOrder)[number] | "All">("All");
   const [toast, setToast] = useState<string | null>(null);
 
@@ -28,9 +28,8 @@ export const ShopPage = () => {
 
       <section className="space-y-4">
         <SectionHeader
-          eyebrow="Shop"
-          title="Unlock new destinations"
-          description="Earn Stamps by running, then spend them on new destinations grouped by Starter, Standard, Advanced, and Premium."
+          eyebrow={t("app.shop")}
+          title={t("shop.unlockDestinations")}
         />
 
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -60,7 +59,7 @@ export const ShopPage = () => {
           <section key={group.tier} className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-ink">{group.tier}</h2>
-              <p className="text-sm text-sage-500">{group.routes.length} destinations</p>
+              <p className="text-sm text-sage-500">{t("shop.destinations", { count: group.routes.length })}</p>
             </div>
             <div className="grid gap-4">
               {group.routes.map((route) => (

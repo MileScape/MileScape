@@ -19,7 +19,7 @@ export const achievementLabel = {
 
 export const PaceportDetailPage = () => {
   const { routeId } = useParams();
-  const { routes, state, selectRoute } = useAppState();
+  const { routes, state, selectRoute, t } = useAppState();
   const route = routes.find((entry) => entry.id === routeId);
 
   if (!route) {
@@ -29,6 +29,9 @@ export const PaceportDetailPage = () => {
   const summary = getPaceportSummary(route, state);
   const owned = summary.status !== "locked";
   const achievementTier = getAchievementTier(summary.runCount);
+  const sourceCrewName = route.sourceCrewId
+    ? state.paceCrews.find((crew) => crew.id === route.sourceCrewId)?.name
+    : null;
 
   return (
     <div className="space-y-6">
@@ -41,7 +44,16 @@ export const PaceportDetailPage = () => {
 
           <div className="space-y-2">
             <h1 className="text-3xl font-semibold tracking-tight text-ink">{route.name}</h1>
-            <p className="text-sm leading-6 text-sage-700">{route.description}</p>
+            {route.crewOnly ? (
+              <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+                  {t("paceport.pacecrewOnly")}
+                  </span>
+                {sourceCrewName ? (
+                  <span className="text-xs font-medium text-sage-500">{t("paceport.fromPaceCrew", { name: sourceCrewName })}</span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -75,30 +87,30 @@ export const PaceportDetailPage = () => {
       </section>
 
       <section className="space-y-4">
-        <SectionHeader
-          eyebrow="Landmarks"
-          title="Destination unlocks"
-          description="Landmarks unlock from cumulative distance. Locked entries stay greyed out until you reach the milestone."
-        />
+        <SectionHeader eyebrow="Landmarks" title={t("paceport.destinationUnlocks")} />
         <LandmarkTimeline
           landmarks={route.landmarks}
           unlockedIds={summary.progress.unlockedLandmarkIds}
         />
       </section>
 
-      {owned ? (
+      {owned && !route.crewOnly ? (
         <Link
           to="/run/setup"
           className={buttonStyles({ fullWidth: true })}
           onClick={() => selectRoute(route.id)}
         >
-          Start run for this destination
+          {t("paceport.startRun")}
         </Link>
+      ) : owned && route.crewOnly ? (
+        <div className="rounded-[28px] bg-sky-50 px-5 py-4 ring-1 ring-sky-100">
+          <p className="text-xs uppercase tracking-[0.18em] text-sky-700">{t("paceport.exclusiveTeamReward")}</p>
+        </div>
       ) : (
         <Link to="/shop" className={buttonStyles({ fullWidth: true })}>
           <span className="inline-flex items-center gap-2">
             <Lock className="h-4 w-4" />
-            Unlock in Shop
+            {t("paceport.unlockInShop")}
           </span>
         </Link>
       )}

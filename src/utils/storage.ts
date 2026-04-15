@@ -1,6 +1,7 @@
 import type { AppState } from "../types";
 
 const STORAGE_KEY = "milescape-state";
+const ONBOARDING_KEY = "milescape-onboarding-seen";
 
 export const loadState = (): AppState | null => {
   if (typeof window === "undefined") {
@@ -29,4 +30,20 @@ export const clearState = () => {
   }
 
   window.localStorage.removeItem(STORAGE_KEY);
+};
+
+export const hasSeenOnboarding = () => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.localStorage.getItem(ONBOARDING_KEY) === "true";
+};
+
+export const markOnboardingSeen = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(ONBOARDING_KEY, "true");
 };

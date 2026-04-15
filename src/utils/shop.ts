@@ -5,7 +5,7 @@ export const tierOrder: RouteTier[] = ["Starter", "Standard", "Advanced", "Premi
 export const groupRoutesByTier = (routes: Route[]) =>
   tierOrder.map((tier) => ({
     tier,
-    routes: routes.filter((route) => route.tier === tier)
+    routes: routes.filter((route) => route.tier === tier && route.sourceType === "personal")
   }));
 
 export const isRouteOwned = (routeId: string, purchasedRouteIds: string[]) =>

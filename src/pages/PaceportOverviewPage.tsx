@@ -4,19 +4,22 @@ import { useAppState } from "../hooks/useAppState";
 import { getPaceportSummary } from "../utils/paceport";
 
 export const PaceportOverviewPage = () => {
-  const { routes, state } = useAppState();
+  const { routes, state, t } = useAppState();
 
   return (
     <div className="space-y-6">
       <SectionHeader
-        eyebrow="Paceport"
-        title="Your destinations, progress, and achievements"
-        description="Paceport merges destination ownership, route progress, landmark unlocks, and run-based achievement tiers."
+        eyebrow={t("app.paceport")}
+        title={t("paceport.title")}
       />
 
       <div className="grid gap-4">
         {routes.map((route) => {
           const summary = getPaceportSummary(route, state);
+          const sourceCrewName =
+            route.sourceCrewId
+              ? state.paceCrews.find((crew) => crew.id === route.sourceCrewId)?.name
+              : undefined;
 
           return (
             <PaceportDestinationCard
@@ -28,6 +31,7 @@ export const PaceportOverviewPage = () => {
               unlockedLandmarkCount={summary.unlockedLandmarkCount}
               runCount={summary.runCount}
               achievementTier={summary.achievementTier}
+              sourceCrewName={sourceCrewName}
             />
           );
         })}

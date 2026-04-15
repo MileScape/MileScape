@@ -1,4 +1,5 @@
 import { CheckCircle2, Lock, MapPinned } from "lucide-react";
+import { useAppState } from "../../hooks/useAppState";
 import type { Route } from "../../types";
 import { formatDistance } from "../../utils/progress";
 import { canPurchaseRoute, isRouteOwned } from "../../utils/shop";
@@ -17,6 +18,7 @@ export const ShopRouteCard = ({
   purchasedRouteIds,
   onPurchase
 }: ShopRouteCardProps) => {
+  const { t } = useAppState();
   const owned = isRouteOwned(route.id, purchasedRouteIds);
   const purchasable = canPurchaseRoute(route, currentStamps, purchasedRouteIds);
 
@@ -30,12 +32,12 @@ export const ShopRouteCard = ({
           {owned ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-sage-100 px-3 py-1 text-xs font-semibold text-sage-700">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              Owned
+              {t("shop.owned")}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-sage-500 ring-1 ring-sage-100">
               <Lock className="h-3.5 w-3.5" />
-              Locked
+              {t("shop.locked")}
             </span>
           )}
         </div>
@@ -48,14 +50,13 @@ export const ShopRouteCard = ({
             <h3 className="mt-2 text-2xl font-semibold tracking-tight text-ink">{route.name}</h3>
           </div>
           <div className="text-right">
-            <p className="text-xs uppercase tracking-[0.18em] text-sage-500">Price</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-sage-500">{t("shop.price")}</p>
             <p className="mt-2 text-xl font-semibold text-ink">{route.priceStamps}</p>
           </div>
         </div>
       </div>
 
       <div className="mt-4 space-y-3">
-        <p className="text-sm leading-6 text-sage-700">{route.description}</p>
         <div className="flex items-center justify-between text-sm text-sage-600">
           <span className="inline-flex items-center gap-2">
             <MapPinned className="h-4 w-4" />
@@ -69,7 +70,11 @@ export const ShopRouteCard = ({
           disabled={!owned && !purchasable}
           onClick={() => onPurchase(route.id)}
         >
-          {owned ? "Owned" : purchasable ? `Unlock destination for ${route.priceStamps}` : "Insufficient Stamps"}
+          {owned
+            ? t("shop.owned")
+            : purchasable
+              ? t("shop.unlockFor", { count: route.priceStamps })
+              : t("shop.insufficient")}
         </Button>
       </div>
     </article>

@@ -7,7 +7,7 @@ import { useAppState } from "../hooks/useAppState";
 import { formatDistance, getRouteProgress } from "../utils/progress";
 
 export const DashboardPage = () => {
-  const { routes, state, resetDemo, setSliderMaxDistanceKm } = useAppState();
+  const { routes, state, resetDemo, setLanguage, setSliderMaxDistanceKm, t } = useAppState();
   const [sliderMaxInput, setSliderMaxInput] = useState(String(state.sliderMaxDistanceKm));
   const totalDistance = state.runHistory.reduce((sum, run) => sum + run.distanceKm, 0);
   const routesInProgress = routes.filter((route) => {
@@ -20,7 +20,7 @@ export const DashboardPage = () => {
     (sum, entry) => sum + entry.unlockedLandmarkIds.length,
     0,
   );
-  const ownedRoutes = state.purchasedRouteIds.length;
+  const ownedRoutes = new Set([...state.purchasedRouteIds, ...state.unlockedCrewDestinationIds]).size;
 
   useEffect(() => {
     setSliderMaxInput(String(state.sliderMaxDistanceKm));
@@ -36,35 +36,28 @@ export const DashboardPage = () => {
     <div className="space-y-6">
       <SectionHeader
         eyebrow="Dashboard"
-        title="Your running journey so far"
-        description="A compact profile view that surfaces the metrics most useful for a coursework MVP demo."
+        title={t("dashboard.title")}
       />
 
       <div className="grid grid-cols-2 gap-4">
-        <StatCard label="Total distance" value={formatDistance(totalDistance)} hint="Across all simulated runs" />
-        <StatCard label="Stamp balance" value={String(state.currentStamps)} hint="Spend these in the shop" />
-        <StatCard label="Routes in progress" value={String(routesInProgress)} hint="Active travel stories" />
-        <StatCard label="Owned routes" value={String(ownedRoutes)} hint="Unlocked destinations in Paceport" />
-        <StatCard label="Completed routes" value={String(completedRoutes)} hint="Fully explored journeys" />
-        <StatCard label="Landmarks unlocked" value={String(unlockedLandmarks)} hint="Collectible memories found" />
+        <StatCard label={t("dashboard.totalDistance")} value={formatDistance(totalDistance)} hint="" />
+        <StatCard label={t("dashboard.stampBalance")} value={String(state.currentStamps)} hint="" />
+        <StatCard label={t("dashboard.routesInProgress")} value={String(routesInProgress)} hint="" />
+        <StatCard label={t("dashboard.ownedRoutes")} value={String(ownedRoutes)} hint="" />
+        <StatCard label={t("dashboard.completedRoutes")} value={String(completedRoutes)} hint="" />
+        <StatCard label={t("dashboard.landmarksUnlocked")} value={String(unlockedLandmarks)} hint="" />
       </div>
 
       <section className="space-y-4">
-        <SectionHeader
-          eyebrow="Settings"
-          title="Run distance range"
-          description="Set the maximum distance shown on the run setup slider. This lets heavier runners drag across a larger range without putting custom input on the main screen."
-        />
+        <SectionHeader eyebrow={t("dashboard.settings")} title={t("dashboard.runDistanceRange")} />
         <div className="rounded-[28px] bg-white p-5 shadow-card ring-1 ring-sage-100">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-ink">Custom max distance</p>
-              <p className="mt-1 text-sm text-sage-600">
-                Current slider range: 0 to {state.sliderMaxDistanceKm} km
-              </p>
+              <p className="text-sm font-semibold text-ink">{t("dashboard.customMaxDistance")}</p>
+              <p className="mt-1 text-sm text-sage-600">0 to {state.sliderMaxDistanceKm} km</p>
             </div>
             <div className="rounded-full bg-sage-50 px-4 py-2 text-sm font-medium text-sage-700">
-              Max 100 km
+              {t("dashboard.max100")}
             </div>
           </div>
 
@@ -90,37 +83,55 @@ export const DashboardPage = () => {
               }}
               disabled={!sliderMaxValid}
             >
-              Save
+              {t("dashboard.save")}
             </Button>
           </div>
 
           <p className="mt-3 text-xs text-sage-500">
             {sliderMaxValid
-              ? "The run setup slider will use this new maximum distance."
-              : "Enter a whole number between 1 and 100."}
+              ? t("dashboard.savedRange")
+              : t("dashboard.enterRange")}
           </p>
         </div>
       </section>
 
       <section className="space-y-4">
-        <SectionHeader
-          eyebrow="Recent Runs"
-          title="History"
-          description="Simple local run history gives continuity to the demo and supports future streak features."
-        />
+        <SectionHeader eyebrow={t("dashboard.settings")} title={t("dashboard.language")} />
+        <div className="grid grid-cols-2 gap-3 rounded-[28px] bg-white p-5 shadow-card ring-1 ring-sage-100">
+          <button
+            type="button"
+            onClick={() => setLanguage("en")}
+            className={`rounded-[22px] px-4 py-4 text-sm font-semibold transition ${
+              state.language === "en" ? "bg-sage-700 text-white" : "bg-sage-50 text-ink"
+            }`}
+          >
+            {t("dashboard.english")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setLanguage("zh")}
+            className={`rounded-[22px] px-4 py-4 text-sm font-semibold transition ${
+              state.language === "zh" ? "bg-sage-700 text-white" : "bg-sage-50 text-ink"
+            }`}
+          >
+            {t("dashboard.chinese")}
+          </button>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeader eyebrow={t("dashboard.history")} title={t("dashboard.history")} />
         {state.runHistory.length > 0 ? (
           <HistoryList history={state.runHistory} routes={routes} />
         ) : (
           <div className="rounded-[28px] bg-sage-50 p-5 ring-1 ring-sage-100">
-            <p className="text-sm leading-6 text-sage-700">
-              No runs yet. Use the setup page to create the first result state.
-            </p>
+            <p className="text-sm text-sage-700">{t("dashboard.noRuns")}</p>
           </div>
         )}
       </section>
 
       <Button variant="secondary" fullWidth onClick={resetDemo}>
-        Reset demo data
+        {t("dashboard.resetDemo")}
       </Button>
     </div>
   );

@@ -10,6 +10,10 @@ export const HistoryList = ({ history, routes }: HistoryListProps) => (
   <div className="space-y-3">
     {history.slice(0, 5).map((item) => {
       const route = routes.find((entry) => entry.id === item.routeId);
+      const label =
+        item.runTargetType === "pacecrew_mission"
+          ? "PaceCrew Mission"
+          : route?.name ?? "Unknown route";
 
       return (
         <div
@@ -18,7 +22,7 @@ export const HistoryList = ({ history, routes }: HistoryListProps) => (
         >
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-ink">{route?.name ?? "Unknown route"}</p>
+              <p className="text-sm font-semibold text-ink">{label}</p>
               <p className="text-xs text-sage-500">
                 {new Date(item.completedAt).toLocaleDateString()}
               </p>

@@ -12,6 +12,7 @@ interface PaceportDestinationCardProps {
   unlockedLandmarkCount: number;
   runCount: number;
   achievementTier: AchievementTier;
+  sourceCrewName?: string;
 }
 
 const tierLabels: Record<AchievementTier, string> = {
@@ -36,7 +37,8 @@ export const PaceportDestinationCard = ({
   completedDistanceKm,
   unlockedLandmarkCount,
   runCount,
-  achievementTier
+  achievementTier,
+  sourceCrewName
 }: PaceportDestinationCardProps) => (
   <Link
     to={`/paceport/${route.id}`}
@@ -63,6 +65,16 @@ export const PaceportDestinationCard = ({
               {route.city}, {route.country}
             </p>
             <h3 className="mt-1 text-xl font-semibold text-ink">{route.name}</h3>
+            {route.crewOnly ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+                  PaceCrew Only
+                </span>
+                {sourceCrewName ? (
+                  <span className="text-xs text-sage-500">From PaceCrew: {sourceCrewName}</span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
           <span className="rounded-full bg-sage-50 px-3 py-1 text-xs font-semibold text-sage-700">
             {statusLabels[status]}

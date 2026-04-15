@@ -1,14 +1,19 @@
 import type { AchievementTier, AppState, PaceportStatus, Route } from "../types";
 import { getRouteProgress, getProgressPercent } from "./progress";
 import { getAchievementTier } from "./achievement";
+import { isRouteOwnedInPaceport } from "./paceCrew";
 
 export const getRunCountForRoute = (routeId: string, state: AppState) =>
   getRouteProgress(routeId, state).runCount;
 
 export const getPaceportStatus = (route: Route, state: AppState): PaceportStatus => {
-  const owned = state.purchasedRouteIds.includes(route.id);
+  const owned = isRouteOwnedInPaceport(route.id, state);
   if (!owned) {
     return "locked";
+  }
+
+  if (route.sourceType === "pacecrew") {
+    return "owned";
   }
 
   const progress = getRouteProgress(route.id, state);

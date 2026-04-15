@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Route, ShoppingBag, Sparkles, UserCircle2, X } from "lucide-react";
+import { Route, ShoppingBag, Sparkles, UserCircle2, Users, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useAppState } from "../../hooks/useAppState";
 import { cn } from "../../utils/cn";
 
 interface SideDrawerProps {
@@ -8,15 +9,16 @@ interface SideDrawerProps {
   onClose: () => void;
 }
 
-const items = [
-  { to: "/run/setup", label: "Start Run", icon: Route },
-  { to: "/paceport", label: "Paceport", icon: Sparkles },
-  { to: "/shop", label: "Shop", icon: ShoppingBag },
-  { to: "/dashboard", label: "Profile", icon: UserCircle2 }
-];
-
 export const SideDrawer = ({ open, onClose }: SideDrawerProps) => {
   const location = useLocation();
+  const { t } = useAppState();
+  const items = [
+    { to: "/run/setup", label: t("drawer.startRun"), icon: Route },
+    { to: "/pacecrew", label: t("drawer.paceCrew"), icon: Users },
+    { to: "/paceport", label: t("drawer.paceport"), icon: Sparkles },
+    { to: "/shop", label: t("drawer.shop"), icon: ShoppingBag },
+    { to: "/dashboard", label: t("drawer.profile"), icon: UserCircle2 }
+  ];
 
   return (
     <AnimatePresence>
@@ -41,7 +43,7 @@ export const SideDrawer = ({ open, onClose }: SideDrawerProps) => {
             <div className="mb-8 flex items-center justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.22em] text-sage-500">MileScape</p>
-                <p className="mt-1 text-2xl font-semibold text-ink">Menu</p>
+                <p className="mt-1 text-2xl font-semibold text-ink">{t("drawer.menu")}</p>
               </div>
               <button
                 type="button"
@@ -75,10 +77,7 @@ export const SideDrawer = ({ open, onClose }: SideDrawerProps) => {
             </div>
 
             <div className="mt-auto rounded-[28px] bg-hero-glow p-5 ring-1 ring-sage-100">
-              <p className="text-xs uppercase tracking-[0.22em] text-sage-500">Concept</p>
-              <p className="mt-2 text-sm leading-6 text-sage-700">
-                Run a little, travel a little further, and unlock a calmer memory each time.
-              </p>
+              <p className="text-xs uppercase tracking-[0.22em] text-sage-500">{t("drawer.concept")}</p>
             </div>
           </motion.aside>
         </>
