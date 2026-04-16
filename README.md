@@ -39,7 +39,19 @@ npm install
 npm run dev
 ```
 
-3. Build for production:
+3. To enable the 3D route previews, create a local `.env` file:
+
+```bash
+cp .env.example .env
+```
+
+Then set:
+
+```bash
+VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_public_token_here
+```
+
+4. Build for production:
 
 ```bash
 npm run build

@@ -2,6 +2,7 @@ import { ChevronLeft, Menu } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAppState } from "../../hooks/useAppState";
+import { cn } from "../../utils/cn";
 import { SideDrawer } from "./SideDrawer";
 
 export const AppShell = () => {
@@ -44,12 +45,17 @@ export const AppShell = () => {
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-canvas md:max-w-[430px]">
       <SideDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
-      <header className="sticky top-0 z-30 flex items-center justify-between px-4 pb-3 pt-5 backdrop-blur">
+      <header
+        className={cn(
+          "sticky top-0 z-30 flex items-center justify-between px-4 pt-5",
+          isPrimaryHome ? "mb-[-4.75rem] pb-0" : "pb-3 backdrop-blur",
+        )}
+      >
         {isPrimaryHome ? (
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="rounded-full bg-white/90 p-3 text-sage-700 shadow-card ring-1 ring-sage-100"
+            className="rounded-full bg-white/68 p-3 text-sage-700 shadow-[0_10px_28px_rgba(24,43,29,0.12)] ring-1 ring-white/75 backdrop-blur-xl"
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
@@ -68,14 +74,16 @@ export const AppShell = () => {
         )}
 
         <div className="text-center">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-sage-500">MileScape</p>
-          <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1>
+          <p className={cn("uppercase tracking-[0.28em]", isPrimaryHome ? "text-[10px] text-white/92" : "text-[11px] text-sage-500")}>
+            MILESCAPE
+          </p>
+          {!isPrimaryHome ? <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1> : null}
         </div>
 
         <div className="h-11 w-11" />
       </header>
 
-      <main className="flex-1 px-4 pb-8 pt-1">
+      <main className={cn("flex-1", isPrimaryHome ? "px-0 pb-0 pt-0" : "px-4 pb-8 pt-1")}>
         <Outlet />
       </main>
     </div>

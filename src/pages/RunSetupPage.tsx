@@ -107,6 +107,31 @@ export const RunSetupPage = () => {
     };
   }, [activeTargetType, effectiveDistance, route, selectedMissionBundle, state.routeProgress]);
 
+  const routeProgress = route
+    ? state.routeProgress.find((entry) => entry.routeId === route.id)
+    : undefined;
+  const routeExploredPercent = route
+    ? Math.round(((routeProgress?.completedDistanceKm ?? 0) / route.totalDistanceKm) * 100)
+    : 0;
+  const missionProgressPercent =
+    activeTargetType === "pacecrew_mission" && selectedMissionBundle
+      ? Math.round(
+          (getMissionProgress(selectedMissionBundle.mission, selectedMissionBundle.missionState).completedDistanceKm /
+            selectedMissionBundle.mission.targetDistanceKm) *
+            100,
+        )
+      : 0;
+  const locationLabel =
+    activeTargetType === "pacecrew_mission" && selectedMissionBundle
+      ? "PACECREW MISSION"
+      : route
+        ? `${route.city.toUpperCase()} · ${route.country.toUpperCase()}`
+        : "";
+  const metadataLabel =
+    activeTargetType === "pacecrew_mission" && selectedMissionBundle
+      ? `${effectiveDistance.toFixed(1)} km selected · ${missionProgressPercent}% complete`
+      : `${effectiveDistance.toFixed(1)} km selected · ${routeExploredPercent}% explored`;
+
   const handleStartRun = () => {
     setIsSubmitting(true);
 
@@ -128,15 +153,61 @@ export const RunSetupPage = () => {
 
   return (
     <>
-      <div className="space-y-4 pb-4">
-        {showModeSwitcher ? (
-          <div className="rounded-[28px] bg-white/85 p-2 shadow-card ring-1 ring-sage-100">
-            <div className="grid grid-cols-2 gap-2">
+      <div className="relative min-h-screen overflow-hidden bg-canvas pb-6">
+        {activeTargetType === "personal" && route ? (
+          <div className="relative min-h-[60vh]">
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="block h-[62vh] w-full text-left"
+            >
+              <RouteArtwork routeId={route.id} variant="hero" className="h-[62vh] w-full" />
+            </button>
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#0d1711]/24 via-[#0d1711]/10 to-transparent" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#f5f3ee] via-[#f5f3ee]/82 to-transparent" />
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="absolute bottom-5 left-1/2 inline-flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full bg-white/78 text-sage-700 shadow-[0_10px_32px_rgba(24,43,29,0.12)] ring-1 ring-white/80 backdrop-blur-xl"
+              aria-label="Open route picker"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="relative flex h-[62vh] items-end overflow-hidden bg-[linear-gradient(180deg,#d9e8dd_0%,#eef4ee_38%,#f5f3ee_100%)] px-6 pb-10">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#ffffff7a,transparent_42%)]" />
+            <button
+              type="button"
+              onClick={() => setMissionPickerOpen(true)}
+              className="relative w-full rounded-[30px] border border-white/70 bg-white/62 px-6 py-6 text-left shadow-[0_18px_40px_rgba(24,43,29,0.08)] backdrop-blur-xl"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sky-700">
+                    PACECREW MISSION
+                  </p>
+                  <h2 className="mt-3 text-[2rem] leading-[0.98] tracking-[-0.04em] text-ink">
+                    {selectedMissionBundle?.mission.title ?? "Choose a mission"}
+                  </h2>
+                  <p className="mt-2 text-sm text-sage-700">{selectedMissionBundle?.crew.name ?? "Accepted mission"}</p>
+                </div>
+                <div className="rounded-full bg-sky-100/80 p-3 text-sky-700">
+                  <Flag className="h-5 w-5" />
+                </div>
+              </div>
+            </button>
+          </div>
+        )}
+
+        <section className="relative z-10 -mt-8 rounded-t-[34px] border-t border-white/75 bg-[linear-gradient(180deg,rgba(250,249,245,0.94)_0%,rgba(245,243,238,0.98)_100%)] px-6 pb-8 pt-5 shadow-[0_-14px_32px_rgba(34,49,38,0.08)] backdrop-blur-2xl">
+          {showModeSwitcher ? (
+            <div className="mb-6 inline-flex rounded-full bg-sage-900/6 p-1 ring-1 ring-sage-900/8">
               <button
                 type="button"
                 onClick={() => setTargetType("personal")}
-                className={`rounded-[22px] px-4 py-3 text-sm font-semibold transition ${
-                  activeTargetType === "personal" ? "bg-sage-700 text-white" : "bg-transparent text-sage-700"
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  activeTargetType === "personal" ? "bg-white text-ink shadow-sm" : "text-sage-600"
                 }`}
               >
                 <span className="inline-flex items-center gap-2">
@@ -147,8 +218,8 @@ export const RunSetupPage = () => {
               <button
                 type="button"
                 onClick={() => setTargetType("pacecrew_mission")}
-                className={`rounded-[22px] px-4 py-3 text-sm font-semibold transition ${
-                  activeTargetType === "pacecrew_mission" ? "bg-sage-700 text-white" : "bg-transparent text-sage-700"
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  activeTargetType === "pacecrew_mission" ? "bg-white text-ink shadow-sm" : "text-sage-600"
                 }`}
               >
                 <span className="inline-flex items-center gap-2">
@@ -157,80 +228,34 @@ export const RunSetupPage = () => {
                 </span>
               </button>
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        <section className="overflow-hidden rounded-[42px] bg-gradient-to-b from-white via-white to-sage-50/70 shadow-card ring-1 ring-white/80">
-          <div className="px-4 pt-5">
-            {activeTargetType === "personal" && route ? (
-              <button type="button" onClick={() => setPickerOpen(true)} className="w-full rounded-[30px] text-left">
-                <RouteArtwork routeId={route.id} label={route.city} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setMissionPickerOpen(true)}
-                className="w-full rounded-[30px] bg-gradient-to-br from-sky-50 via-white to-sage-50 px-6 py-7 text-left ring-1 ring-sky-100"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-600">
-                      PaceCrew Mission
-                    </p>
-                    <h2 className="mt-3 text-[1.9rem] font-semibold leading-[1.02] tracking-[-0.04em] text-ink">
-                      {selectedMissionBundle?.mission.title ?? "Choose a mission"}
-                    </h2>
-                    <p className="mt-2 text-sm text-sage-700">{selectedMissionBundle?.crew.name ?? "Accepted mission"}</p>
-                  </div>
-                  <div className="rounded-full bg-white p-3 shadow-sm ring-1 ring-sky-100">
-                    <Flag className="h-5 w-5 text-sky-600" />
-                  </div>
-                </div>
-              </button>
-            )}
-
-            <div className="mt-3 flex justify-center">
-              <div className="inline-flex items-center justify-center rounded-full bg-white/80 p-2 shadow-sm ring-1 ring-sage-100">
-                <ChevronDown className="h-4 w-4 text-sage-500" />
-              </div>
-            </div>
-
-            <div className="pb-4 pt-4 text-center">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-sage-500">
-                {preview?.targetMeta}
-              </p>
-              <h2 className="mt-2 text-[2.15rem] font-semibold leading-[1.02] tracking-[-0.04em] text-ink">
-                {preview?.targetTitle}
-              </h2>
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">{locationLabel}</p>
+            <h2 className="font-destination-display mt-3 text-[2.35rem] leading-[0.94] tracking-[0.01em] text-ink">
+              {preview?.targetTitle}
+            </h2>
+            <div className="mt-3 flex items-center gap-2 text-sm text-sage-600">
+              <span>{metadataLabel}</span>
+              {preview && preview.cycleCount > 1 ? (
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sage-700 px-1.5 text-[10px] font-semibold text-white">
+                  {preview.cycleCount}
+                </span>
+              ) : null}
             </div>
           </div>
 
-          <div className="px-5 pb-6 pt-2">
+          <div className="mt-8">
             <div className="flex items-end justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-sage-500">{t("run.distance")}</p>
-                <p className="mt-2 text-5xl font-semibold tracking-tight text-ink">
-                  {effectiveDistance.toFixed(1)}K
-                </p>
-              </div>
-              <div className="pb-2 text-right">
-                <p className="text-xs uppercase tracking-[0.2em] text-sage-500">
-                  {activeTargetType === "pacecrew_mission" ? t("run.missionProgress") : t("run.progress")}
-                </p>
-                <div className="mt-2 flex items-center justify-end gap-2">
-                  <p className="text-sm font-medium text-sage-700">
-                    {preview?.value.toFixed(1)} / {preview?.total} km
-                  </p>
-                  {preview && preview.cycleCount > 1 ? (
-                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-sage-700 px-2 text-xs font-semibold text-white">
-                      {preview.cycleCount}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.26em] text-sage-500">
+                Run Distance
+              </p>
+              <p className="text-[1.9rem] font-semibold tracking-[-0.04em] text-ink">
+                {effectiveDistance.toFixed(1)} km
+              </p>
             </div>
 
-            <div className="mt-8 rounded-[28px] bg-white/75 px-4 py-5 ring-1 ring-sage-100/80 backdrop-blur">
+            <div className="mt-5">
               <input
                 type="range"
                 min="0"
@@ -238,24 +263,28 @@ export const RunSetupPage = () => {
                 step="0.1"
                 value={selectedDistance}
                 onChange={(event) => setSelectedDistance(Number(event.target.value))}
-                className="ios-slider h-2.5 w-full cursor-pointer appearance-none rounded-full bg-sage-100"
+                className="ios-slider h-1.5 w-full cursor-pointer appearance-none rounded-full bg-sage-200/90"
               />
-              <div className="mt-3 flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-sage-400">
-                <span>{t("run.short")}</span>
-                <span>{t("run.long")}</span>
+              <div className="mt-3 flex items-center justify-between text-xs text-sage-400">
+                <span>0 km</span>
+                <span>{state.sliderMaxDistanceKm} km</span>
               </div>
             </div>
+          </div>
 
-            <div className="mt-6">
-              <Button
-                fullWidth
-                className="bg-ink py-4 text-base text-white hover:bg-sage-900"
-                onClick={handleStartRun}
-                disabled={isSubmitting || effectiveDistance <= 0 || (activeTargetType === "pacecrew_mission" && !selectedMissionBundle)}
-              >
-                {isSubmitting ? t("run.simulating") : activeTargetType === "pacecrew_mission" ? t("run.startMissionRun") : t("run.startRun")}
-              </Button>
-            </div>
+          <div className="mt-8">
+            <Button
+              fullWidth
+              className="h-14 bg-sage-700/95 text-base text-white shadow-[0_18px_28px_rgba(61,92,74,0.22)] hover:bg-sage-800"
+              onClick={handleStartRun}
+              disabled={isSubmitting || effectiveDistance <= 0 || (activeTargetType === "pacecrew_mission" && !selectedMissionBundle)}
+            >
+              {isSubmitting
+                ? t("run.simulating")
+                : activeTargetType === "pacecrew_mission"
+                  ? t("run.startMissionRun")
+                  : t("run.startRun")}
+            </Button>
           </div>
         </section>
       </div>
