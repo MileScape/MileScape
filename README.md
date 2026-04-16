@@ -24,6 +24,7 @@ The current MVP is built for demo quality rather than backend complexity:
 - Lucide React
 - localStorage
 - vercel
+- mapbox
 
 ## Run Locally
 
