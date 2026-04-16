@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { PaceCrewCard } from "../components/pacecrew/PaceCrewCard";
-import { SectionHeader } from "../components/ui/SectionHeader";
 import { useAppState } from "../hooks/useAppState";
 
 export const PaceCrewJoinedPage = () => {
@@ -21,13 +20,13 @@ export const PaceCrewJoinedPage = () => {
 
   return (
     <div className="space-y-6">
-      <SectionHeader
-        eyebrow={t("app.paceCrew")}
-        title={t("pacecrew.joined")}
-      />
+      <section className="space-y-2 pt-1">
+        <p className="text-[11px] uppercase tracking-[0.28em] text-sage-500">MILESCAPE</p>
+        <h2 className="text-[2rem] font-semibold tracking-[-0.04em] text-ink">{t("pacecrew.joined")}</h2>
+      </section>
 
       {toast ? (
-        <div className="rounded-[24px] bg-sage-700 px-4 py-3 text-sm font-medium text-white shadow-card">{toast}</div>
+        <div className="rounded-[22px] bg-sage-700 px-4 py-3 text-sm font-medium text-white">{toast}</div>
       ) : null}
 
       {joinedCrews.length > 0 ? (
@@ -44,7 +43,7 @@ export const PaceCrewJoinedPage = () => {
           ))}
         </div>
       ) : (
-        <div className="rounded-[30px] bg-white p-5 shadow-card ring-1 ring-sage-100">
+        <div className="rounded-[28px] bg-white/72 p-5 ring-1 ring-sage-900/8 backdrop-blur-xl">
           <p className="text-sm text-sage-700">{t("pacecrew.noJoined")}</p>
         </div>
       )}
