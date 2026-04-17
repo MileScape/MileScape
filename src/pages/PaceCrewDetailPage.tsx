@@ -31,8 +31,8 @@ export const PaceCrewDetailPage = () => {
   }));
 
   const rewardDestinations = useMemo(
-    () => routes.filter((route) => route.sourceCrewId === crew.id),
-    [crew.id, routes],
+    () => routes.filter((route) => route.crewOnly),
+    [routes],
   );
 
   const showToast = (message: string) => {

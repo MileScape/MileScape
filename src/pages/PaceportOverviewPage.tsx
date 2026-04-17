@@ -27,10 +27,6 @@ export const PaceportOverviewPage = () => {
       <div className="grid gap-3">
         {routes.map((route) => {
           const summary = getPaceportSummary(route, state);
-          const sourceCrewName =
-            route.sourceCrewId
-              ? state.paceCrews.find((crew) => crew.id === route.sourceCrewId)?.name
-              : undefined;
 
           return (
             <PaceportDestinationCard
@@ -42,7 +38,6 @@ export const PaceportOverviewPage = () => {
               unlockedLandmarkCount={summary.unlockedLandmarkCount}
               runCount={summary.runCount}
               achievementTier={summary.achievementTier}
-              sourceCrewName={sourceCrewName}
             />
           );
         })}

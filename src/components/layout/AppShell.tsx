@@ -12,6 +12,7 @@ export const AppShell = () => {
   const { t } = useAppState();
   const isPrimaryHome = location.pathname === "/run/setup";
   const isOnboarding = location.pathname === "/";
+  const isPaceCrewHome = location.pathname === "/pacecrew";
   const isPaceCrewSubpage = location.pathname.startsWith("/pacecrew/") && location.pathname !== "/pacecrew";
 
   const pageTitles: Record<string, string> = {
@@ -77,7 +78,7 @@ export const AppShell = () => {
           <p className={cn("uppercase tracking-[0.28em]", isPrimaryHome ? "text-[10px] text-white/92" : "text-[11px] text-sage-500")}>
             MILESCAPE
           </p>
-          {!isPrimaryHome ? <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1> : null}
+          {!isPrimaryHome && !isPaceCrewHome ? <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1> : null}
         </div>
 
         <div className="h-11 w-11" />

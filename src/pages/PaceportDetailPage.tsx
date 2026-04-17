@@ -29,9 +29,6 @@ export const PaceportDetailPage = () => {
   const summary = getPaceportSummary(route, state);
   const owned = summary.status !== "locked";
   const achievementTier = getAchievementTier(summary.runCount);
-  const sourceCrewName = route.sourceCrewId
-    ? state.paceCrews.find((crew) => crew.id === route.sourceCrewId)?.name
-    : null;
 
   return (
     <div className="space-y-6">
@@ -46,12 +43,9 @@ export const PaceportDetailPage = () => {
             <h1 className="text-3xl font-semibold tracking-tight text-ink">{route.name}</h1>
             {route.crewOnly ? (
               <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+                <span className="rounded-full bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700">
                   {t("paceport.pacecrewOnly")}
-                  </span>
-                {sourceCrewName ? (
-                  <span className="text-xs font-medium text-sage-500">{t("paceport.fromPaceCrew", { name: sourceCrewName })}</span>
-                ) : null}
+                </span>
               </div>
             ) : null}
           </div>
