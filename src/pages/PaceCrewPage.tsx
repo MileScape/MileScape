@@ -425,17 +425,31 @@ export const PaceCrewPage = () => {
   const renderMyCrewTab = () => (
     <div className="space-y-6">
       {!organizedCrew ? (
-        <Surface className="bg-[linear-gradient(145deg,rgba(255,255,255,0.8),rgba(236,242,235,0.94))]">
+        <Surface className="flex min-h-[62vh] flex-col justify-between bg-[linear-gradient(160deg,rgba(255,255,255,0.82),rgba(232,241,232,0.96))] px-6 py-7">
           <p className="text-[11px] uppercase tracking-[0.24em] text-sage-500">My Crew</p>
-          <h2 className="mt-2 text-[1.65rem] font-semibold tracking-[-0.04em] text-ink">Create the one PaceCrew you’ll organize.</h2>
+
+          <div className="space-y-3 py-6">
+            <p className="text-[0.95rem] font-medium uppercase tracking-[0.34em] text-sage-500">
+              CREATE ONE
+            </p>
+            <h2 className="text-[3.9rem] font-semibold uppercase leading-[0.88] tracking-[-0.08em] text-ink">
+              PACECREW
+            </h2>
+            <p className="max-w-[12ch] text-[1.5rem] font-medium leading-[1.02] tracking-[-0.04em] text-sage-700">
+              you&apos;ll organize
+            </p>
+          </div>
+
+          <div className="space-y-4">
           <button
             type="button"
             onClick={() => setSheetMode("create-crew")}
-            className="mt-5 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:bg-sage-900"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-ink px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-sage-900"
           >
             <Plus className="h-4 w-4" />
             Create PaceCrew
           </button>
+          </div>
         </Surface>
       ) : (
         <>

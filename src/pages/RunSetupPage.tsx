@@ -87,17 +87,21 @@ export const RunSetupPage = () => {
       return null;
     }
 
-    const progress = state.routeProgress.find((entry) => entry.routeId === route.id);
-    const completedDistanceKm = progress?.completedDistanceKm ?? 0;
-    const rawPreviewProgressKm = completedDistanceKm + effectiveDistance;
-    const hasOverflowPreview = rawPreviewProgressKm > route.totalDistanceKm;
-    const progressCycleCount = hasOverflowPreview
-      ? Math.floor((rawPreviewProgressKm - 0.0001) / route.totalDistanceKm) + 1
-      : 1;
-    const previewProgressKm = hasOverflowPreview ? rawPreviewProgressKm % route.totalDistanceKm : rawPreviewProgressKm;
+    const totalLoggedDistanceKm = state.runHistory
+      .filter((entry) => entry.runTargetType === "personal" && entry.routeId === route.id)
+      .reduce((sum, entry) => sum + entry.distanceKm, 0);
+    const rawPreviewProgressKm = totalLoggedDistanceKm + effectiveDistance;
+    const hasOverflowPreview = rawPreviewProgressKm >= route.totalDistanceKm;
+    const progressCycleCount = Math.floor(rawPreviewProgressKm / route.totalDistanceKm) + 1;
+    const previewProgressKm =
+      rawPreviewProgressKm === 0
+        ? 0
+        : rawPreviewProgressKm % route.totalDistanceKm === 0
+          ? route.totalDistanceKm
+          : rawPreviewProgressKm % route.totalDistanceKm;
 
     return {
-        label: "Progress",
+      label: "Progress",
       value: previewProgressKm,
       total: route.totalDistanceKm,
       cycleCount: progressCycleCount,
@@ -129,8 +133,10 @@ export const RunSetupPage = () => {
         : "";
   const metadataLabel =
     activeTargetType === "pacecrew_mission" && selectedMissionBundle
-      ? `${effectiveDistance.toFixed(1)} km selected · ${missionProgressPercent}% complete`
-      : `${effectiveDistance.toFixed(1)} km selected · ${routeExploredPercent}% explored`;
+      ? `${effectiveDistance.toFixed(1)} km selected / ${selectedMissionBundle.mission.targetDistanceKm.toFixed(1)} km · ${missionProgressPercent}% complete`
+      : route
+        ? `${effectiveDistance.toFixed(1)} km selected / ${route.totalDistanceKm.toFixed(1)} km · ${routeExploredPercent}% explored`
+        : `${effectiveDistance.toFixed(1)} km selected`;
 
   const handleStartRun = () => {
     setIsSubmitting(true);
