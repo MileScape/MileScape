@@ -11,7 +11,8 @@ import type {
   RouteProgress,
   RunHistoryItem,
   RunResultSummary,
-  UserMissionState
+  UserMissionState,
+  WearableSyncRecord
 } from "../types";
 import { getAchievementTier } from "./achievement";
 import { getMissionCompletionStampReward } from "./missionRewards";
@@ -28,6 +29,8 @@ const createDefaultRouteProgress = (routeId: string): RouteProgress => ({
   achievementTier: "none" as AchievementTier,
   completed: false
 });
+
+const createDefaultWearableSyncHistory = (): WearableSyncRecord[] => [];
 
 export const createInitialState = (): AppState =>
   syncExpiredMissionStates({
@@ -47,6 +50,8 @@ export const createInitialState = (): AppState =>
     paceCrews: initialPaceCrews,
     paceCrewMissions: initialPaceCrewMissions,
     userMissionStates: [],
+    wearableConnection: null,
+    wearableSyncHistory: createDefaultWearableSyncHistory(),
     lastRunResult: null
   });
 
@@ -101,6 +106,8 @@ export const normalizeState = (loadedState: Partial<AppState> | null): AppState 
         ...missionState,
         completedDistanceKm: missionState.completedDistanceKm ?? 0
       })) ?? [],
+    wearableConnection: loadedState.wearableConnection ?? null,
+    wearableSyncHistory: loadedState.wearableSyncHistory ?? createDefaultWearableSyncHistory(),
     lastRunResult: loadedState.lastRunResult ?? null
   });
 };

@@ -15,6 +15,7 @@ export type PaceCrewMissionStatus = "open" | "closed";
 export type UserMissionStatus = "accepted" | "completed" | "failed";
 export type RunTargetType = "personal" | "pacecrew_mission";
 export type AppLanguage = "en" | "zh";
+export type WearableAvailability = "available" | "coming_soon";
 
 export interface UserProfile {
   id: string;
@@ -125,6 +126,22 @@ export interface UserMissionState {
   completedDistanceKm: number;
 }
 
+export interface WearableConnection {
+  id: string;
+  name: string;
+  connectedAt: string;
+  lastSyncedAt: string;
+  autoSyncEnabled: boolean;
+}
+
+export interface WearableSyncRecord {
+  id: string;
+  title: string;
+  sourceName: string;
+  distanceKm: number;
+  syncedAt: string;
+}
+
 export interface AppState {
   language: AppLanguage;
   selectedRouteId: string | null;
@@ -139,6 +156,8 @@ export interface AppState {
   paceCrews: PaceCrew[];
   paceCrewMissions: PaceCrewMission[];
   userMissionStates: UserMissionState[];
+  wearableConnection: WearableConnection | null;
+  wearableSyncHistory: WearableSyncRecord[];
   lastRunResult: RunResultSummary | null;
 }
 
@@ -177,5 +196,10 @@ export interface AppContextValue {
     },
   ) => { success: boolean; message: string };
   acceptMission: (missionId: string) => { success: boolean; message: string };
+  connectWearable: (input: { id: string; name: string }) => { success: boolean; message: string };
+  disconnectWearable: () => { success: boolean; message: string };
+  reconnectWearable: () => { success: boolean; message: string };
+  syncWearableNow: () => { success: boolean; message: string };
+  setWearableAutoSync: (enabled: boolean) => { success: boolean; message: string };
   resetDemo: () => void;
 }

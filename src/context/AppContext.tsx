@@ -2,7 +2,7 @@ import { createContext, useEffect, useMemo, useState, type ReactNode } from "rea
 import { paceCrews as seedPaceCrews } from "../data/paceCrews";
 import { routes } from "../data/routes";
 import { currentUserId, users } from "../data/users";
-import type { AppContextValue, AppState, PaceCrewMission } from "../types";
+import type { AppContextValue, AppState, PaceCrewMission, WearableSyncRecord } from "../types";
 import { translate } from "../utils/i18n";
 import { clearState, loadState, saveState } from "../utils/storage";
 import { applyMissionRunToState, applyPersonalRunToState, createInitialState, normalizeState } from "../utils/progress";
@@ -26,6 +26,63 @@ const createCrewId = (name: string) =>
 
 const createMissionId = (title: string) =>
   `${title.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-")}-${crypto.randomUUID().slice(0, 6)}`;
+
+const buildWearableHistoryFromState = (current: AppState): WearableSyncRecord[] => {
+  const routeNameById = new Map(routes.map((route) => [route.id, route.name]));
+  const syncedRuns = current.runHistory
+    .filter((entry) => entry.runTargetType === "personal" && entry.routeId)
+    .slice(0, 4)
+    .map((entry) => ({
+      id: `wearable-${entry.id}`,
+      title: routeNameById.get(entry.routeId ?? "") ?? "Outdoor Run",
+      sourceName: "Synced Run",
+      distanceKm: entry.distanceKm,
+      syncedAt: entry.completedAt
+    }));
+
+  if (syncedRuns.length > 0) {
+    return syncedRuns;
+  }
+
+  const now = Date.now();
+
+  return [
+    {
+      id: crypto.randomUUID(),
+      title: "Evening Run",
+      sourceName: "Synced Run",
+      distanceKm: 5.2,
+      syncedAt: new Date(now - 45 * 60 * 1000).toISOString()
+    },
+    {
+      id: crypto.randomUUID(),
+      title: "Morning Run",
+      sourceName: "Synced Run",
+      distanceKm: 2.1,
+      syncedAt: new Date(now - 8 * 60 * 60 * 1000).toISOString()
+    },
+    {
+      id: crypto.randomUUID(),
+      title: "West Lake Run",
+      sourceName: "Imported Yesterday",
+      distanceKm: 8,
+      syncedAt: new Date(now - 24 * 60 * 60 * 1000).toISOString()
+    }
+  ];
+};
+
+const createWearableSyncRecord = (current: AppState): WearableSyncRecord => {
+  const latestRouteId = [...current.runHistory].find((entry) => entry.runTargetType === "personal" && entry.routeId)?.routeId;
+  const routeName = latestRouteId ? routes.find((route) => route.id === latestRouteId)?.name : undefined;
+
+  return {
+    id: crypto.randomUUID(),
+    title: routeName ?? "Outdoor Run",
+    sourceName: "Manual Sync",
+    distanceKm: latestRouteId ? 4.6 : 3.8,
+    syncedAt: new Date().toISOString()
+  };
+};
 
 export const AppProvider = ({ children }: AppProviderProps) => {
   const [state, setState] = useState<AppState>(() => normalizeState(loadState()));
@@ -309,6 +366,77 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         }));
 
         return { success: true, message: "Mission accepted" };
+      },
+      connectWearable: ({ id, name }) => {
+        setState((current) => ({
+          ...current,
+          wearableConnection: {
+            id,
+            name,
+            connectedAt: new Date().toISOString(),
+            lastSyncedAt: new Date().toISOString(),
+            autoSyncEnabled: true
+          },
+          wearableSyncHistory: buildWearableHistoryFromState(current)
+        }));
+
+        return { success: true, message: `${name} connected` };
+      },
+      disconnectWearable: () => {
+        if (!state.wearableConnection) {
+          return { success: false, message: "No wearable connected" };
+        }
+
+        setState((current) => ({
+          ...current,
+          wearableConnection: null,
+          wearableSyncHistory: []
+        }));
+
+        return { success: true, message: "Wearable disconnected" };
+      },
+      reconnectWearable: () => {
+        if (!state.wearableConnection) {
+          return { success: false, message: "No wearable connected" };
+        }
+
+        setState((current) => ({
+          ...current,
+          wearableConnection: current.wearableConnection
+            ? { ...current.wearableConnection, lastSyncedAt: new Date().toISOString() }
+            : null
+        }));
+
+        return { success: true, message: "Connection refreshed" };
+      },
+      syncWearableNow: () => {
+        if (!state.wearableConnection) {
+          return { success: false, message: "No wearable connected" };
+        }
+
+        setState((current) => ({
+          ...current,
+          wearableConnection: current.wearableConnection
+            ? { ...current.wearableConnection, lastSyncedAt: new Date().toISOString() }
+            : null,
+          wearableSyncHistory: [createWearableSyncRecord(current), ...current.wearableSyncHistory].slice(0, 8)
+        }));
+
+        return { success: true, message: "Sync complete" };
+      },
+      setWearableAutoSync: (enabled) => {
+        if (!state.wearableConnection) {
+          return { success: false, message: "No wearable connected" };
+        }
+
+        setState((current) => ({
+          ...current,
+          wearableConnection: current.wearableConnection
+            ? { ...current.wearableConnection, autoSyncEnabled: enabled }
+            : null
+        }));
+
+        return { success: true, message: enabled ? "Auto Sync enabled" : "Auto Sync paused" };
       },
       resetDemo: () => {
         clearState();
