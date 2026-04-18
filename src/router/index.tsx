@@ -12,7 +12,6 @@ import { PaceportDetailPage } from "../pages/PaceportDetailPage";
 import { PaceportOverviewPage } from "../pages/PaceportOverviewPage";
 import { RunResultPage } from "../pages/RunResultPage";
 import { RunSetupPage } from "../pages/RunSetupPage";
-import { SettingsPage } from "../pages/SettingsPage";
 import { ShopPage } from "../pages/ShopPage";
 import { WearablePage } from "../pages/WearablePage";
 import { WearablesPage } from "../pages/WearablesPage";
@@ -36,8 +35,7 @@ export const router = createBrowserRouter([
       { path: "run/result", element: <RunResultPage /> },
       { path: "wearables", element: <WearablesPage /> },
       { path: "shop", element: <ShopPage /> },
-      { path: "dashboard", element: <DashboardPage /> },
-      { path: "settings", element: <SettingsPage /> }
+      { path: "dashboard", element: <DashboardPage /> }
     ]
   }
 ]);

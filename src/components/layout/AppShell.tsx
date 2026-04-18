@@ -31,8 +31,7 @@ export const AppShell = () => {
     "/run/setup": t("app.chooseJourney"),
     "/run/result": t("app.runResult"),
     "/shop": t("app.shop"),
-    "/dashboard": t("app.profile"),
-    "/settings": t("app.settings")
+    "/dashboard": t("app.profile")
   };
 
   const title = useMemo(() => {

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Activity, ChevronRight, Settings2, ShoppingBag, Sparkles, UserCircle2, Users, Watch, X } from "lucide-react";
+import { Activity, ChevronRight, ShoppingBag, Sparkles, UserCircle2, Users, Watch, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAppState } from "../../hooks/useAppState";
 import { cn } from "../../utils/cn";
@@ -51,27 +51,14 @@ export const SideDrawer = ({ open, onClose }: SideDrawerProps) => {
                   <p className="mt-1 text-base font-semibold text-ink">Hello</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Link
-                  to="/settings"
-                  onClick={onClose}
-                  className={cn(
-                    "rounded-full bg-white/76 p-2 text-sage-700 ring-1 ring-sage-900/8 transition hover:bg-white",
-                    location.pathname === "/settings" && "bg-sage-100 text-sage-800",
-                  )}
-                  aria-label={t("drawer.settings")}
-                >
-                  <Settings2 className="h-5 w-5" strokeWidth={1.9} />
-                </Link>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-full bg-white/76 p-2 text-sage-700 ring-1 ring-sage-900/8"
-                  aria-label="Close menu"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-full bg-white/76 p-2 text-sage-700 ring-1 ring-sage-900/8"
+                aria-label="Close menu"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
             <div className="space-y-1">
