@@ -4,7 +4,7 @@ import {
   MapPinned,
   MessageCircle,
   Play,
-  Settings,
+  Settings2,
   Square,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -247,7 +247,7 @@ export const WearablePage = () => {
                   className={iconButtonClassName}
                   onClick={() => handleOpenScreen("settings")}
                 >
-                  <Settings className="h-[18px] w-[18px]" strokeWidth={2.1} />
+                  <Settings2 className="h-[18px] w-[18px]" strokeWidth={1.9} />
                 </button>
                 <div className="flex justify-end">
                   <button
