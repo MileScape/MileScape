@@ -232,37 +232,14 @@ export const WearablesPage = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-center">
-                <div className="rounded-[22px] bg-white/75 px-3 py-4 ring-1 ring-sage-900/8">
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-sage-500">Today</p>
-                  <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-ink">{syncedTodayDistance.toFixed(1)} km</p>
+                <div className="rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.76),rgba(245,248,244,0.92))] px-4 py-5 text-left shadow-[0_14px_34px_rgba(49,60,50,0.06)]">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-sage-500">Today</p>
+                  <p className="mt-3 text-[2rem] font-semibold tracking-[-0.05em] text-ink">{syncedTodayDistance.toFixed(1)} km</p>
                 </div>
-                <div className="rounded-[22px] bg-white/75 px-3 py-4 ring-1 ring-sage-900/8">
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-sage-500">Week</p>
-                  <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-ink">{syncedThisWeekDistance.toFixed(1)} km</p>
+                <div className="rounded-[24px] bg-[linear-gradient(180deg,rgba(241,247,242,0.82),rgba(255,255,255,0.72))] px-4 py-5 text-left shadow-[0_14px_34px_rgba(49,60,50,0.06)]">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-sage-500">Week</p>
+                  <p className="mt-3 text-[2rem] font-semibold tracking-[-0.05em] text-ink">{syncedThisWeekDistance.toFixed(1)} km</p>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={handleSync}
-                  className="flex items-center justify-between rounded-[22px] bg-white/78 px-4 py-4 text-left ring-1 ring-sage-900/8 transition hover:bg-white"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-ink">Sync now</p>
-                  </div>
-                  <RefreshCw className="h-4 w-4 text-sage-500" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/wearables/connect")}
-                  className="flex items-center justify-between rounded-[22px] bg-white/78 px-4 py-4 text-left ring-1 ring-sage-900/8 transition hover:bg-white"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-ink">Connect new</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-sage-400" />
-                </button>
               </div>
             </div>
           </Surface>

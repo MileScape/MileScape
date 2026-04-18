@@ -15,6 +15,7 @@ export const AppShell = () => {
   const isPaceCrewHome = location.pathname === "/pacecrew";
   const isWearableHome = location.pathname === "/wearable";
   const isWearablesHome = location.pathname === "/wearables";
+  const isRunResult = location.pathname === "/run/result";
   const isPaceCrewSubpage = location.pathname.startsWith("/pacecrew/") && location.pathname !== "/pacecrew";
   const isWearablesSubpage = location.pathname.startsWith("/wearables/") && location.pathname !== "/wearables";
   const isWearablesFullBleed = isWearablesHome && !state.wearableConnection;
@@ -56,7 +57,11 @@ export const AppShell = () => {
       <header
         className={cn(
           "sticky top-0 z-30 flex items-center justify-between px-4 pt-5",
-          isPrimaryHome || isWearableHome || isWearablesFullBleed ? "mb-[-4.75rem] pb-0" : "pb-3 backdrop-blur",
+          isRunResult
+            ? "mb-[-4.35rem] pb-3 backdrop-blur-2xl bg-[linear-gradient(180deg,rgba(245,243,238,0.86)_0%,rgba(245,243,238,0.56)_42%,rgba(245,243,238,0.18)_72%,rgba(245,243,238,0)_100%)]"
+            : isPrimaryHome || isWearableHome || isWearablesFullBleed
+            ? "mb-[-4.75rem] pb-0"
+            : "pb-3 backdrop-blur",
         )}
       >
         {isPrimaryHome ? (
@@ -118,7 +123,16 @@ export const AppShell = () => {
         <div className="h-11 w-11" />
       </header>
 
-      <main className={cn("flex-1", isPrimaryHome || isWearableHome || isWearablesFullBleed ? "px-0 pb-0 pt-0" : "px-4 pb-8 pt-1")}>
+      <main
+        className={cn(
+          "flex-1",
+          isPrimaryHome || isWearableHome || isWearablesFullBleed
+            ? "px-0 pb-0 pt-0"
+            : isRunResult
+              ? "px-0 pb-8 pt-0"
+              : "px-4 pb-8 pt-1",
+        )}
+      >
         <Outlet />
       </main>
     </div>
