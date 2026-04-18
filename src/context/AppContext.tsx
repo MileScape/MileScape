@@ -84,6 +84,71 @@ const createWearableSyncRecord = (current: AppState): WearableSyncRecord => {
   };
 };
 
+const resolveRunMeasurement = (current: AppState, plannedDistanceKm: number) => {
+  const connection = current.wearableConnection;
+
+  if (!connection) {
+    return {
+      distanceKm: plannedDistanceKm,
+      dataSource: "manual" as const,
+      sourceName: "App input",
+      fallbackReason: undefined
+    };
+  }
+
+  const feedbackAgeMs = Date.now() - new Date(connection.lastSyncedAt).getTime();
+  const hasWearableFeedback = connection.autoSyncEnabled && feedbackAgeMs <= 12 * 60 * 60 * 1000;
+
+  if (!hasWearableFeedback) {
+    return {
+      distanceKm: plannedDistanceKm,
+      dataSource: "manual" as const,
+      sourceName: "App input",
+      fallbackReason: connection.autoSyncEnabled
+        ? "No recent wearable feedback, so MileScape used app input."
+        : "Wearable sync is paused, so MileScape used app input."
+    };
+  }
+
+  const offsetPattern = [-0.1, 0, 0.1, 0.2];
+  const offset = offsetPattern[current.runHistory.length % offsetPattern.length] ?? 0;
+  const measuredDistanceKm = Math.max(0.1, Number((plannedDistanceKm + offset).toFixed(1)));
+
+  return {
+    distanceKm: measuredDistanceKm,
+    dataSource: "wearable" as const,
+    sourceName: connection.name,
+    fallbackReason: undefined
+  };
+};
+
+const createWearableSyncRecordFromRun = (
+  current: AppState,
+  input: { targetType: "personal"; routeId: string } | { targetType: "pacecrew_mission"; missionId: string },
+  distanceKm: number,
+  sourceName: string,
+): WearableSyncRecord => {
+  if (input.targetType === "personal") {
+    const routeName = routes.find((route) => route.id === input.routeId)?.name ?? "Outdoor Run";
+    return {
+      id: crypto.randomUUID(),
+      title: routeName,
+      sourceName,
+      distanceKm,
+      syncedAt: new Date().toISOString()
+    };
+  }
+
+  const missionTitle = current.paceCrewMissions.find((mission) => mission.id === input.missionId)?.title ?? "Mission Run";
+  return {
+    id: crypto.randomUUID(),
+    title: missionTitle,
+    sourceName,
+    distanceKm,
+    syncedAt: new Date().toISOString()
+  };
+};
+
 export const AppProvider = ({ children }: AppProviderProps) => {
   const [state, setState] = useState<AppState>(() => normalizeState(loadState()));
 
@@ -123,6 +188,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
         setState((current) => {
           const synced = syncExpiredMissionStates(current);
+          const measurement = resolveRunMeasurement(synced, input.distanceKm);
 
           if (input.targetType === "personal") {
             const route = routes.find((entry) => entry.id === input.routeId && entry.sourceType === "personal");
@@ -131,9 +197,28 @@ export const AppProvider = ({ children }: AppProviderProps) => {
               throw new Error(`Unknown or locked route: ${input.routeId}`);
             }
 
-            const result = applyPersonalRunToState(synced, route, input.distanceKm);
+            const result = applyPersonalRunToState(synced, route, measurement.distanceKm, {
+              plannedDistanceKm: input.distanceKm,
+              dataSource: measurement.dataSource,
+              sourceName: measurement.sourceName,
+              fallbackReason: measurement.fallbackReason
+            });
             summary = result.summary;
-            return result.nextState;
+            if (measurement.dataSource !== "wearable" || !synced.wearableConnection) {
+              return result.nextState;
+            }
+
+            return {
+              ...result.nextState,
+              wearableConnection: {
+                ...synced.wearableConnection,
+                lastSyncedAt: new Date().toISOString()
+              },
+              wearableSyncHistory: [
+                createWearableSyncRecordFromRun(synced, { targetType: "personal", routeId: route.id }, measurement.distanceKm, measurement.sourceName),
+                ...synced.wearableSyncHistory
+              ].slice(0, 8)
+            };
           }
 
           const mission = getMissionById(synced, input.missionId);
@@ -142,9 +227,33 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             throw new Error(`Unknown mission: ${input.missionId}`);
           }
 
-          const result = applyMissionRunToState(synced, mission, input.distanceKm);
+          const result = applyMissionRunToState(synced, mission, measurement.distanceKm, {
+            plannedDistanceKm: input.distanceKm,
+            dataSource: measurement.dataSource,
+            sourceName: measurement.sourceName,
+            fallbackReason: measurement.fallbackReason
+          });
           summary = result.summary;
-          return result.nextState;
+          if (measurement.dataSource !== "wearable" || !synced.wearableConnection) {
+            return result.nextState;
+          }
+
+          return {
+            ...result.nextState,
+            wearableConnection: {
+              ...synced.wearableConnection,
+              lastSyncedAt: new Date().toISOString()
+            },
+            wearableSyncHistory: [
+              createWearableSyncRecordFromRun(
+                synced,
+                { targetType: "pacecrew_mission", missionId: mission.id },
+                measurement.distanceKm,
+                measurement.sourceName,
+              ),
+              ...synced.wearableSyncHistory
+            ].slice(0, 8)
+          };
         });
 
         if (!summary) {

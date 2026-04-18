@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ChevronDown, Flag, Route as RouteIcon, Users } from "lucide-react";
+import { ChevronDown, Flag, Route as RouteIcon, Users, Watch } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { RouteArtwork } from "../components/route/RouteArtwork";
@@ -137,6 +137,7 @@ export const RunSetupPage = () => {
       : route
         ? `${effectiveDistance.toFixed(1)} km selected / ${route.totalDistanceKm.toFixed(1)} km · ${routeExploredPercent}% explored`
         : `${effectiveDistance.toFixed(1)} km selected`;
+  const hasWearablePriority = Boolean(state.wearableConnection && state.wearableConnection.autoSyncEnabled);
 
   const handleStartRun = () => {
     setIsSubmitting(true);
@@ -238,9 +239,20 @@ export const RunSetupPage = () => {
 
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">{locationLabel}</p>
-            <h2 className="font-destination-display mt-3 text-[2.35rem] leading-[0.94] tracking-[0.01em] text-ink">
-              {preview?.targetTitle}
-            </h2>
+            <div className="mt-3 flex items-start justify-between gap-3">
+              <h2 className="font-destination-display text-[2.35rem] leading-[0.94] tracking-[0.01em] text-ink">
+                {preview?.targetTitle}
+              </h2>
+              {hasWearablePriority ? (
+                <div
+                  className="mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sage-900/4 text-sage-500"
+                  aria-label={`${state.wearableConnection?.name ?? "Wearable"} data source`}
+                  title={state.wearableConnection?.name ?? "Wearable"}
+                >
+                  <Watch className="h-4 w-4" />
+                </div>
+              ) : null}
+            </div>
             <div className="mt-3 flex items-center gap-2 text-sm text-sage-600">
               <span>{metadataLabel}</span>
               {preview && preview.cycleCount > 1 ? (

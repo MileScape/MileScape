@@ -11,12 +11,13 @@ interface SideDrawerProps {
 
 export const SideDrawer = ({ open, onClose }: SideDrawerProps) => {
   const location = useLocation();
-  const { t } = useAppState();
+  const { state, t } = useAppState();
+  const wearablesEntryPath = state.wearableConnection ? "/wearables" : "/wearables/connect";
   const items = [
     { to: "/pacecrew", label: t("drawer.paceCrew"), icon: Users },
     { to: "/paceport", label: t("drawer.paceport"), icon: Sparkles },
     { to: "/wearable", label: t("drawer.wearable"), icon: Activity },
-    { to: "/wearables", label: t("drawer.wearables"), icon: Watch },
+    { to: wearablesEntryPath, label: t("drawer.wearables"), icon: Watch },
     { to: "/shop", label: t("drawer.shop"), icon: ShoppingBag },
     { to: "/dashboard", label: t("drawer.profile"), icon: UserCircle2 }
   ];
@@ -63,7 +64,9 @@ export const SideDrawer = ({ open, onClose }: SideDrawerProps) => {
 
             <div className="space-y-1">
               {items.map(({ to, label, icon: Icon }) => {
-                const active = location.pathname === to;
+                const active = to === wearablesEntryPath
+                  ? location.pathname === "/wearables" || location.pathname.startsWith("/wearables/")
+                  : location.pathname === to;
 
                 return (
                   <Link

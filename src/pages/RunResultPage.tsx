@@ -143,12 +143,16 @@ export const RunResultPage = () => {
               <Users className="h-4 w-4" />
               {t("run.pacecrewMission")}
             </span>
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-ink">{t("result.youRan", { distance: formatDistance(summary.runDistanceKm) })}</h1>
-              <p className="mt-3 text-sm text-sage-700">
-                {mission.title}: {formatDistance(summary.appliedDistanceKm)} / {formatDistance(mission.targetDistanceKm)}
-              </p>
-            </div>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-ink">{t("result.youRan", { distance: formatDistance(summary.runDistanceKm) })}</h1>
+            <p className="mt-3 text-sm text-sage-700">
+              {mission.title}: {formatDistance(summary.appliedDistanceKm)} / {formatDistance(mission.targetDistanceKm)}
+            </p>
+            <p className="mt-2 text-sm text-sage-700">
+              Source: {summary.dataSource === "wearable" ? summary.sourceName ?? "Wearable" : summary.sourceName ?? "App input"}
+            </p>
+            {summary.fallbackReason ? <p className="mt-1 text-xs text-sage-500">{summary.fallbackReason}</p> : null}
+          </div>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-[24px] bg-sage-50 p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-sage-500">{t("result.overflowMission")}</p>
@@ -226,6 +230,13 @@ export const RunResultPage = () => {
             <p className="mt-3 text-sm text-sage-700">
                 {route.name}: {formatDistance(summary.updatedDistanceKm)} / {formatDistance(route.totalDistanceKm)}
             </p>
+            <p className="mt-2 text-sm text-sage-700">
+              Source: {summary.dataSource === "wearable" ? summary.sourceName ?? "Wearable" : summary.sourceName ?? "App input"}
+              {summary.plannedDistanceKm && summary.plannedDistanceKm !== summary.runDistanceKm
+                ? ` · Planned ${formatDistance(summary.plannedDistanceKm)}`
+                : ""}
+            </p>
+            {summary.fallbackReason ? <p className="mt-1 text-xs text-sage-500">{summary.fallbackReason}</p> : null}
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-[24px] bg-sage-50 p-4">

@@ -9,14 +9,15 @@ export const AppShell = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { t } = useAppState();
+  const { state, t } = useAppState();
   const isPrimaryHome = location.pathname === "/run/setup";
   const isOnboarding = location.pathname === "/";
   const isPaceCrewHome = location.pathname === "/pacecrew";
-  const isWearable = location.pathname === "/wearable";
+  const isWearableHome = location.pathname === "/wearable";
   const isWearablesHome = location.pathname === "/wearables";
   const isPaceCrewSubpage = location.pathname.startsWith("/pacecrew/") && location.pathname !== "/pacecrew";
-  const isWearableHome = isWearable || isWearablesHome;
+  const isWearablesSubpage = location.pathname.startsWith("/wearables/") && location.pathname !== "/wearables";
+  const isWearablesFullBleed = isWearablesHome && !state.wearableConnection;
 
   const pageTitles: Record<string, string> = {
     "/": t("app.welcome"),
@@ -28,6 +29,7 @@ export const AppShell = () => {
     "/paceport": t("app.paceport"),
     "/wearable": t("app.wearable"),
     "/wearables": t("app.wearables"),
+    "/wearables/connect": "Connect Device",
     "/run/setup": t("app.chooseJourney"),
     "/run/result": t("app.runResult"),
     "/shop": t("app.shop"),
@@ -54,7 +56,7 @@ export const AppShell = () => {
       <header
         className={cn(
           "sticky top-0 z-30 flex items-center justify-between px-4 pt-5",
-          isPrimaryHome || isWearableHome ? "mb-[-4.75rem] pb-0" : "pb-3 backdrop-blur",
+          isPrimaryHome || isWearableHome || isWearablesFullBleed ? "mb-[-4.75rem] pb-0" : "pb-3 backdrop-blur",
         )}
       >
         {isPrimaryHome ? (
@@ -80,9 +82,27 @@ export const AppShell = () => {
         ) : (
           <button
             type="button"
-            onClick={() => navigate(isPaceCrewSubpage ? "/pacecrew" : "/run/setup")}
+            onClick={() =>
+              navigate(
+                isPaceCrewSubpage
+                  ? "/pacecrew"
+                  : isWearablesSubpage
+                    ? state.wearableConnection
+                      ? "/wearables"
+                      : "/run/setup"
+                    : "/run/setup",
+              )
+            }
             className="rounded-full bg-white/90 p-3 text-sage-700 shadow-card ring-1 ring-sage-100"
-            aria-label={isPaceCrewSubpage ? "Return to PaceCrew" : "Return to Choose Journey"}
+            aria-label={
+              isPaceCrewSubpage
+                ? "Return to PaceCrew"
+                : isWearablesSubpage
+                  ? state.wearableConnection
+                    ? "Return to Wearables"
+                    : "Return to Choose Journey"
+                  : "Return to Choose Journey"
+            }
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -92,13 +112,13 @@ export const AppShell = () => {
           <p className={cn("uppercase tracking-[0.28em]", isPrimaryHome ? "text-[10px] text-white/92" : "text-[11px] text-sage-500")}>
             MILESCAPE
           </p>
-          {!isPrimaryHome && !isPaceCrewHome && !isWearableHome ? <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1> : null}
+          {!isPrimaryHome && !isPaceCrewHome && !isWearableHome && !isWearablesFullBleed ? <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1> : null}
         </div>
 
         <div className="h-11 w-11" />
       </header>
 
-      <main className={cn("flex-1", isPrimaryHome || isWearableHome ? "px-0 pb-0 pt-0" : "px-4 pb-8 pt-1")}>
+      <main className={cn("flex-1", isPrimaryHome || isWearableHome || isWearablesFullBleed ? "px-0 pb-0 pt-0" : "px-4 pb-8 pt-1")}>
         <Outlet />
       </main>
     </div>
