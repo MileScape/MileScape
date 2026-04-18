@@ -14,6 +14,7 @@ export type PaceCrewRole = "organizer" | "member";
 export type PaceCrewMissionStatus = "open" | "closed";
 export type UserMissionStatus = "accepted" | "completed" | "failed";
 export type RunTargetType = "personal" | "pacecrew_mission";
+export type RunDataSource = "wearable" | "manual";
 export type AppLanguage = "en" | "zh";
 export type WearableAvailability = "available" | "coming_soon";
 
@@ -55,6 +56,9 @@ export interface RunHistoryItem {
   crewId?: string;
   runTargetType: RunTargetType;
   distanceKm: number;
+  plannedDistanceKm?: number;
+  dataSource?: RunDataSource;
+  sourceName?: string;
   completedAt: string;
 }
 
@@ -64,6 +68,10 @@ export interface RunResultSummary {
   crewId?: string;
   runTargetType: RunTargetType;
   runDistanceKm: number;
+  plannedDistanceKm?: number;
+  dataSource?: RunDataSource;
+  sourceName?: string;
+  fallbackReason?: string;
   appliedDistanceKm: number;
   overflowDistanceKm: number;
   previousDistanceKm: number;
