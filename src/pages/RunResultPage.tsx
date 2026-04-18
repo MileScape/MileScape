@@ -1,6 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Flag, Sparkles, Users } from "lucide-react";
+import type { ReactNode } from "react";
+import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
+import { RunPosterCard } from "../components/run/RunPosterCard";
 import { RouteArtwork } from "../components/route/RouteArtwork";
 import { buttonStyles } from "../components/ui/Button";
 import { ProgressBar } from "../components/ui/ProgressBar";
@@ -8,6 +11,94 @@ import { SectionHeader } from "../components/ui/SectionHeader";
 import { useAppState } from "../hooks/useAppState";
 import { achievementLabel } from "../pages/PaceportDetailPage";
 import { formatDistance, getProgressPercent } from "../utils/progress";
+
+const defaultRunPosterImage = "/posters/run-cover.jpg";
+const defaultMissionPosterImage = "/posters/mission-cover.jpg";
+const routePosterImages: Record<string, string> = {
+  "west-lake-loop": "/posters/westlake.jpg",
+  "central-park-loop": "/posters/centralpark.jpg",
+  "tokyo-city-route": "/posters/Tokyo.jpg",
+};
+
+const PosterTransitionShell = ({
+  poster,
+  children,
+}: {
+  poster: ReactNode;
+  children: ReactNode;
+}) => {
+  const [showIntro, setShowIntro] = useState(true);
+
+  return (
+    <div className="relative">
+      <AnimatePresence>
+        {showIntro ? (
+          <motion.div
+            key="poster-intro"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
+            className="fixed inset-0 z-40 flex items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.94)_0%,rgba(233,240,235,0.96)_38%,rgba(218,228,220,0.98)_100%)] px-6"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.65),transparent_24%),radial-gradient(circle_at_50%_86%,rgba(120,146,132,0.10),transparent_28%)]" />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.86, y: 36, rotate: -3 }}
+              animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: -28 }}
+              transition={{
+                duration: 0.8,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className="relative w-full max-w-[360px]"
+            >
+              <motion.div
+                animate={{ y: [0, -6, 0] }}
+                transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowIntro(false)}
+                  className="relative block w-full cursor-pointer rounded-[2rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.10),rgba(255,255,255,0.03))] p-3 text-left shadow-[0_24px_72px_rgba(63,84,72,0.10)] backdrop-blur-[24px]"
+                  aria-label="Close poster preview"
+                >
+                  <span className="pointer-events-none absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.008)_30%,rgba(255,255,255,0)_100%)]" />
+                  {poster}
+                </button>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.45, ease: "easeOut" }}
+                className="mt-5 flex flex-col items-center gap-3 text-center"
+              >
+                <p className="text-sm text-[#4a5d55]">点击海报继续查看本次跑步结果</p>
+                <button
+                  type="button"
+                  onClick={() => setShowIntro(false)}
+                  className="rounded-full bg-[linear-gradient(180deg,rgba(255,255,255,0.48),rgba(255,255,255,0.24))] px-5 py-3 text-sm font-semibold text-[#243228] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_14px_30px_rgba(36,50,40,0.06)] backdrop-blur-lg transition hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.56),rgba(255,255,255,0.30))]"
+                >
+                  查看结果
+                </button>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.55, delay: showIntro ? 0.18 : 0, ease: "easeOut" }}
+        className="space-y-6"
+      >
+        {poster}
+        {children}
+      </motion.div>
+    </div>
+  );
+};
 
 export const RunResultPage = () => {
   const { routes, state, t } = useAppState();
@@ -31,9 +122,16 @@ export const RunResultPage = () => {
     const totalMissionStamps =
       summary.earnedStamps + summary.missionRewardStamps + summary.depositReturnedStamps;
     const missionProgressPercent = Math.min(100, Math.round((summary.updatedDistanceKm / mission.targetDistanceKm) * 100));
+    const missionPoster = (
+      <RunPosterCard
+        imageUrl={unlockedDestination?.coverImage ?? defaultMissionPosterImage}
+        title={mission.title}
+        subtitle={crew.name}
+      />
+    );
 
     return (
-      <div className="space-y-6">
+      <PosterTransitionShell poster={missionPoster}>
         <section className="rounded-[36px] bg-white p-6 shadow-card ring-1 ring-sage-100">
           <div className="space-y-5">
             <div className="flex justify-center">
@@ -92,7 +190,7 @@ export const RunResultPage = () => {
             {t("result.viewPaceport")}
           </Link>
         </div>
-      </div>
+      </PosterTransitionShell>
     );
   }
 
@@ -103,9 +201,17 @@ export const RunResultPage = () => {
   }
 
   const progressPercent = getProgressPercent(route, summary.updatedDistanceKm);
+  const routePosterImage = routePosterImages[route.id] ?? defaultRunPosterImage;
+  const personalPoster = (
+    <RunPosterCard
+      imageUrl={routePosterImage}
+      title={route.name}
+      subtitle={`${route.city} · ${route.country}`}
+    />
+  );
 
   return (
-    <div className="space-y-6">
+    <PosterTransitionShell poster={personalPoster}>
       <section className="rounded-[36px] bg-white p-6 shadow-card ring-1 ring-sage-100">
         <div className="space-y-5">
           <div className="flex justify-center">
@@ -201,6 +307,6 @@ export const RunResultPage = () => {
       <Link to="/shop" className={buttonStyles({ fullWidth: true, variant: "secondary" })}>
         {t("result.spendInShop")}
       </Link>
-    </div>
+    </PosterTransitionShell>
   );
 };

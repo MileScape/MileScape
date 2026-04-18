@@ -13,8 +13,10 @@ export const AppShell = () => {
   const isPrimaryHome = location.pathname === "/run/setup";
   const isOnboarding = location.pathname === "/";
   const isPaceCrewHome = location.pathname === "/pacecrew";
+  const isWearable = location.pathname === "/wearable";
   const isWearablesHome = location.pathname === "/wearables";
   const isPaceCrewSubpage = location.pathname.startsWith("/pacecrew/") && location.pathname !== "/pacecrew";
+  const isWearableHome = isWearable || isWearablesHome;
 
   const pageTitles: Record<string, string> = {
     "/": t("app.welcome"),
@@ -24,6 +26,7 @@ export const AppShell = () => {
     "/pacecrew/discover": t("app.paceCrewDiscover"),
     "/pacecrew/missions": t("app.paceCrewMissions"),
     "/paceport": t("app.paceport"),
+    "/wearable": t("app.wearable"),
     "/wearables": t("app.wearables"),
     "/run/setup": t("app.chooseJourney"),
     "/run/result": t("app.runResult"),
@@ -51,7 +54,7 @@ export const AppShell = () => {
       <header
         className={cn(
           "sticky top-0 z-30 flex items-center justify-between px-4 pt-5",
-          isPrimaryHome ? "mb-[-4.75rem] pb-0" : "pb-3 backdrop-blur",
+          isPrimaryHome || isWearableHome ? "mb-[-4.75rem] pb-0" : "pb-3 backdrop-blur",
         )}
       >
         {isPrimaryHome ? (
@@ -59,6 +62,15 @@ export const AppShell = () => {
             type="button"
             onClick={() => setDrawerOpen(true)}
             className="rounded-full bg-white/68 p-3 text-sage-700 shadow-[0_10px_28px_rgba(24,43,29,0.12)] ring-1 ring-white/75 backdrop-blur-xl"
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        ) : isWearableHome ? (
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="rounded-full bg-white/74 p-3 text-sage-700 shadow-[0_10px_28px_rgba(24,43,29,0.12)] ring-1 ring-white/75 backdrop-blur-xl"
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
@@ -80,13 +92,13 @@ export const AppShell = () => {
           <p className={cn("uppercase tracking-[0.28em]", isPrimaryHome ? "text-[10px] text-white/92" : "text-[11px] text-sage-500")}>
             MILESCAPE
           </p>
-          {!isPrimaryHome && !isPaceCrewHome && !isWearablesHome ? <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1> : null}
+          {!isPrimaryHome && !isPaceCrewHome && !isWearableHome ? <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1> : null}
         </div>
 
         <div className="h-11 w-11" />
       </header>
 
-      <main className={cn("flex-1", isPrimaryHome ? "px-0 pb-0 pt-0" : "px-4 pb-8 pt-1")}>
+      <main className={cn("flex-1", isPrimaryHome || isWearableHome ? "px-0 pb-0 pt-0" : "px-4 pb-8 pt-1")}>
         <Outlet />
       </main>
     </div>
