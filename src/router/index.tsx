@@ -13,6 +13,7 @@ import { PaceportOverviewPage } from "../pages/PaceportOverviewPage";
 import { RunResultPage } from "../pages/RunResultPage";
 import { RunSetupPage } from "../pages/RunSetupPage";
 import { ShopPage } from "../pages/ShopPage";
+import { WearablePage } from "../pages/WearablePage";
 
 export const router = createBrowserRouter([
   {
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
       { path: "pacecrew/:crewId", element: <PaceCrewDetailPage /> },
       { path: "paceport", element: <PaceportOverviewPage /> },
       { path: "paceport/:routeId", element: <PaceportDetailPage /> },
+      { path: "wearable", element: <WearablePage /> },
       { path: "run/setup", element: <RunSetupPage /> },
       { path: "run/result", element: <RunResultPage /> },
       { path: "shop", element: <ShopPage /> },
