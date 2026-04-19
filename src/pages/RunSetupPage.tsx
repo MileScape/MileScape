@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Flag, Route as RouteIcon, Users, Watch } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
+import runnerIcon from "../assets/runner-slider.svg";
 import { RouteArtwork } from "../components/route/RouteArtwork";
 import { Button } from "../components/ui/Button";
 import { useAppState } from "../hooks/useAppState";
@@ -34,6 +35,7 @@ export const RunSetupPage = () => {
   const [missionPickerOpen, setMissionPickerOpen] = useState(false);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const carouselScrollTimeoutRef = useRef<number | null>(null);
+  const runSimulationDurationSeconds = 10;
 
   useEffect(() => {
     setSelectedDistance((current) => Math.min(current, state.sliderMaxDistanceKm));
@@ -154,7 +156,7 @@ export const RunSetupPage = () => {
         completeRun({ targetType: "personal", routeId: route.id, distanceKm: effectiveDistance });
       }
       navigate("/run/result");
-    }, 900);
+    }, runSimulationDurationSeconds * 1000);
   };
 
   const showModeSwitcher = acceptedMissions.length > 0;
@@ -213,13 +215,17 @@ export const RunSetupPage = () => {
     <>
       <div className="relative min-h-screen overflow-hidden bg-canvas pb-6">
         {activeTargetType === "personal" && route ? (
-          <div className="relative min-h-[60vh]">
-            <div className="block h-[62vh] w-full text-left">
-              <RouteArtwork routeId={route.id} variant="hero" className="h-[62vh] w-full" />
+          <motion.div
+            className="relative overflow-hidden"
+            animate={{ height: isSubmitting ? "calc(100vh - 104px)" : "62vh" }}
+            transition={{ duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="block h-full w-full text-left">
+              <RouteArtwork routeId={route.id} variant="hero" className="h-full w-full" />
             </div>
             <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#0d1711]/24 via-[#0d1711]/10 to-transparent" />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#f5f3ee] via-[#f5f3ee]/82 to-transparent" />
-          </div>
+          </motion.div>
         ) : (
           <div className="relative flex h-[62vh] items-end overflow-hidden bg-[linear-gradient(180deg,#d9e8dd_0%,#eef4ee_38%,#f5f3ee_100%)] px-6 pb-10">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#ffffff7a,transparent_42%)]" />
@@ -246,8 +252,17 @@ export const RunSetupPage = () => {
           </div>
         )}
 
-        <section className="relative z-10 -mt-8 rounded-t-[34px] border-t border-white/75 bg-[linear-gradient(180deg,rgba(250,249,245,0.94)_0%,rgba(245,243,238,0.98)_100%)] px-6 pb-8 pt-5 shadow-[0_-14px_32px_rgba(34,49,38,0.08)] backdrop-blur-2xl">
-          {showModeSwitcher ? (
+        <motion.section
+          initial={false}
+          animate={{
+            height: isSubmitting ? 136 : "auto",
+          }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className={`relative z-20 -mt-8 rounded-t-[34px] border-t border-white/75 bg-[linear-gradient(180deg,rgba(250,249,245,0.94)_0%,rgba(245,243,238,0.98)_100%)] px-6 shadow-[0_-14px_32px_rgba(34,49,38,0.08)] backdrop-blur-2xl ${
+            isSubmitting ? "flex items-center overflow-hidden py-4" : "pb-8 pt-5"
+          }`}
+        >
+          {showModeSwitcher && !isSubmitting ? (
             <div className="mb-6 inline-flex rounded-full bg-sage-900/6 p-1 ring-1 ring-sage-900/8">
               <button
                 type="button"
@@ -276,7 +291,51 @@ export const RunSetupPage = () => {
             </div>
           ) : null}
 
-          {activeTargetType === "personal" && route ? (
+          {isSubmitting && activeTargetType === "personal" && route ? (
+            <motion.div
+              key="running-status"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full space-y-2.5"
+            >
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">
+                  {route.city.toUpperCase()} · {route.country.toUpperCase()}
+                </p>
+                <h2 className="mt-1.5 truncate font-destination-display text-[1.62rem] leading-[0.94] tracking-[0.01em] text-ink">
+                  {route.name}
+                </h2>
+              </div>
+
+              <div>
+                <div className="relative h-8 overflow-visible">
+                  <div className="absolute inset-x-[15px] top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-sage-200/90" />
+                  <div className="absolute inset-x-[15px] top-1/2 h-1.5 -translate-y-1/2 overflow-hidden rounded-full">
+                    <motion.div
+                      className="h-full origin-left rounded-full bg-sage-700/25"
+                      initial={{ scaleX: 0 }}
+                      animate={{ scaleX: 1 }}
+                      transition={{ duration: runSimulationDurationSeconds, ease: "easeInOut" }}
+                    />
+                  </div>
+                  <motion.img
+                    src={runnerIcon}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute top-1/2 h-[30px] w-[30px] -translate-y-[80%]"
+                    initial={{ left: 0 }}
+                    animate={{ left: "calc(100% - 30px)" }}
+                    transition={{ duration: runSimulationDurationSeconds, ease: "easeInOut" }}
+                  />
+                </div>
+                <div className="mt-2 flex items-center justify-between text-xs text-sage-500">
+                  <span>0 km</span>
+                  <span>{effectiveDistance.toFixed(1)} km</span>
+                </div>
+              </div>
+            </motion.div>
+          ) : activeTargetType === "personal" && route ? (
             <div
               ref={carouselRef}
               onScroll={handleRouteCarouselScroll}
@@ -363,7 +422,7 @@ export const RunSetupPage = () => {
             </div>
           )}
 
-          <div className="mt-8">
+          {!isSubmitting ? <div className="mt-8">
             <div className="flex items-end justify-between gap-4">
               <p className="text-[11px] font-medium uppercase tracking-[0.26em] text-sage-500">
                 Run Distance
@@ -388,9 +447,9 @@ export const RunSetupPage = () => {
                 <span>{state.sliderMaxDistanceKm} km</span>
               </div>
             </div>
-          </div>
+          </div> : null}
 
-          <div className="mt-8">
+          {!isSubmitting ? <div className="mt-8">
             <Button
               fullWidth
               className="h-14 bg-sage-700/95 text-base text-white shadow-[0_18px_28px_rgba(61,92,74,0.22)] hover:bg-sage-800"
@@ -403,8 +462,8 @@ export const RunSetupPage = () => {
                   ? t("run.startMissionRun")
                   : t("run.startRun")}
             </Button>
-          </div>
-        </section>
+          </div> : null}
+        </motion.section>
       </div>
 
       {missionPickerOpen ? (

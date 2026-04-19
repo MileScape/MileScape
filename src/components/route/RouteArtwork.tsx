@@ -115,6 +115,7 @@ export const RouteArtwork = ({
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const mapToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -129,8 +130,9 @@ export const RouteArtwork = ({
     mapboxgl.accessToken = mapToken;
     mapboxgl.prewarm();
 
+    const container = containerRef.current;
     const map = new mapboxgl.Map({
-      container: containerRef.current,
+      container,
       style: "mapbox://styles/mapbox/standard",
       config: {
         basemap: {
@@ -154,6 +156,14 @@ export const RouteArtwork = ({
 
     mapRef.current = map;
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-left");
+
+    resizeObserverRef.current = new ResizeObserver(() => {
+      window.requestAnimationFrame(() => {
+        map.resize();
+        map.triggerRepaint();
+      });
+    });
+    resizeObserverRef.current.observe(container);
 
     map.once("load", () => {
       if (!map.getSource("mapbox-dem")) {
@@ -245,6 +255,8 @@ export const RouteArtwork = ({
         window.clearTimeout(transitionTimeoutRef.current);
         transitionTimeoutRef.current = null;
       }
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       markerRef.current?.remove();
       markerRef.current = null;
       map.remove();
@@ -313,11 +325,11 @@ export const RouteArtwork = ({
       />
       <div
         className={cn(
-          "absolute inset-0 overflow-hidden bg-[#0f172a]",
+          "absolute inset-0 overflow-hidden bg-[#edf4ef]",
           variant === "hero" ? "rounded-none shadow-none" : "rounded-[32px] shadow-card",
         )}
       >
-        <div ref={containerRef} className="absolute inset-0" />
+        <div ref={containerRef} className="absolute inset-0 bg-[#edf4ef]" />
         <div
           className={cn(
             "absolute inset-0",
@@ -334,12 +346,12 @@ export const RouteArtwork = ({
         />
 
         {!mapToken ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/25 text-white/85 backdrop-blur-[2px]">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-sage-900/20 text-white/85 backdrop-blur-[2px]">
             <AlertCircle className="h-5 w-5" />
             <span className={cn("font-medium", sizeStyle.label)}>Add Mapbox token</span>
           </div>
         ) : !mapReady ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/20 text-white/85 backdrop-blur-[1px]">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-sage-900/15 text-white/85 backdrop-blur-[1px]">
             <MapIcon className="h-5 w-5" />
             <span className={cn("font-medium", sizeStyle.label)}>Loading map</span>
           </div>
