@@ -1,16 +1,37 @@
-import { motion } from "framer-motion";
+import { motion, useSpring, useTransform } from "framer-motion";
 import { Flag, Route as RouteIcon, Users, Watch } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { type PointerEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import runnerIcon from "../assets/runner-slider.svg";
 import { RouteArtwork } from "../components/route/RouteArtwork";
 import { Button } from "../components/ui/Button";
 import { useAppState } from "../hooks/useAppState";
 import { getAcceptedMissionStatesForUser, getMissionProgress } from "../utils/paceCrew";
+import { markOnboardingSeen } from "../utils/storage";
 
 export const RunSetupPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { playableRoutes, state, completeRun, selectRoute, t } = useAppState();
+  const routeState = location.state as { initialDistanceRatio?: number; showWelcomeIntro?: boolean } | null;
+  const initialDistanceRatio =
+    typeof routeState?.initialDistanceRatio === "number"
+      ? Math.min(Math.max(routeState.initialDistanceRatio, 0), 1)
+      : null;
+  const [showWelcomeIntro, setShowWelcomeIntro] = useState(Boolean(routeState?.showWelcomeIntro));
+  const [welcomeSliderValue, setWelcomeSliderValue] = useState(0);
+  const [isWelcomeRevealing, setIsWelcomeRevealing] = useState(false);
+  const welcomeTrackRef = useRef<HTMLDivElement | null>(null);
+  const welcomeDragActiveRef = useRef(false);
+  const welcomeRevealingRef = useRef(false);
+  const welcomeDrawProgress = useSpring(0, {
+    stiffness: 58,
+    damping: 24,
+    mass: 0.8,
+  });
+  const welcomeLandscapeProgress = useTransform(welcomeDrawProgress, [0.04, 0.44], [0, 1]);
+  const welcomeRouteProgress = useTransform(welcomeDrawProgress, [0.16, 0.76], [0, 1]);
+  const welcomeCityProgress = useTransform(welcomeDrawProgress, [0.44, 0.96], [0, 1]);
   const acceptedMissionStates = getAcceptedMissionStatesForUser(state);
   const acceptedMissions = acceptedMissionStates
     .map((missionState) => {
@@ -30,12 +51,22 @@ export const RunSetupPage = () => {
   const [targetType, setTargetType] = useState<"personal" | "pacecrew_mission">(
     acceptedMissions.length > 0 ? "personal" : "personal",
   );
-  const [selectedDistance, setSelectedDistance] = useState(Math.min(5, state.sliderMaxDistanceKm));
+  const [selectedDistance, setSelectedDistance] = useState(() =>
+    initialDistanceRatio === null
+      ? Math.min(5, state.sliderMaxDistanceKm)
+      : Math.min(state.sliderMaxDistanceKm, Math.max(0, state.sliderMaxDistanceKm * initialDistanceRatio)),
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [missionPickerOpen, setMissionPickerOpen] = useState(false);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const carouselScrollTimeoutRef = useRef<number | null>(null);
   const runSimulationDurationSeconds = 10;
+  const welcomeRevealThreshold = 100;
+  const welcomeDistanceRatio = 0.86;
+
+  useEffect(() => {
+    welcomeDrawProgress.set(welcomeSliderValue / 100);
+  }, [welcomeDrawProgress, welcomeSliderValue]);
 
   useEffect(() => {
     setSelectedDistance((current) => Math.min(current, state.sliderMaxDistanceKm));
@@ -157,6 +188,83 @@ export const RunSetupPage = () => {
       }
       navigate("/run/result");
     }, runSimulationDurationSeconds * 1000);
+  };
+
+  const completeWelcomeIntro = () => {
+    if (isWelcomeRevealing) {
+      return;
+    }
+
+    welcomeRevealingRef.current = true;
+    setIsWelcomeRevealing(true);
+    setWelcomeSliderValue(welcomeRevealThreshold);
+    setSelectedDistance(state.sliderMaxDistanceKm * welcomeDistanceRatio);
+    markOnboardingSeen();
+
+    window.setTimeout(() => {
+      setShowWelcomeIntro(false);
+    }, 860);
+  };
+
+  const getWelcomeSliderValueFromPointer = (clientX: number) => {
+    const track = welcomeTrackRef.current;
+    if (!track) {
+      return welcomeSliderValue;
+    }
+
+    const rect = track.getBoundingClientRect();
+    return Math.min(Math.max(((clientX - rect.left) / rect.width) * 100, 0), 100);
+  };
+
+  const syncJourneyDistanceFromPointer = (clientX: number) => {
+    const appWidth = Math.min(window.innerWidth, 430);
+    const appLeft = (window.innerWidth - appWidth) / 2;
+    const trackLeft = appLeft + 24;
+    const trackWidth = appWidth - 48;
+    const ratio = Math.min(Math.max((clientX - trackLeft) / trackWidth, 0), 1);
+    setSelectedDistance(state.sliderMaxDistanceKm * ratio);
+  };
+
+  const handleWelcomePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (isWelcomeRevealing) {
+      return;
+    }
+
+    welcomeDragActiveRef.current = true;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const value = getWelcomeSliderValueFromPointer(event.clientX);
+    setWelcomeSliderValue(value);
+    if (value >= welcomeRevealThreshold) {
+      completeWelcomeIntro();
+    }
+  };
+
+  const handleWelcomePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!welcomeDragActiveRef.current) {
+      return;
+    }
+
+    if (welcomeRevealingRef.current) {
+      syncJourneyDistanceFromPointer(event.clientX);
+      return;
+    }
+
+    const value = getWelcomeSliderValueFromPointer(event.clientX);
+    setWelcomeSliderValue(value);
+    if (value >= welcomeRevealThreshold) {
+      completeWelcomeIntro();
+    }
+  };
+
+  const resetWelcomeSlider = () => {
+    welcomeDragActiveRef.current = false;
+    if (welcomeRevealingRef.current) {
+      setShowWelcomeIntro(false);
+      return;
+    }
+    if (!welcomeRevealingRef.current && welcomeSliderValue < welcomeRevealThreshold) {
+      setWelcomeSliderValue(0);
+    }
   };
 
   const showModeSwitcher = acceptedMissions.length > 0;
@@ -465,6 +573,135 @@ export const RunSetupPage = () => {
           </div> : null}
         </motion.section>
       </div>
+
+      {showWelcomeIntro ? (
+        <motion.div
+          className="fixed inset-0 z-50 flex justify-center bg-black/0"
+          initial={{ opacity: 1 }}
+          animate={isWelcomeRevealing ? { opacity: 0 } : { opacity: 1 }}
+          transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
+          onAnimationComplete={() => {
+            if (isWelcomeRevealing && !welcomeDragActiveRef.current) {
+              setShowWelcomeIntro(false);
+            }
+          }}
+        >
+          <div className="relative h-screen w-full max-w-md overflow-hidden bg-[#f7f5ef] px-7 text-ink">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(216,229,218,0.62),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.86)_0%,rgba(247,245,239,0)_58%)]" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-64 bg-[linear-gradient(180deg,rgba(247,245,239,0)_0%,rgba(237,243,237,0.78)_100%)]" />
+
+            <motion.main
+              className="relative z-10 mt-[-10vh] flex h-full flex-col items-center justify-center text-center"
+              animate={isWelcomeRevealing ? { y: -28, opacity: 0 } : { y: 0, opacity: 1 }}
+              transition={{ duration: 0.62, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="relative mt-[-1rem] flex h-12 w-full items-center justify-center">
+                <motion.h1
+                  className="absolute text-xs font-light uppercase tracking-[0.5em] text-sage-800/70"
+                  animate={{
+                    opacity: [0.9, 0.9, 0, 0, 0.9],
+                    filter: ["blur(0px)", "blur(0px)", "blur(4px)", "blur(4px)", "blur(0px)"],
+                    scale: [1, 1, 0.98, 0.98, 1],
+                  }}
+                  transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  MILESCAPE
+                </motion.h1>
+                <motion.p
+                  className="absolute text-[0.85rem] font-light tracking-wide text-sage-600/70"
+                  animate={{
+                    opacity: [0, 0, 0.9, 0.9, 0],
+                    filter: ["blur(4px)", "blur(4px)", "blur(0px)", "blur(0px)", "blur(4px)"],
+                    scale: [0.98, 0.98, 1, 1, 0.98],
+                  }}
+                  transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  Sync your movement with your map.
+                </motion.p>
+              </div>
+
+              <div className="pointer-events-none relative mt-12 w-full max-w-[280px] sm:max-w-sm">
+                <svg
+                  viewBox="0 0 400 200"
+                  className="h-auto w-full drop-shadow-sm"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <motion.path
+                    d="M 10 150 C 30 150 50 90 80 90 C 110 90 120 150 150 150 C 182 150 199 124 224 124 C 250 124 264 150 290 150"
+                    stroke="rgba(54,83,66,0.46)"
+                    strokeWidth="2.2"
+                    style={{ pathLength: welcomeLandscapeProgress }}
+                  />
+                  <motion.path
+                    d="M 10 150 C 30 150 50 90 80 90 C 110 90 120 150 150 150 L 180 150 C 200 150 210 120 230 120 C 250 120 260 150 280 150 L 310 150 L 310 100 L 330 100 L 330 150 L 340 150 L 340 70 L 360 70 L 360 150 L 390 150"
+                    stroke="rgba(54,83,66,0.2)"
+                    strokeWidth="1.4"
+                    style={{ pathLength: welcomeDrawProgress }}
+                  />
+                  <motion.path
+                    d="M 42 162 C 86 137 125 135 160 151 C 196 168 229 164 266 142 C 300 121 332 122 374 144"
+                    stroke="rgba(54,83,66,0.82)"
+                    strokeWidth="3.2"
+                    style={{ pathLength: welcomeRouteProgress }}
+                  />
+                  <motion.path
+                    d="M 306 150 L 306 104 L 326 104 L 326 150 M 338 150 L 338 76 L 360 76 L 360 150 M 372 150 L 372 118 L 390 118 L 390 150"
+                    stroke="rgba(54,83,66,0.66)"
+                    strokeWidth="2.3"
+                    style={{ pathLength: welcomeCityProgress }}
+                  />
+                </svg>
+              </div>
+            </motion.main>
+
+            <div className="absolute left-1/2 top-[78.2%] z-20 w-[78%] max-w-[18.5rem] -translate-x-1/2">
+              <div
+                ref={welcomeTrackRef}
+                role="slider"
+                aria-label="Start your journey"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(welcomeSliderValue)}
+                tabIndex={0}
+                onPointerDown={handleWelcomePointerDown}
+                onPointerMove={handleWelcomePointerMove}
+                onPointerUp={resetWelcomeSlider}
+                onPointerCancel={resetWelcomeSlider}
+                className="relative h-8 touch-none cursor-pointer overflow-visible"
+              >
+                <div className="absolute inset-x-[15px] top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-[rgba(188,207,194,0.78)]" />
+                <div className="absolute inset-x-[15px] top-1/2 h-1.5 -translate-y-1/2 overflow-hidden rounded-full">
+                  <div
+                    className="h-full origin-left rounded-full bg-[rgba(54,83,66,0.9)]"
+                    style={{ transform: `scaleX(${welcomeSliderValue / 100})` }}
+                  />
+                </div>
+                <img
+                  src={runnerIcon}
+                  alt=""
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 h-[30px] w-[30px] -translate-x-1/2 -translate-y-[80%]"
+                  style={{ left: `calc(${welcomeSliderValue}% + ${15 - welcomeSliderValue * 0.3}px)` }}
+                />
+              </div>
+              <p
+                className="mt-7 text-center text-[11px] font-semibold uppercase tracking-[0.34em] text-sage-500"
+                style={{ opacity: Math.max(1 - welcomeSliderValue / 50, 0) }}
+              >
+                Start your journey
+              </p>
+              <p
+                className="mt-3 text-center text-xs leading-5 text-sage-500/80"
+                style={{ opacity: Math.max(1 - welcomeSliderValue / 58, 0) }}
+              >
+                Slide the runner to reveal your route.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      ) : null}
 
       {missionPickerOpen ? (
         <div className="fixed inset-0 z-40">
