@@ -15,10 +15,10 @@ export const routeMapViews: Record<string, RouteMapView> = {
     marker: [120.1503, 30.2486]
   },
   "central-park-loop": {
-    center: [-73.9683, 40.7813],
-    zoom: 13.5,
+    center: [-73.9665, 40.7813],
+    zoom: 13.7,
     pitch: 78,
-    bearing: 24,
+    bearing: 29,
     marker: [-73.9681, 40.7818]
   },
   "tokyo-city-route": {

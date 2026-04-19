@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { ChevronDown, Flag, Route as RouteIcon, Users, Watch } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Flag, Route as RouteIcon, Users, Watch } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { RouteArtwork } from "../components/route/RouteArtwork";
 import { Button } from "../components/ui/Button";
@@ -31,8 +31,9 @@ export const RunSetupPage = () => {
   );
   const [selectedDistance, setSelectedDistance] = useState(Math.min(5, state.sliderMaxDistanceKm));
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [missionPickerOpen, setMissionPickerOpen] = useState(false);
+  const carouselRef = useRef<HTMLDivElement | null>(null);
+  const carouselScrollTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     setSelectedDistance((current) => Math.min(current, state.sliderMaxDistanceKm));
@@ -158,28 +159,66 @@ export const RunSetupPage = () => {
 
   const showModeSwitcher = acceptedMissions.length > 0;
 
+  useEffect(() => {
+    return () => {
+      if (carouselScrollTimeoutRef.current) {
+        window.clearTimeout(carouselScrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!carouselRef.current || activeTargetType !== "personal" || !route) {
+      return;
+    }
+
+    const activeCard = carouselRef.current.querySelector<HTMLButtonElement>(`[data-route-id="${route.id}"]`);
+    activeCard?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [activeTargetType, route?.id]);
+
+  const handleRouteCarouselScroll = () => {
+    if (!carouselRef.current) {
+      return;
+    }
+
+    if (carouselScrollTimeoutRef.current) {
+      window.clearTimeout(carouselScrollTimeoutRef.current);
+    }
+
+    carouselScrollTimeoutRef.current = window.setTimeout(() => {
+      const carousel = carouselRef.current;
+      if (!carousel) {
+        return;
+      }
+
+      const cards = Array.from(carousel.querySelectorAll<HTMLButtonElement>("[data-route-id]"));
+      const carouselCenter = carousel.scrollLeft + carousel.clientWidth / 2;
+      const nearestCard = cards.reduce<HTMLButtonElement | null>((nearest, card) => {
+        const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+        if (!nearest) {
+          return card;
+        }
+        const nearestCenter = nearest.offsetLeft + nearest.offsetWidth / 2;
+        return Math.abs(cardCenter - carouselCenter) < Math.abs(nearestCenter - carouselCenter) ? card : nearest;
+      }, null);
+
+      const nextRouteId = nearestCard?.dataset.routeId;
+      if (nextRouteId && nextRouteId !== route?.id) {
+        selectRoute(nextRouteId);
+      }
+    }, 90);
+  };
+
   return (
     <>
       <div className="relative min-h-screen overflow-hidden bg-canvas pb-6">
         {activeTargetType === "personal" && route ? (
           <div className="relative min-h-[60vh]">
-            <button
-              type="button"
-              onClick={() => setPickerOpen(true)}
-              className="block h-[62vh] w-full text-left"
-            >
+            <div className="block h-[62vh] w-full text-left">
               <RouteArtwork routeId={route.id} variant="hero" className="h-[62vh] w-full" />
-            </button>
+            </div>
             <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#0d1711]/24 via-[#0d1711]/10 to-transparent" />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#f5f3ee] via-[#f5f3ee]/82 to-transparent" />
-            <button
-              type="button"
-              onClick={() => setPickerOpen(true)}
-              className="absolute bottom-5 left-1/2 inline-flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full bg-white/78 text-sage-700 shadow-[0_10px_32px_rgba(24,43,29,0.12)] ring-1 ring-white/80 backdrop-blur-xl"
-              aria-label="Open route picker"
-            >
-              <ChevronDown className="h-4 w-4" />
-            </button>
           </div>
         ) : (
           <div className="relative flex h-[62vh] items-end overflow-hidden bg-[linear-gradient(180deg,#d9e8dd_0%,#eef4ee_38%,#f5f3ee_100%)] px-6 pb-10">
@@ -237,31 +276,92 @@ export const RunSetupPage = () => {
             </div>
           ) : null}
 
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">{locationLabel}</p>
-            <div className="mt-3 flex items-start justify-between gap-3">
-              <h2 className="font-destination-display text-[2.35rem] leading-[0.94] tracking-[0.01em] text-ink">
-                {preview?.targetTitle}
-              </h2>
-              {hasWearablePriority ? (
-                <div
-                  className="mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sage-900/4 text-sage-500"
-                  aria-label={`${state.wearableConnection?.name ?? "Wearable"} data source`}
-                  title={state.wearableConnection?.name ?? "Wearable"}
-                >
-                  <Watch className="h-4 w-4" />
-                </div>
-              ) : null}
+          {activeTargetType === "personal" && route ? (
+            <div
+              ref={carouselRef}
+              onScroll={handleRouteCarouselScroll}
+              className="-mx-6 flex snap-x snap-mandatory overflow-x-auto pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {playableRoutes.map((item) => {
+                const active = item.id === route.id;
+                const itemLoggedDistanceKm = state.runHistory
+                  .filter((entry) => entry.runTargetType === "personal" && entry.routeId === item.id)
+                  .reduce((sum, entry) => sum + entry.distanceKm, 0);
+                const itemExploredPercent = Math.round((itemLoggedDistanceKm / item.totalDistanceKm) * 100);
+                const itemMetadata =
+                  active && metadataLabel
+                    ? metadataLabel
+                    : `${item.totalDistanceKm.toFixed(1)} km route · ${itemExploredPercent}% explored`;
+
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    data-route-id={item.id}
+                    onClick={() => selectRoute(item.id)}
+                    className={`w-full min-w-full shrink-0 snap-start overflow-hidden px-6 py-1 text-left transition ${
+                      active ? "opacity-100" : "opacity-35"
+                    }`}
+                    aria-label={`Select ${item.name}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">
+                          {item.city.toUpperCase()} · {item.country.toUpperCase()}
+                        </p>
+                        <h2 className="mt-3 truncate font-destination-display text-[2.35rem] leading-[0.94] tracking-[0.01em] text-ink">
+                          {item.name}
+                        </h2>
+                      </div>
+                      {active && hasWearablePriority ? (
+                        <div
+                          className="mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sage-900/4 text-sage-500"
+                          aria-label={`${state.wearableConnection?.name ?? "Wearable"} data source`}
+                          title={state.wearableConnection?.name ?? "Wearable"}
+                        >
+                          <Watch className="h-4 w-4" />
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-sage-600">
+                      <span>{itemMetadata}</span>
+                      {active && preview && preview.cycleCount > 1 ? (
+                        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sage-700 px-1.5 text-[10px] font-semibold text-white">
+                          {preview.cycleCount}
+                        </span>
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-            <div className="mt-3 flex items-center gap-2 text-sm text-sage-600">
-              <span>{metadataLabel}</span>
-              {preview && preview.cycleCount > 1 ? (
-                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sage-700 px-1.5 text-[10px] font-semibold text-white">
-                  {preview.cycleCount}
-                </span>
-              ) : null}
+          ) : (
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">{locationLabel}</p>
+              <div className="mt-3 flex items-start justify-between gap-3">
+                <h2 className="font-destination-display text-[2.35rem] leading-[0.94] tracking-[0.01em] text-ink">
+                  {preview?.targetTitle}
+                </h2>
+                {hasWearablePriority ? (
+                  <div
+                    className="mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sage-900/4 text-sage-500"
+                    aria-label={`${state.wearableConnection?.name ?? "Wearable"} data source`}
+                    title={state.wearableConnection?.name ?? "Wearable"}
+                  >
+                    <Watch className="h-4 w-4" />
+                  </div>
+                ) : null}
+              </div>
+              <div className="mt-3 flex items-center gap-2 text-sm text-sage-600">
+                <span>{metadataLabel}</span>
+                {preview && preview.cycleCount > 1 ? (
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sage-700 px-1.5 text-[10px] font-semibold text-white">
+                    {preview.cycleCount}
+                  </span>
+                ) : null}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="mt-8">
             <div className="flex items-end justify-between gap-4">
@@ -306,44 +406,6 @@ export const RunSetupPage = () => {
           </div>
         </section>
       </div>
-
-      {pickerOpen && route ? (
-        <div className="fixed inset-0 z-40">
-          <button type="button" onClick={() => setPickerOpen(false)} className="absolute inset-0 bg-black/18" aria-label="Close route picker" />
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            className="absolute bottom-0 left-0 right-0 rounded-t-[32px] bg-white px-4 pb-8 pt-4 shadow-2xl"
-          >
-            <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-sage-200" />
-            <div className="space-y-3">
-              {playableRoutes.map((item) => {
-                const active = item.id === route.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      selectRoute(item.id);
-                      setPickerOpen(false);
-                    }}
-                    className={`flex w-full items-center gap-3 rounded-[24px] p-3 text-left transition ${
-                      active ? "bg-sage-700 text-white" : "bg-sage-50 text-ink"
-                    }`}
-                  >
-                    <RouteArtwork routeId={item.id} size="sm" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold">{item.name}</p>
-                      <p className={`mt-1 text-xs ${active ? "text-white/80" : "text-sage-500"}`}>{item.city}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </motion.div>
-        </div>
-      ) : null}
 
       {missionPickerOpen ? (
         <div className="fixed inset-0 z-40">

@@ -56,6 +56,51 @@ const defaultView = {
   bearing: 0
 };
 
+const simplifyMapLabels = (map: mapboxgl.Map) => {
+  const setBasemapConfig = (property: string, value: boolean | string) => {
+    try {
+      map.setConfigProperty("basemap", property, value);
+    } catch {
+      // Older/custom styles may not expose Standard basemap config.
+    }
+  };
+
+  setBasemapConfig("language", "en");
+  setBasemapConfig("showPointOfInterestLabels", false);
+  setBasemapConfig("showTransitLabels", false);
+  setBasemapConfig("showRoadLabels", false);
+  setBasemapConfig("showPlaceLabels", true);
+
+  const styleLayers = map.getStyle().layers ?? [];
+  styleLayers.forEach((layer) => {
+    if (layer.type !== "symbol") {
+      return;
+    }
+
+    const layerId = layer.id.toLowerCase();
+    const shouldKeep =
+      layerId.includes("place") ||
+      layerId.includes("settlement") ||
+      layerId.includes("water") ||
+      layerId.includes("road-label") ||
+      layerId.includes("road-number");
+
+    try {
+      map.setLayoutProperty(layer.id, "visibility", shouldKeep ? "visible" : "none");
+      if (shouldKeep) {
+        map.setLayoutProperty(layer.id, "text-field", [
+          "coalesce",
+          ["get", "name_en"],
+          ["get", "name"],
+        ]);
+        map.setPaintProperty(layer.id, "text-opacity", layerId.includes("road") ? 0.36 : 0.5);
+      }
+    } catch {
+      // Some imported Standard style layers cannot be controlled directly.
+    }
+  });
+};
+
 export const RouteArtwork = ({
   routeId,
   label: _label,
@@ -69,7 +114,9 @@ export const RouteArtwork = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const transitionTimeoutRef = useRef<number | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const mapToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
   const view = useMemo(() => routeMapViews[routeId] ?? defaultView, [routeId]);
 
@@ -80,10 +127,20 @@ export const RouteArtwork = ({
     }
 
     mapboxgl.accessToken = mapToken;
+    mapboxgl.prewarm();
 
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: "mapbox://styles/mapbox/standard",
+      config: {
+        basemap: {
+          language: "en",
+          showPointOfInterestLabels: false,
+          showTransitLabels: false,
+          showRoadLabels: false,
+          showPlaceLabels: false
+        }
+      },
       center: view.center,
       zoom: view.zoom,
       pitch: view.pitch,
@@ -91,7 +148,8 @@ export const RouteArtwork = ({
       interactive: false,
       attributionControl: false,
       logoPosition: "bottom-left",
-      antialias: true
+      antialias: true,
+      fadeDuration: 80
     });
 
     mapRef.current = map;
@@ -107,7 +165,7 @@ export const RouteArtwork = ({
         });
       }
 
-      map.setTerrain({ source: "mapbox-dem", exaggeration: 1.5 });
+      map.setTerrain({ source: "mapbox-dem", exaggeration: 1.85 });
       map.setFog({
         color: "#f4f7f2",
         "high-color": "#eff6ff",
@@ -115,6 +173,7 @@ export const RouteArtwork = ({
         "space-color": "#f8fafc",
         "star-intensity": 0
       });
+      simplifyMapLabels(map);
 
       const styleLayers = map.getStyle().layers ?? [];
       const labelLayerId = styleLayers.find(
@@ -132,9 +191,9 @@ export const RouteArtwork = ({
             minzoom: 11,
             paint: {
               "fill-extrusion-color": "#d7e6d7",
-              "fill-extrusion-height": ["get", "height"],
+              "fill-extrusion-height": ["*", ["coalesce", ["get", "height"], 18], 1.18],
               "fill-extrusion-base": ["get", "min_height"],
-              "fill-extrusion-opacity": 0.62
+              "fill-extrusion-opacity": 0.7
             }
           },
           labelLayerId,
@@ -182,29 +241,57 @@ export const RouteArtwork = ({
     });
 
     return () => {
+      if (transitionTimeoutRef.current) {
+        window.clearTimeout(transitionTimeoutRef.current);
+        transitionTimeoutRef.current = null;
+      }
       markerRef.current?.remove();
       markerRef.current = null;
       map.remove();
       mapRef.current = null;
       setMapReady(false);
     };
-  }, [mapToken, routeId, view]);
+  }, [mapToken]);
 
   useEffect(() => {
     if (!mapRef.current || !mapReady) {
       return;
     }
 
+    if (transitionTimeoutRef.current) {
+      window.clearTimeout(transitionTimeoutRef.current);
+    }
+
+    setIsTransitioning(true);
+    mapRef.current.stop();
     mapRef.current.easeTo({
       center: view.center,
       zoom: view.zoom,
       pitch: view.pitch,
       bearing: view.bearing,
-      duration: 900
+      duration: 720,
+      essential: true
     });
+
+    mapRef.current.triggerRepaint();
+
+    transitionTimeoutRef.current = window.setTimeout(() => {
+      setIsTransitioning(false);
+      transitionTimeoutRef.current = null;
+    }, 920);
 
     if (markerRef.current && view.marker) {
       markerRef.current.setLngLat(view.marker);
+    } else if (!markerRef.current && view.marker) {
+      const markerNode = document.createElement("div");
+      markerNode.className =
+        "h-3.5 w-3.5 rounded-full border-2 border-white bg-sage-700 shadow-[0_0_0_6px_rgba(255,255,255,0.24)]";
+      markerRef.current = new mapboxgl.Marker({ element: markerNode })
+        .setLngLat(view.marker)
+        .addTo(mapRef.current);
+    } else if (markerRef.current && !view.marker) {
+      markerRef.current.remove();
+      markerRef.current = null;
     }
   }, [mapReady, view]);
 
@@ -237,6 +324,12 @@ export const RouteArtwork = ({
             variant === "hero"
               ? "bg-[linear-gradient(180deg,rgba(255,255,255,0.08),transparent_24%,transparent_72%,rgba(7,13,10,0.08))]"
               : "bg-[radial-gradient(circle_at_center,transparent_68%,rgba(10,20,30,0.08)_100%)]",
+          )}
+        />
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(235,244,235,0.22),rgba(205,224,211,0.14)_46%,rgba(123,151,132,0.08)_100%)] transition-opacity duration-300",
+            isTransitioning ? "opacity-100" : "opacity-0",
           )}
         />
 
