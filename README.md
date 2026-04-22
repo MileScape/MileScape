@@ -87,6 +87,31 @@ src/
 - `src/pages/*` contains the main user flow pages for onboarding, exploration, run setup, results, achievements, and dashboard.
 - `src/components/*` keeps the UI modular and beginner-friendly for future student work.
 
+## System Diagram
+
+```mermaid
+flowchart TD
+  User[User] --> Pages[React pages]
+  Pages --> Context[AppContext]
+  Context --> Data[Mock data catalog]
+  Context --> Storage[localStorage]
+
+  Pages --> RunSetup[Run setup]
+  RunSetup --> CompleteRun[completeRun]
+  CompleteRun --> Measurement{Wearable connected?}
+  Measurement -->|Yes| Wearable[Use synced wearable distance]
+  Measurement -->|No| Manual[Use app input distance]
+
+  Wearable --> Progress[Progress utilities]
+  Manual --> Progress
+  Progress --> RouteProgress[Update route or mission progress]
+  Progress --> Rewards[Unlock landmarks, stamps, achievements]
+  RouteProgress --> Context
+  Rewards --> Context
+  Context --> Result[Run result page]
+  Context --> Storage
+```
+
 ## Future Improvements
 
 - Add a dedicated streak and consistency model
