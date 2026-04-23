@@ -20,7 +20,7 @@ import { getMissionCompletionStampReward } from "./missionRewards";
 import { createMembership, syncExpiredMissionStates } from "./paceCrew";
 import { calculateEarnedStamps } from "./stamps";
 
-const defaultPurchasedRouteIds = ["west-lake-loop", "central-park-loop", "tokyo-city-route"];
+const defaultPurchasedRouteIds = ["tokyo-city-route", "west-lake-loop", "central-park-loop"];
 
 const createDefaultRouteProgress = (routeId: string): RouteProgress => ({
   routeId,
