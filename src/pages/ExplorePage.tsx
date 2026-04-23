@@ -41,11 +41,8 @@ export const ExplorePage = () => {
       <Link to="/run/setup" className={buttonStyles({ fullWidth: true })}>
         Continue to run setup
       </Link>
-      <Link
-        to="/shop"
-        className={buttonStyles({ fullWidth: true, variant: "secondary" })}
-      >
-        Visit shop
+      <Link to="/paceport" className={buttonStyles({ fullWidth: true, variant: "secondary" })}>
+        Open Paceport
       </Link>
     </div>
   );

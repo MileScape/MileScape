@@ -13,7 +13,6 @@ import { PaceportDetailPage } from "../pages/PaceportDetailPage";
 import { PaceportOverviewPage } from "../pages/PaceportOverviewPage";
 import { RunResultPage } from "../pages/RunResultPage";
 import { RunSetupPage } from "../pages/RunSetupPage";
-import { ShopPage } from "../pages/ShopPage";
 import { WearablesConnectPage } from "../pages/WearablesConnectPage";
 import { WearablesPage } from "../pages/WearablesPage";
 
@@ -36,7 +35,6 @@ export const router = createBrowserRouter([
       { path: "run/result", element: <RunResultPage /> },
       { path: "wearables", element: <WearablesPage /> },
       { path: "wearables/connect", element: <WearablesConnectPage /> },
-      { path: "shop", element: <ShopPage /> },
       { path: "dashboard", element: <DashboardPage /> }
     ]
   }

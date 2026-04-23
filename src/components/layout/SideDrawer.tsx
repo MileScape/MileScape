@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, Globe2, ShoppingBag, Sparkles, UserCircle2, Users, Watch, X } from "lucide-react";
+import { ChevronRight, Globe2, Sparkles, UserCircle2, Users, Watch, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAppState } from "../../hooks/useAppState";
 import { cn } from "../../utils/cn";
@@ -18,7 +18,6 @@ export const SideDrawer = ({ open, onClose }: SideDrawerProps) => {
     { to: "/paceport", label: t("drawer.paceport"), icon: Sparkles },
     { to: "/myscape", label: t("drawer.myScape"), icon: Globe2 },
     { to: wearablesEntryPath, label: t("drawer.wearables"), icon: Watch },
-    { to: "/shop", label: t("drawer.shop"), icon: ShoppingBag },
     { to: "/dashboard", label: t("drawer.profile"), icon: UserCircle2 }
   ];
 

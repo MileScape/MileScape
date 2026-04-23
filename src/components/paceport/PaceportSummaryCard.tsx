@@ -1,4 +1,4 @@
-import { ArrowRight, Lock, MapPinned, Route as RouteIcon } from "lucide-react";
+import { ArrowRight, Lock, MapPinned, Route as RouteIcon, Stamp } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { AchievementTier, PaceportStatus, Route } from "../../types";
 import { cn } from "../../utils/cn";
@@ -18,6 +18,8 @@ export interface PaceportRouteSummary {
 interface PaceportSummaryCardProps {
   countryName: string;
   routes: PaceportRouteSummary[];
+  currentStamps: number;
+  onUnlock: (routeId: string) => void;
 }
 
 const statusLabels: Record<PaceportStatus, string> = {
@@ -34,7 +36,7 @@ const routeSortOrder: Record<PaceportStatus, number> = {
   locked: 3
 };
 
-export const PaceportSummaryCard = ({ countryName, routes }: PaceportSummaryCardProps) => {
+export const PaceportSummaryCard = ({ countryName, routes, currentStamps, onUnlock }: PaceportSummaryCardProps) => {
   const sortedRoutes = [...routes].sort((a, b) => {
     if (routeSortOrder[a.status] !== routeSortOrder[b.status]) {
       return routeSortOrder[a.status] - routeSortOrder[b.status];
@@ -44,6 +46,7 @@ export const PaceportSummaryCard = ({ countryName, routes }: PaceportSummaryCard
     }
     return a.route.name.localeCompare(b.route.name);
   });
+
   const unlockedRoutes = sortedRoutes.filter((summary) => summary.status !== "locked");
   const totalDistanceKm = sortedRoutes.reduce((sum, summary) => sum + summary.route.totalDistanceKm, 0);
   const completedDistanceKm = sortedRoutes.reduce((sum, summary) => sum + summary.completedDistanceKm, 0);
@@ -66,18 +69,16 @@ export const PaceportSummaryCard = ({ countryName, routes }: PaceportSummaryCard
           {sortedRoutes.map((summary) => {
             const { route } = summary;
             const locked = summary.status === "locked";
+            const canUnlock = currentStamps >= route.priceStamps;
+            const cardClassName = cn(
+              "group block rounded-[24px] px-4 py-4 ring-1 transition",
+              locked
+                ? "bg-white/42 text-sage-500 ring-sage-900/6"
+                : "bg-white/72 text-ink ring-sage-900/8 hover:bg-white/88",
+            );
 
-            return (
-              <Link
-                key={route.id}
-                to={locked ? "/shop" : `/paceport/${route.id}`}
-                className={cn(
-                  "group block rounded-[24px] px-4 py-4 ring-1 transition",
-                  locked
-                    ? "bg-white/42 text-sage-500 ring-sage-900/6"
-                    : "bg-white/72 text-ink ring-sage-900/8 hover:bg-white/88",
-                )}
-              >
+            const content = (
+              <>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-sage-500">{route.city}</p>
@@ -114,12 +115,44 @@ export const PaceportSummaryCard = ({ countryName, routes }: PaceportSummaryCard
                     <MapPinned className="h-3.5 w-3.5" />
                     {summary.unlockedLandmarkCount}/{route.landmarks.length}
                   </span>
-                  <span className="ml-auto inline-flex items-center gap-1 font-medium text-sage-600">
-                    {locked ? "Unlock" : "View"}
-                    <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-                  </span>
+                  {locked ? (
+                    <span className="ml-auto text-sage-500">{canUnlock ? "Ready to unlock" : "Need more stamps"}</span>
+                  ) : (
+                    <span className="ml-auto inline-flex items-center gap-1 font-medium text-sage-600">
+                      View
+                      <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                    </span>
+                  )}
                 </div>
-              </Link>
+              </>
+            );
+
+            if (!locked) {
+              return (
+                <Link key={route.id} to={`/paceport/${route.id}`} className={cardClassName}>
+                  {content}
+                </Link>
+              );
+            }
+
+            return (
+              <div key={route.id} className={cardClassName}>
+                {content}
+                <button
+                  type="button"
+                  onClick={() => onUnlock(route.id)}
+                  disabled={!canUnlock}
+                  className={cn(
+                    "mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold transition",
+                    canUnlock
+                      ? "bg-sage-700 text-white hover:bg-sage-800"
+                      : "bg-sage-900/5 text-sage-400",
+                  )}
+                >
+                  <Stamp className="h-4 w-4" />
+                  {canUnlock ? `Unlock for ${route.priceStamps}` : `${currentStamps} / ${route.priceStamps} stamps`}
+                </button>
+              </div>
             );
           })}
         </div>

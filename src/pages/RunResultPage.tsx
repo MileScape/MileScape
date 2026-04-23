@@ -552,16 +552,8 @@ export const RunResultPage = () => {
               </AnimatePresence>
             </section>
 
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <Link to={`/paceport/${route.id}`} className={buttonStyles({ fullWidth: true })}>
-                {t("result.openPaceport")}
-              </Link>
-              <Link to="/paceport" className={buttonStyles({ fullWidth: true, variant: "secondary" })}>
-                {t("result.viewPaceport")}
-              </Link>
-            </div>
-            <Link to="/shop" className={buttonStyles({ fullWidth: true, variant: "secondary" })}>
-              {t("result.spendInShop")}
+            <Link to="/paceport" className={buttonStyles({ fullWidth: true })}>
+              {t("result.viewPaceport")}
             </Link>
           </div>
         </section>

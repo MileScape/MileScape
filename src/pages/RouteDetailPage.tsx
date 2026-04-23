@@ -36,11 +36,11 @@ export const RouteDetailPage = () => {
             <div className="space-y-2">
               <h1 className="text-3xl font-semibold tracking-tight text-ink">{route.name}</h1>
               <p className="text-sm leading-6 text-sage-700">
-                Unlock this map in the shop for {route.priceStamps} Stamps.
+                Unlock this map in Paceport for {route.priceStamps} Stamps.
               </p>
             </div>
-            <Link to="/shop" className={buttonStyles({ fullWidth: true })}>
-              Go to shop
+            <Link to="/paceport" className={buttonStyles({ fullWidth: true })}>
+              Open Paceport
             </Link>
           </div>
         </section>

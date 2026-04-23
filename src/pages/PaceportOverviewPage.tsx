@@ -1,3 +1,4 @@
+import { Coins } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { PaceportSummaryCard, type PaceportRouteSummary } from "../components/paceport/PaceportSummaryCard";
 import { WorldProgressMap, type PaceportCountrySummary } from "../components/paceport/WorldProgressMap";
@@ -39,8 +40,9 @@ const toRouteSummary = (route: Route, state: ReturnType<typeof useAppState>["sta
 };
 
 export const PaceportOverviewPage = () => {
-  const { routes, state, t } = useAppState();
+  const { routes, state, purchaseRoute, t } = useAppState();
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const countryCollections = useMemo(() => {
     const collections = new Map<string, CountryCollection>();
@@ -99,6 +101,15 @@ export const PaceportOverviewPage = () => {
     }
   }, [countryCollections, selectedCountryCode]);
 
+  useEffect(() => {
+    if (!toast) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => setToast(null), 2200);
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
+
   const selectedCountry =
     countryCollections.find((country) => country.code === selectedCountryCode) ?? countryCollections[0] ?? null;
   const selectedCountryIsUnlocked = selectedCountry?.routes.some((route) => route.status !== "locked") ?? false;
@@ -119,26 +130,49 @@ export const PaceportOverviewPage = () => {
     0,
   );
 
+  const handleUnlock = (routeId: string) => {
+    const result = purchaseRoute(routeId);
+    setToast(result.message);
+  };
+
   return (
-<div className="-mx-4 -mt-[calc(5.4rem+1.95rem)] min-h-screen bg-canvas">
-  <section className="relative h-[calc(100vh+5.65rem)] min-h-[700px] overflow-hidden">
-    <div className="absolute inset-0">
-      <WorldProgressMap
-        countries={mapCountries}
-        selectedCountryCode={selectedMapCountryCode}
-        onSelectCountry={setSelectedCountryCode}
-      />
-    </div>
+    <div className="relative -mx-4 -mt-[calc(5.4rem+1.95rem)] min-h-screen bg-canvas">
+      <div className="pointer-events-none fixed left-1/2 top-0 z-[80] flex w-full max-w-[430px] -translate-x-1/2 justify-end px-4 pt-4">
+        <div className="inline-flex items-center gap-2 rounded-full bg-[#f7f4ed] px-3.5 py-2 text-[11px] font-medium text-sage-700 shadow-[0_12px_30px_rgba(24,43,29,0.18)] ring-1 ring-[#ebe4d8]">
+          <Coins className="h-4 w-4 text-sage-700" />
+          <span className="text-sm font-semibold text-ink">{state.currentStamps}</span>
+          <span>Stamps</span>
+        </div>
+      </div>
 
-    <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[linear-gradient(180deg,rgba(245,243,238,0.42)_0%,rgba(245,243,238,0.16)_52%,rgba(245,243,238,0)_100%)]" />
-    <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.22),rgba(255,255,255,0)_72%)]" />
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[#f5f3ee] via-[#f5f3ee]/84 to-transparent" />
+      <div className="pointer-events-none fixed left-1/2 top-0 z-[80] flex w-full max-w-[430px] -translate-x-1/2 justify-start px-4 pt-20">
+        <div className="inline-flex items-center gap-2 rounded-full bg-transparent px-3.5 py-2 text-[11px] font-medium text-sage-700 ring-1 ring-white/28 backdrop-blur-[22px] [box-shadow:inset_0_1px_0_rgba(255,255,255,0.38)]">
+          <span className="text-sm font-semibold text-ink">{illuminatedCountryCount}</span>
+          <span>Lit countries</span>
+        </div>
+      </div>
 
-    <div className="relative z-10 flex justify-end px-6 pt-60">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/64 px-3.5 py-2 text-[11px] font-medium text-sage-600 shadow-[0_10px_28px_rgba(24,43,29,0.07)] ring-1 ring-white/80 backdrop-blur-xl">
-            <span className="text-sm font-semibold text-ink">{illuminatedCountryCount}</span>
-            <span>Lit countries</span>
-          </div>
+      <section className="relative h-[calc(100vh+5.65rem)] min-h-[700px] overflow-hidden">
+        <div className="absolute inset-0">
+          <WorldProgressMap
+            countries={mapCountries}
+            selectedCountryCode={selectedMapCountryCode}
+            onSelectCountry={setSelectedCountryCode}
+          />
+        </div>
+
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[linear-gradient(180deg,rgba(245,243,238,0.42)_0%,rgba(245,243,238,0.16)_52%,rgba(245,243,238,0)_100%)]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.22),rgba(255,255,255,0)_72%)]" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[#f5f3ee] via-[#f5f3ee]/84 to-transparent" />
+
+        <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between px-6 pt-6">
+          {toast ? (
+            <div className="max-w-[220px] rounded-full bg-sage-700 px-4 py-2 text-[11px] font-medium text-white shadow-[0_10px_28px_rgba(24,43,29,0.14)]">
+              {toast}
+            </div>
+          ) : (
+            <div />
+          )}
         </div>
 
         <div className="absolute bottom-40 left-6 right-6 z-10 flex items-center justify-between rounded-full bg-white/58 px-4 py-2.5 text-[11px] font-medium text-sage-600 shadow-[0_12px_30px_rgba(34,49,38,0.07)] ring-1 ring-white/80 backdrop-blur-xl">
@@ -149,10 +183,12 @@ export const PaceportOverviewPage = () => {
 
       {selectedCountry && selectedCountryIsUnlocked ? (
         <section className="relative z-20 mt-6">
-        <PaceportSummaryCard
-          countryName={selectedCountry.name}
-          routes={selectedCountry.routes}
-        />
+          <PaceportSummaryCard
+            countryName={selectedCountry.name}
+            routes={selectedCountry.routes}
+            currentStamps={state.currentStamps}
+            onUnlock={handleUnlock}
+          />
         </section>
       ) : (
         <section className="relative z-20 -mt-36 rounded-t-[34px] border-t border-white/75 bg-[linear-gradient(180deg,rgba(250,249,245,0.97)_0%,rgba(245,243,238,0.99)_100%)] px-6 pb-5 pt-4 shadow-[0_-16px_34px_rgba(34,49,38,0.08)]">
@@ -162,7 +198,7 @@ export const PaceportOverviewPage = () => {
             {t("app.paceport")}
           </h2>
           <p className="mt-1.5 text-[13px] leading-5 text-sage-600">
-            Unlocked countries will illuminate here. {lockedDestinationCount} route maps are still waiting in the shop.
+            Unlocked countries will illuminate here. {lockedDestinationCount} route maps are still waiting to be unlocked.
           </p>
         </section>
       )}

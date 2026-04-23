@@ -94,7 +94,7 @@ export const RunSetupPage = () => {
   }, [acceptedMissions]);
 
   if (!route && acceptedMissions.length === 0) {
-    return <Navigate to="/shop" replace />;
+    return <Navigate to="/paceport" replace />;
   }
 
   const selectedMissionBundle = acceptedMissions.find((item) => item.mission.id === selectedMissionId) ?? acceptedMissions[0];

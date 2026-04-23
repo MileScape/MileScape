@@ -34,7 +34,6 @@ export const AppShell = () => {
     "/wearables/connect": "Connect Device",
     "/run/setup": t("app.chooseJourney"),
     "/run/result": t("app.runResult"),
-    "/shop": t("app.shop"),
     "/dashboard": t("app.profile")
   };
 

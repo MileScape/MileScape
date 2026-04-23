@@ -161,7 +161,7 @@ export const routes: Route[] = [
     totalDistanceKm: 14,
     coverImage: "",
     description: "A PaceCrew-only shoreline route unlocked through shared missions and held as a team reward.",
-    motivation: "This destination belongs to your social archive rather than the solo run shop.",
+    motivation: "This destination belongs to your social archive rather than the solo unlock flow.",
     tier: "Standard",
     priceStamps: 0,
     sourceType: "pacecrew",
