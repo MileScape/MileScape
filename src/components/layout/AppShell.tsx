@@ -13,7 +13,6 @@ export const AppShell = () => {
   const isPrimaryHome = location.pathname === "/run/setup";
   const isOnboarding = location.pathname === "/";
   const isPaceCrewHome = location.pathname === "/pacecrew";
-  const isWearableHome = location.pathname === "/wearable";
   const isWearablesHome = location.pathname === "/wearables";
   const isRunResult = location.pathname === "/run/result";
   const isPaceportHome = location.pathname === "/paceport";
@@ -29,7 +28,6 @@ export const AppShell = () => {
     "/pacecrew/discover": t("app.paceCrewDiscover"),
     "/pacecrew/missions": t("app.paceCrewMissions"),
     "/paceport": t("app.paceport"),
-    "/wearable": t("app.wearable"),
     "/wearables": t("app.wearables"),
     "/wearables/connect": "Connect Device",
     "/run/setup": t("app.chooseJourney"),
@@ -64,7 +62,7 @@ export const AppShell = () => {
             ? "mb-[-4.35rem] pb-3 backdrop-blur-2xl bg-[linear-gradient(180deg,rgba(245,243,238,0.86)_0%,rgba(245,243,238,0.56)_42%,rgba(245,243,238,0.18)_72%,rgba(245,243,238,0)_100%)]"
             : isPaceportHome
             ? "mb-[-5.4rem] pb-5 backdrop-blur-[5px] bg-[linear-gradient(180deg,rgba(245,243,238,0.34)_0%,rgba(245,243,238,0.2)_48%,rgba(245,243,238,0)_100%)]"
-            : isPrimaryHome || isWearableHome || isWearablesFullBleed
+            : isPrimaryHome || isWearablesFullBleed
             ? "mb-[-4.75rem] pb-0"
             : "pb-3 backdrop-blur",
         )}
@@ -74,15 +72,6 @@ export const AppShell = () => {
             type="button"
             onClick={() => setDrawerOpen(true)}
             className="rounded-full bg-white/68 p-3 text-sage-700 shadow-[0_10px_28px_rgba(24,43,29,0.12)] ring-1 ring-white/75 backdrop-blur-xl"
-            aria-label="Open menu"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-        ) : isWearableHome ? (
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="rounded-full bg-white/74 p-3 text-sage-700 shadow-[0_10px_28px_rgba(24,43,29,0.12)] ring-1 ring-white/75 backdrop-blur-xl"
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
@@ -127,7 +116,7 @@ export const AppShell = () => {
           <p className={cn("uppercase tracking-[0.28em]", isPrimaryHome ? "text-[10px] text-white/92" : "text-[11px] text-sage-500")}>
             MILESCAPE
           </p>
-          {!isPrimaryHome && !isPaceCrewHome && !isWearableHome && !isWearablesFullBleed ? <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1> : null}
+          {!isPrimaryHome && !isPaceCrewHome && !isWearablesFullBleed ? <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1> : null}
         </div>
 
         <div className="h-11 w-11" />
@@ -136,7 +125,7 @@ export const AppShell = () => {
       <main
         className={cn(
           "flex-1",
-          isOnboarding || isPrimaryHome || isWearableHome || isWearablesFullBleed
+          isOnboarding || isPrimaryHome || isWearablesFullBleed
             ? "px-0 pb-0 pt-0"
             : isRunResult
               ? "px-0 pb-8 pt-0"
