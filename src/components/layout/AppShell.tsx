@@ -16,6 +16,7 @@ export const AppShell = () => {
   const isWearablesHome = location.pathname === "/wearables";
   const isRunResult = location.pathname === "/run/result";
   const isPaceportHome = location.pathname === "/paceport";
+  const isMyScapeHome = location.pathname === "/myscape";
   const isPaceCrewSubpage = location.pathname.startsWith("/pacecrew/") && location.pathname !== "/pacecrew";
   const isWearablesSubpage = location.pathname.startsWith("/wearables/") && location.pathname !== "/wearables";
   const isWearablesFullBleed = isWearablesHome && !state.wearableConnection;
@@ -28,6 +29,7 @@ export const AppShell = () => {
     "/pacecrew/discover": t("app.paceCrewDiscover"),
     "/pacecrew/missions": t("app.paceCrewMissions"),
     "/paceport": t("app.paceport"),
+    "/myscape": t("app.myScape"),
     "/wearables": t("app.wearables"),
     "/wearables/connect": "Connect Device",
     "/run/setup": t("app.chooseJourney"),
@@ -116,7 +118,7 @@ export const AppShell = () => {
           <p className={cn("uppercase tracking-[0.28em]", isPrimaryHome ? "text-[10px] text-white/92" : "text-[11px] text-sage-500")}>
             MILESCAPE
           </p>
-          {!isPrimaryHome && !isPaceCrewHome && !isWearablesFullBleed ? <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1> : null}
+          {!isPrimaryHome && !isPaceCrewHome && !isWearablesFullBleed && !isMyScapeHome ? <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1> : null}
         </div>
 
         <div className="h-11 w-11" />

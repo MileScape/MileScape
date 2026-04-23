@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { DashboardPage } from "../pages/DashboardPage";
 import { HomePage } from "../pages/HomePage";
+import { MyScapePage } from "../pages/MyScapePage";
 import { PaceCrewCreatePage } from "../pages/PaceCrewCreatePage";
 import { PaceCrewDetailPage } from "../pages/PaceCrewDetailPage";
 import { PaceCrewDiscoverPage } from "../pages/PaceCrewDiscoverPage";
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
       { path: "pacecrew/:crewId", element: <PaceCrewDetailPage /> },
       { path: "paceport", element: <PaceportOverviewPage /> },
       { path: "paceport/:routeId", element: <PaceportDetailPage /> },
+      { path: "myscape", element: <MyScapePage /> },
       { path: "run/setup", element: <RunSetupPage /> },
       { path: "run/result", element: <RunResultPage /> },
       { path: "wearables", element: <WearablesPage /> },

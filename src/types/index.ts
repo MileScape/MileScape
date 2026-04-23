@@ -150,6 +150,20 @@ export interface WearableSyncRecord {
   syncedAt: string;
 }
 
+export interface MyScapePlacedLandmark {
+  id: string;
+  landmarkId: string;
+  x: number;
+  y: number;
+  scale: number;
+  zIndex: number;
+}
+
+export interface MyScapeLayout {
+  placedLandmarks: MyScapePlacedLandmark[];
+  updatedAt: string;
+}
+
 export interface AppState {
   language: AppLanguage;
   selectedRouteId: string | null;
