@@ -1,5 +1,4 @@
 import type { PointerEvent as ReactPointerEvent, RefObject } from "react";
-import { Compass, Grid2X2, Sparkles } from "lucide-react";
 import type { MyScapePlacedLandmark } from "../../types";
 import type { UnlockedLandmarkAsset } from "../../utils/myScape";
 import { PlacedLandmark } from "./PlacedLandmark";
@@ -9,6 +8,7 @@ interface MyScapeBoardProps {
   assets: UnlockedLandmarkAsset[];
   placedLandmarks: MyScapePlacedLandmark[];
   selectedId: string | null;
+  expanded?: boolean;
   onItemPointerDown: (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => void;
   onSelectItem: (itemId: string) => void;
 }
@@ -18,72 +18,103 @@ export const MyScapeBoard = ({
   assets,
   placedLandmarks,
   selectedId,
+  expanded = false,
   onItemPointerDown,
   onSelectItem,
 }: MyScapeBoardProps) => {
   const assetMap = new Map(assets.map((asset) => [asset.id, asset]));
 
   return (
-    <section className="rounded-[36px] bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(241,245,240,0.92))] p-3 shadow-[0_26px_60px_rgba(36,55,41,0.1)] ring-1 ring-white/85 backdrop-blur-xl">
-      <div className="mb-3 flex items-center justify-between px-1.5">
-        <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-sage-500">Personal World</p>
-          <h2 className="mt-1 text-[1.2rem] font-semibold tracking-[-0.03em] text-ink">Miniature Board</h2>
-        </div>
-        <div className="flex items-center gap-2 rounded-full bg-white/72 px-3 py-2 text-[11px] font-medium text-sage-600 ring-1 ring-sage-900/8">
-          <Grid2X2 className="h-3.5 w-3.5" />
-          Snap grid on
-        </div>
-      </div>
+    <div className="relative h-full min-h-[420px] overflow-hidden bg-[linear-gradient(180deg,#f6f4ee_0%,#eef2eb_36%,#edf1ea_100%)]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.92),rgba(255,255,255,0)_46%)]" />
+      <div className="absolute inset-x-0 bottom-0 h-28 bg-[linear-gradient(180deg,rgba(238,242,235,0)_0%,rgba(238,242,235,0.88)_100%)]" />
+      <div className="absolute inset-x-4 top-6 h-24 rounded-full bg-[radial-gradient(circle,rgba(190,213,195,0.3),rgba(190,213,195,0)_72%)] blur-2xl" />
+      <div
+        className={`absolute left-1/2 rounded-full bg-[radial-gradient(circle,rgba(57,77,63,0.14),rgba(57,77,63,0)_72%)] blur-md ${
+          expanded ? "bottom-10 h-20 w-[364px] -translate-x-1/2" : "bottom-14 h-16 w-[306px] -translate-x-1/2"
+        }`}
+      />
 
       <div
-        ref={boardRef}
-        className="relative h-[430px] overflow-hidden rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,#f7f6f1_0%,#edf2eb_100%)]"
+        className={`absolute left-1/2 -translate-x-1/2 -translate-y-1/2 ${
+          expanded ? "top-[48%] h-[356px] w-[424px]" : "top-[49%] h-[327px] w-[386px]"
+        }`}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.86),rgba(255,255,255,0)_42%)]" />
-        <div className="absolute inset-x-4 top-8 h-32 rounded-[42%] bg-[radial-gradient(circle_at_30%_40%,rgba(206,222,208,0.9),rgba(176,198,181,0.5)_50%,rgba(176,198,181,0)_78%)] blur-sm" />
-        <div className="absolute left-6 top-24 h-24 w-40 rotate-[-8deg] rounded-[46%] bg-[linear-gradient(180deg,rgba(214,227,215,0.9),rgba(195,212,198,0.54))] opacity-90 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]" />
-        <div className="absolute right-8 top-20 h-28 w-44 rotate-[10deg] rounded-[48%] bg-[linear-gradient(180deg,rgba(211,223,213,0.88),rgba(188,205,191,0.45))] opacity-90 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]" />
-        <div className="absolute left-20 top-48 h-20 w-28 rotate-[14deg] rounded-[44%] bg-[linear-gradient(180deg,rgba(215,226,214,0.84),rgba(194,210,197,0.4))]" />
-        <div className="absolute inset-x-7 bottom-7 h-[108px] rounded-[34px] bg-[linear-gradient(180deg,rgba(228,236,227,0.7),rgba(202,216,204,0.92))] shadow-[inset_0_2px_0_rgba(255,255,255,0.7),0_24px_40px_rgba(75,96,81,0.16)] [transform:perspective(960px)_rotateX(62deg)]" />
-        <div className="absolute inset-0 opacity-[0.18]" style={{ backgroundImage: "linear-gradient(rgba(83,101,90,0.16) 1px, transparent 1px), linear-gradient(90deg, rgba(83,101,90,0.16) 1px, transparent 1px)", backgroundSize: "42px 42px" }} />
+        <svg viewBox="0 0 296 250" className="h-full w-full overflow-visible">
+            <defs>
+              <linearGradient id="myscape-top" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#e9f0e7" />
+                <stop offset="48%" stopColor="#d7e4d5" />
+                <stop offset="100%" stopColor="#bdd0c0" />
+              </linearGradient>
+              <linearGradient id="myscape-left" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#8ea192" />
+                <stop offset="100%" stopColor="#6f8374" />
+              </linearGradient>
+              <linearGradient id="myscape-right" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#7b8f80" />
+                <stop offset="100%" stopColor="#607367" />
+              </linearGradient>
+              <linearGradient id="myscape-soil-left" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#98866d" />
+                <stop offset="100%" stopColor="#7c6b55" />
+              </linearGradient>
+              <linearGradient id="myscape-soil-right" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#877662" />
+                <stop offset="100%" stopColor="#6e5e4d" />
+              </linearGradient>
+              <pattern id="myscape-soil-dots" width="28" height="28" patternUnits="userSpaceOnUse">
+                <circle cx="10" cy="10" r="6" fill="rgba(134,115,91,0.24)" />
+                <circle cx="23" cy="22" r="5" fill="rgba(171,152,126,0.14)" />
+              </pattern>
+            </defs>
 
-        <div className="pointer-events-none absolute left-6 top-6 flex items-center gap-2 rounded-full bg-white/70 px-3 py-2 text-[11px] font-medium text-sage-600 ring-1 ring-white/80 backdrop-blur">
-          <Compass className="h-3.5 w-3.5" />
-          Curated placement world
+            <polygon points="148,24 280,94 148,164 16,94" fill="url(#myscape-top)" />
+            <polygon points="16,94 148,164 148,208 16,146" fill="url(#myscape-left)" />
+            <polygon points="280,94 148,164 148,208 280,146" fill="url(#myscape-right)" />
+
+            <polygon points="16,104 148,172 148,208 16,146" fill="url(#myscape-soil-left)" />
+            <polygon points="280,104 148,172 148,208 280,146" fill="url(#myscape-soil-right)" />
+            <polygon points="16,104 148,172 148,208 16,146" fill="url(#myscape-soil-dots)" opacity="0.9" />
+            <polygon points="280,104 148,172 148,208 280,146" fill="url(#myscape-soil-dots)" opacity="0.78" />
+
+            <polygon points="148,24 280,94 148,164 16,94" fill="rgba(255,255,255,0.08)" />
+            <path d="M148 24 L280 94" stroke="rgba(255,255,255,0.28)" strokeWidth="2" />
+            <path d="M148 24 L16 94" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+            <path d="M16 94 L148 164 L280 94" fill="none" stroke="rgba(96,121,109,0.24)" strokeWidth="1.5" />
+            <path d="M16 94 L16 146 L148 208 L280 146 L280 94" fill="none" stroke="rgba(70,88,52,0.14)" strokeWidth="1.5" />
+        </svg>
+        <div
+          ref={boardRef}
+          className={expanded ? "absolute left-[26px] top-[14px] h-[208px] w-[344px]" : "absolute left-[24px] top-[14px] h-[189px] w-[311px]"}
+        >
+          {placedLandmarks.map((item) => {
+            const asset = assetMap.get(item.landmarkId);
+            if (!asset) {
+              return null;
+            }
+
+            return (
+              <PlacedLandmark
+                key={item.id}
+                asset={asset}
+                item={item}
+                selected={selectedId === item.id}
+                onPointerDown={onItemPointerDown}
+                onSelect={onSelectItem}
+              />
+            );
+          })}
         </div>
-        <div className="pointer-events-none absolute bottom-6 right-6 flex items-center gap-2 rounded-full bg-white/74 px-3 py-2 text-[11px] font-medium text-sage-600 ring-1 ring-white/80 backdrop-blur">
-          <Sparkles className="h-3.5 w-3.5" />
-          Collectible memory studio
-        </div>
-
-        {placedLandmarks.map((item) => {
-          const asset = assetMap.get(item.landmarkId);
-          if (!asset) {
-            return null;
-          }
-
-          return (
-            <PlacedLandmark
-              key={item.id}
-              asset={asset}
-              item={item}
-              selected={selectedId === item.id}
-              onPointerDown={onItemPointerDown}
-              onSelect={onSelectItem}
-            />
-          );
-        })}
-
-        {placedLandmarks.length === 0 ? (
-          <div className="absolute inset-x-8 bottom-24 rounded-[28px] bg-white/68 px-5 py-4 text-center shadow-[0_16px_34px_rgba(36,55,42,0.08)] ring-1 ring-white/80 backdrop-blur">
-            <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-sage-500">First Placement</p>
-            <p className="mt-2 text-sm leading-6 text-sage-600">
-              Choose an unlocked landmark below and it will settle into the nearest open grid position.
-            </p>
-          </div>
-        ) : null}
       </div>
-    </section>
+
+      {placedLandmarks.length === 0 ? (
+        <div className="pointer-events-none absolute left-1/2 top-[43%] z-10 flex w-[220px] -translate-x-1/2 -translate-y-1/2 flex-col items-center rounded-[28px] bg-white/60 px-5 py-4 text-center shadow-[0_18px_36px_rgba(35,52,40,0.08)] ring-1 ring-white/80 backdrop-blur">
+
+          <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-sage-500">Under Construction</p>
+
+        </div>
+      ) : null}
+    </div>
   );
 };

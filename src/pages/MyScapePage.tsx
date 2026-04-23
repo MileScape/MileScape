@@ -1,17 +1,27 @@
-import { ChevronLeft, ChevronRight, Landmark } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { MyScapeBoard } from "../components/myscape/MyScapeBoard";
 import { useAppState } from "../hooks/useAppState";
+import type { MyScapePlacedLandmark } from "../types";
+import { saveMyScapeLayout } from "../utils/storage";
 import {
   buildMyScapeChartData,
   buildMyScapeUnlockTimeline,
+  createPlacedLandmark,
   formatMyScapePeriodLabel,
+  getMyScapeYearDemoAssets,
+  getNextZIndex,
   getPeriodEnd,
   getPeriodStart,
   isFuturePeriod,
+  normalizeBoardPosition,
+  resolveUnlockedLandmarkAssets,
+  restoreMyScapeLayout,
+  serializeMyScapeLayout,
+  shiftAnchorDate,
   type MyScapeChartPoint,
   type MyScapeUnlockEvent,
   type MyScapeViewMode,
-  shiftAnchorDate,
 } from "../utils/myScape";
 
 const viewModes: Array<{ key: MyScapeViewMode; label: string }> = [
@@ -22,6 +32,7 @@ const viewModes: Array<{ key: MyScapeViewMode; label: string }> = [
 ];
 
 const formatDistance = (value: number) => `${Number(value.toFixed(1))} km`;
+const longPressDurationMs = 220;
 
 const getPeriodSummaryText = (mode: MyScapeViewMode) => {
   if (mode === "day") {
@@ -36,92 +47,17 @@ const getPeriodSummaryText = (mode: MyScapeViewMode) => {
   return "This year's running memory";
 };
 
-const MyScapeIsland = ({
-  featuredUnlock,
-  unlockCount,
-  totalDistanceKm,
-}: {
-  featuredUnlock: MyScapeUnlockEvent | null;
-  unlockCount: number;
-  totalDistanceKm: number;
-}) => {
-  return (
-  <div className="relative flex h-[320px] items-center justify-center overflow-visible">
-    <div className="absolute inset-x-4 top-6 h-24 rounded-full bg-[radial-gradient(circle,rgba(190,213,195,0.36),rgba(190,213,195,0)_72%)] blur-2xl" />
-    <div className="absolute bottom-7 left-1/2 h-14 w-[272px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(57,77,63,0.22),rgba(57,77,63,0)_72%)] blur-md" />
-
-    <div className="relative h-[250px] w-[296px]">
-      <svg viewBox="0 0 296 250" className="h-full w-full overflow-visible">
-        <defs>
-          <linearGradient id="myscape-top" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#e9f0e7" />
-            <stop offset="48%" stopColor="#d7e4d5" />
-            <stop offset="100%" stopColor="#bdd0c0" />
-          </linearGradient>
-          <linearGradient id="myscape-left" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#8ea192" />
-            <stop offset="100%" stopColor="#6f8374" />
-          </linearGradient>
-          <linearGradient id="myscape-right" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#7b8f80" />
-            <stop offset="100%" stopColor="#607367" />
-          </linearGradient>
-          <linearGradient id="myscape-soil-left" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#98866d" />
-            <stop offset="100%" stopColor="#7c6b55" />
-          </linearGradient>
-          <linearGradient id="myscape-soil-right" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#877662" />
-            <stop offset="100%" stopColor="#6e5e4d" />
-          </linearGradient>
-          <pattern id="myscape-grid" width="37" height="18.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-            <path d="M 37 0 L 0 0 0 18.5" fill="none" stroke="rgba(96,121,109,0.18)" strokeWidth="1" />
-          </pattern>
-          <pattern id="myscape-soil-dots" width="28" height="28" patternUnits="userSpaceOnUse">
-            <circle cx="10" cy="10" r="6" fill="rgba(134,115,91,0.24)" />
-            <circle cx="23" cy="22" r="5" fill="rgba(171,152,126,0.14)" />
-          </pattern>
-        </defs>
-
-        <polygon points="148,24 280,94 148,164 16,94" fill="url(#myscape-top)" />
-        <polygon points="16,94 148,164 148,222 16,152" fill="url(#myscape-left)" />
-        <polygon points="280,94 148,164 148,222 280,152" fill="url(#myscape-right)" />
-
-        <polygon points="16,106 148,176 148,222 16,152" fill="url(#myscape-soil-left)" />
-        <polygon points="280,106 148,176 148,222 280,152" fill="url(#myscape-soil-right)" />
-        <polygon points="16,106 148,176 148,222 16,152" fill="url(#myscape-soil-dots)" opacity="0.9" />
-        <polygon points="280,106 148,176 148,222 280,152" fill="url(#myscape-soil-dots)" opacity="0.78" />
-
-        <polygon points="148,24 280,94 148,164 16,94" fill="url(#myscape-grid)" opacity="0.78" />
-        <polygon points="148,24 280,94 148,164 16,94" fill="rgba(255,255,255,0.16)" style={{ filter: "blur(0.5px)" }} />
-        <path d="M148 24 L280 94" stroke="rgba(255,255,255,0.28)" strokeWidth="2" />
-        <path d="M148 24 L16 94" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
-        <path d="M16 94 L148 164 L280 94" fill="none" stroke="rgba(96,121,109,0.24)" strokeWidth="1.5" />
-        <path d="M16 94 L16 152 L148 222 L280 152 L280 94" fill="none" stroke="rgba(70,88,52,0.14)" strokeWidth="1.5" />
-
-        <ellipse cx="148" cy="144" rx="36" ry="12" fill="rgba(84,104,91,0.12)" />
-      </svg>
-    </div>
-
-    {featuredUnlock ? (
-      <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-[34%] flex-col items-center">
-        <div className="mb-[-10px] h-5 w-24 rounded-full bg-[radial-gradient(circle,rgba(71,95,80,0.2),rgba(71,95,80,0)_72%)] blur-[2px]" />
-        <div className="w-[126px] rounded-[24px] border border-white/78 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(241,244,239,0.98))] px-4 py-4 text-center shadow-[0_18px_36px_rgba(44,62,49,0.14)] backdrop-blur">
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-[14px] bg-[linear-gradient(180deg,rgba(220,232,221,0.95),rgba(189,208,192,0.95))] text-sage-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
-            <Landmark className="h-4 w-4" />
-          </div>
-          <p className="mt-2 text-[11px] font-semibold leading-4 text-ink">{featuredUnlock.name}</p>
-          <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-sage-500">{featuredUnlock.city}</p>
-        </div>
-      </div>
-    ) : null}
-
-    <div className="absolute bottom-4 right-4 flex items-center gap-3 text-xs text-sage-600">
-      <span>{formatDistance(totalDistanceKm)}</span>
-      <span>{unlockCount} unlocks</span>
-    </div>
-  </div>
-  );
+const getLawnTitle = (mode: MyScapeViewMode, anchorDate: Date) => {
+  if (mode === "day") {
+    return "Today's Lawn";
+  }
+  if (mode === "week") {
+    return "Week's Lawn";
+  }
+  if (mode === "month") {
+    return `${anchorDate.toLocaleDateString("en-US", { month: "long" })}'s Lawn`;
+  }
+  return `${anchorDate.getFullYear()}'s Lawn`;
 };
 
 const MyScapeChartCard = ({
@@ -134,9 +70,8 @@ const MyScapeChartCard = ({
   emptyText: string;
 }) => {
   const maxValue = Math.max(...points.map((point) => point.value), 0);
-  const visiblePoints = points.length > 12
-    ? points.filter((_, index) => index % Math.ceil(points.length / 12) === 0).slice(0, 12)
-    : points;
+  const visiblePoints =
+    points.length > 12 ? points.filter((_, index) => index % Math.ceil(points.length / 12) === 0).slice(0, 12) : points;
 
   return (
     <section className="rounded-[24px] bg-white/82 px-4 py-4 shadow-[0_16px_38px_rgba(35,52,40,0.08)] ring-1 ring-white/85 backdrop-blur-xl">
@@ -147,14 +82,17 @@ const MyScapeChartCard = ({
         </div>
       ) : (
         <div className="mt-4">
-          <div className="flex h-[180px] items-end gap-1.5 rounded-[18px] bg-sage-50/70 px-3 pb-3 pt-6">
+          <div
+            className="grid h-[180px] items-end gap-1 rounded-[18px] bg-sage-50/70 px-3 pb-3 pt-6"
+            style={{ gridTemplateColumns: `repeat(${Math.max(visiblePoints.length, 1)}, minmax(0, 1fr))` }}
+          >
             {visiblePoints.map((point) => (
-              <div key={point.label} className="flex flex-1 flex-col items-center justify-end gap-2">
+              <div key={point.label} className="flex min-w-0 flex-col items-center justify-end gap-2">
                 <div
                   className="w-full rounded-full bg-[linear-gradient(180deg,rgba(189,208,192,0.95)_0%,rgba(78,98,88,1)_100%)]"
                   style={{ height: `${Math.max(8, (point.value / maxValue) * 120)}px` }}
                 />
-                <span className="text-[9px] text-sage-500">{point.label}</span>
+                <span className="w-full text-center text-[9px] leading-3 text-sage-500">{point.label}</span>
               </div>
             ))}
           </div>
@@ -168,7 +106,86 @@ export const MyScapePage = () => {
   const { routes, state } = useAppState();
   const [viewMode, setViewMode] = useState<MyScapeViewMode>("day");
   const [anchorDate, setAnchorDate] = useState(() => new Date());
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [placedLandmarks, setPlacedLandmarks] = useState<MyScapePlacedLandmark[]>(() => restoreMyScapeLayout());
+  const [yearDemoLandmarks, setYearDemoLandmarks] = useState<MyScapePlacedLandmark[]>([]);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const dragStateRef = useRef<{
+    itemId: string;
+    offsetX: number;
+    offsetY: number;
+  } | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
   const today = new Date();
+
+  const unlockedAssets = useMemo(
+    () => resolveUnlockedLandmarkAssets(routes, state.routeProgress),
+    [routes, state.routeProgress],
+  );
+  const yearDemoAssets = useMemo(() => getMyScapeYearDemoAssets(), []);
+  const assets = useMemo(() => (viewMode === "year" ? yearDemoAssets : unlockedAssets), [unlockedAssets, viewMode, yearDemoAssets]);
+  const assetIds = useMemo(() => new Set(unlockedAssets.map((asset) => asset.id)), [unlockedAssets]);
+
+  useEffect(() => {
+    setPlacedLandmarks((current) => {
+      const seen = new Set<string>();
+      return current.filter((item) => {
+        if (!assetIds.has(item.landmarkId) || seen.has(item.landmarkId)) {
+          return false;
+        }
+
+        seen.add(item.landmarkId);
+        return true;
+      });
+    });
+  }, [assetIds]);
+
+  useEffect(() => {
+    if (viewMode !== "year") {
+      return;
+    }
+
+    const board = boardRef.current;
+    if (!board) {
+      return;
+    }
+
+    const width = board.clientWidth;
+    const height = board.clientHeight;
+    const layout = [
+      { id: "tokyo-tower", x: 0.02, y: 0.28, scale: 1.02 },
+      { id: "eiffel-tower-demo", x: 0.16, y: 0.06, scale: 0.98 },
+      { id: "london-bridge-demo", x: 0.34, y: 0.01, scale: 1.06 },
+      { id: "statue-of-liberty", x: 0.12, y: 0.46, scale: 1.06 },
+      { id: "torii-gate", x: 0.36, y: 0.18, scale: 1.26 },
+      { id: "eiffel-tower-demo", x: 0.57, y: 0.26, scale: 0.96 },
+      { id: "statue-of-liberty", x: 0.69, y: 0.02, scale: 1.12 },
+      { id: "tokyo-tower", x: 0.82, y: 0.28, scale: 1.02 },
+      { id: "big-ben-demo", x: 0.24, y: 0.62, scale: 1.02 },
+      { id: "sydney-opera-demo", x: 0.42, y: 0.7, scale: 1.04 },
+      { id: "big-ben-demo", x: 0.64, y: 0.56, scale: 1.04 },
+    ] as const;
+
+    setYearDemoLandmarks(
+      layout.map((entry, index) => ({
+        id: `year-demo-${entry.id}-${index}`,
+        landmarkId: entry.id,
+        x: normalizeBoardPosition({ x: width * entry.x, y: height * entry.y }, width, height, entry.scale).x,
+        y: normalizeBoardPosition({ x: width * entry.x, y: height * entry.y }, width, height, entry.scale).y,
+        scale: entry.scale,
+        zIndex: index + 1,
+      })),
+    );
+  }, [viewMode]);
+
+  useEffect(() => {
+    const activeLandmarks = viewMode === "year" ? yearDemoLandmarks : placedLandmarks;
+    if (!selectedId || activeLandmarks.some((item) => item.id === selectedId)) {
+      return;
+    }
+
+    setSelectedId(null);
+  }, [placedLandmarks, selectedId, viewMode, yearDemoLandmarks]);
 
   const unlockTimeline = useMemo(
     () => buildMyScapeUnlockTimeline(routes, state.runHistory),
@@ -198,19 +215,186 @@ export const MyScapePage = () => {
 
   const totalDistanceKm = runsInPeriod.reduce((sum, entry) => sum + entry.distanceKm, 0);
   const runCount = runsInPeriod.length;
-  const featuredUnlock = unlocksInPeriod[unlocksInPeriod.length - 1] ?? null;
   const chartData = useMemo(
     () => buildMyScapeChartData(state.runHistory, anchorDate, viewMode),
     [anchorDate, state.runHistory, viewMode],
   );
   const nextPeriodDisabled = isFuturePeriod(shiftAnchorDate(anchorDate, viewMode, 1), viewMode);
 
+  useEffect(() => {
+    if (viewMode === "year") {
+      return;
+    }
+
+    const board = boardRef.current;
+    if (!board) {
+      return;
+    }
+
+    setPlacedLandmarks((current) =>
+      unlockedAssets.reduce((next, asset) => {
+        if (!asset.imageSrc || !assetIds.has(asset.id) || next.some((item) => item.landmarkId === asset.id)) {
+          return next;
+        }
+
+        return [
+          ...next,
+          createPlacedLandmark(
+            asset.id,
+            next,
+            board.clientWidth,
+            board.clientHeight,
+            asset.defaultScale ?? 1,
+          ),
+        ];
+      }, current),
+    );
+  }, [assetIds, unlockedAssets]);
+
+  useEffect(() => {
+    if (viewMode === "year") {
+      return;
+    }
+
+    const saveTimer = window.setTimeout(() => {
+      saveMyScapeLayout(serializeMyScapeLayout(placedLandmarks));
+    }, 120);
+
+    return () => window.clearTimeout(saveTimer);
+  }, [placedLandmarks]);
+
+  const handleItemPointerDown = (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => {
+    const board = boardRef.current;
+    const target = event.currentTarget;
+    if (!board) {
+      return;
+    }
+
+    event.preventDefault();
+    target.setPointerCapture(event.pointerId);
+    const boardRect = board.getBoundingClientRect();
+    const activeLandmarks = viewMode === "year" ? yearDemoLandmarks : placedLandmarks;
+    const item = activeLandmarks.find((entry) => entry.id === itemId);
+    if (!item) {
+      return;
+    }
+    setSelectedId(itemId);
+
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+    }
+
+    longPressTimerRef.current = window.setTimeout(() => {
+      dragStateRef.current = {
+        itemId,
+        offsetX: event.clientX - boardRect.left - item.x,
+        offsetY: event.clientY - boardRect.top - item.y,
+      };
+
+      const raiseZIndex = (current: MyScapePlacedLandmark[]) =>
+        current.map((entry) =>
+          entry.id === itemId
+            ? {
+                ...entry,
+                zIndex: getNextZIndex(current),
+              }
+            : entry,
+        );
+
+      if (viewMode === "year") {
+        setYearDemoLandmarks(raiseZIndex);
+        return;
+      }
+
+      setPlacedLandmarks(raiseZIndex);
+    }, longPressDurationMs);
+  };
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      const board = boardRef.current;
+      const dragState = dragStateRef.current;
+      if (!board || !dragState) {
+        return;
+      }
+
+      const boardRect = board.getBoundingClientRect();
+      const updateLandmarks = (current: MyScapePlacedLandmark[]) =>
+        current.map((item) => {
+          if (item.id !== dragState.itemId) {
+            return item;
+          }
+
+          const nextPosition = normalizeBoardPosition(
+            {
+              x: event.clientX - boardRect.left - dragState.offsetX,
+              y: event.clientY - boardRect.top - dragState.offsetY,
+            },
+            board.clientWidth,
+            board.clientHeight,
+            item.scale,
+          );
+
+          return {
+            ...item,
+            x: nextPosition.x,
+            y: nextPosition.y,
+          };
+        });
+
+      if (viewMode === "year") {
+        setYearDemoLandmarks(updateLandmarks);
+        return;
+      }
+
+      setPlacedLandmarks(updateLandmarks);
+    };
+
+    const handlePointerUp = () => {
+      if (longPressTimerRef.current) {
+        window.clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      dragStateRef.current = null;
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [viewMode]);
+
+  const displayedLandmarks = viewMode === "year" ? yearDemoLandmarks : placedLandmarks;
+
   return (
-    <div className="-mx-4 -mt-1 min-h-screen bg-[linear-gradient(180deg,#edf3ed_0%,#f5f3ee_38%,#f5f3ee_100%)] pb-10">
-      <section className="px-4 pb-8 pt-3 text-ink">
-        <div className="mx-auto max-w-md">
-          <div className="rounded-[18px] bg-white/76 p-1 shadow-[0_14px_34px_rgba(35,52,40,0.08)] ring-1 ring-white/85 backdrop-blur-xl">
-            <div className="grid grid-cols-4 gap-1">
+    <div className="-mx-4 -mt-[calc(5.4rem+1.95rem)] h-screen overflow-hidden bg-[linear-gradient(180deg,#f3f1eb_0%,#f6f4ef_100%)] text-ink">
+      <section className="relative h-[64vh] min-h-[520px] overflow-hidden">
+        <MyScapeBoard
+          boardRef={boardRef}
+          assets={assets}
+          placedLandmarks={displayedLandmarks}
+          selectedId={selectedId}
+          expanded={viewMode === "year"}
+          onItemPointerDown={handleItemPointerDown}
+          onSelectItem={setSelectedId}
+        />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,rgba(243,241,235,0)_0%,rgba(243,241,235,0.96)_100%)]" />
+      </section>
+
+      <section className="relative z-10 -mt-8 h-[44vh] min-h-[200px] rounded-t-[38px] bg-[linear-gradient(180deg,rgba(247,245,239,0.98),rgba(244,241,234,1))] px-6 pb-10 pt-6 shadow-[0_-20px_40px_rgba(35,52,40,0.08)] ring-1 ring-white/75">
+        <div className="mx-auto flex h-full max-w-md flex-col overflow-y-auto overscroll-contain pr-1">
+          <div className="mb-8 space-y-6">
+          <div className="space-y-2">
+            <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-sage-500">My Scape</p>
+            <h1 className="font-destination-display text-[3rem] leading-[0.92] tracking-[0.01em] text-[#2e3e35]">
+              {getLawnTitle(viewMode, anchorDate)}
+            </h1>
+          </div>
+
+          <section className="rounded-[26px] bg-white/84 p-2 shadow-[0_18px_40px_rgba(35,52,40,0.08)] ring-1 ring-white/88 backdrop-blur-xl">
+            <div className="grid grid-cols-4 gap-2">
               {viewModes.map((mode) => (
                 <button
                   key={mode.key}
@@ -219,93 +403,84 @@ export const MyScapePage = () => {
                     setViewMode(mode.key);
                     setAnchorDate(today);
                   }}
-                  className={`rounded-[12px] px-3 py-2 text-sm font-medium transition ${
-                    viewMode === mode.key ? "bg-sage-700 text-white" : "text-sage-500"
+                  className={`rounded-[16px] px-3 py-3 text-sm font-medium transition ${
+                    viewMode === mode.key
+                      ? "bg-[linear-gradient(180deg,#5f7567,#42574b)] text-white shadow-[0_14px_24px_rgba(45,62,53,0.16)]"
+                      : "bg-sage-50/70 text-sage-500"
                   }`}
                 >
                   {mode.label}
                 </button>
               ))}
             </div>
-          </div>
+          </section>
 
-          <div className="mt-5 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setAnchorDate((current) => shiftAnchorDate(current, viewMode, -1))}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/76 text-sage-700 shadow-[0_12px_28px_rgba(35,52,40,0.08)] ring-1 ring-white/85"
-              aria-label="View previous period"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
+          <section className="space-y-5">
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setAnchorDate((current) => shiftAnchorDate(current, viewMode, -1))}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/72 text-sage-700 ring-1 ring-[#e6e0d4]"
+                aria-label="View previous period"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
 
-            <div className="text-center">
-              <p className="text-base font-semibold">{formatMyScapePeriodLabel(anchorDate, viewMode)}</p>
-              <p className="mt-1 text-xs text-sage-500">{getPeriodSummaryText(viewMode)}</p>
+              <div className="text-center">
+                <p className="text-xl font-semibold tracking-[-0.03em] text-[#2f3f35]">{formatMyScapePeriodLabel(anchorDate, viewMode)}</p>
+                <p className="mt-1 text-xs uppercase tracking-[0.22em] text-sage-500">{getPeriodSummaryText(viewMode)}</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setAnchorDate((current) => shiftAnchorDate(current, viewMode, 1))}
+                disabled={nextPeriodDisabled}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/72 text-sage-700 ring-1 ring-[#e6e0d4] disabled:opacity-35"
+                aria-label="View next period"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setAnchorDate((current) => shiftAnchorDate(current, viewMode, 1))}
-              disabled={nextPeriodDisabled}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/76 text-sage-700 shadow-[0_12px_28px_rgba(35,52,40,0.08)] ring-1 ring-white/85 disabled:opacity-35"
-              aria-label="View next period"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div className="mt-5">
-            <MyScapeIsland
-              featuredUnlock={featuredUnlock}
-              unlockCount={unlocksInPeriod.length}
-              totalDistanceKm={totalDistanceKm}
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-t-[32px] bg-transparent px-4 pb-10 pt-5">
-        <div className="mx-auto max-w-md space-y-4">
-          <section className="rounded-[24px] bg-white/82 px-4 py-4 shadow-[0_16px_38px_rgba(35,52,40,0.08)] ring-1 ring-white/85 backdrop-blur-xl">
-            <h2 className="text-sm font-semibold text-ink">Period Overview</h2>
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              <div className="rounded-[18px] bg-sage-50/70 px-3 py-3">
-                <p className="text-[11px] text-sage-500">Distance</p>
-                <p className="mt-2 text-lg font-semibold text-ink">{formatDistance(totalDistanceKm)}</p>
+            <div className="grid grid-cols-3 gap-3 rounded-[26px] bg-white/58 px-4 py-4 ring-1 ring-white/75">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.22em] text-sage-500">Distance</p>
+                <p className="mt-2 text-[1.55rem] font-semibold tracking-[-0.04em] text-[#2f3f35]">{formatDistance(totalDistanceKm)}</p>
               </div>
-              <div className="rounded-[18px] bg-sage-50/70 px-3 py-3">
-                <p className="text-[11px] text-sage-500">Runs</p>
-                <p className="mt-2 text-lg font-semibold text-ink">{runCount}</p>
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.22em] text-sage-500">Runs</p>
+                <p className="mt-2 text-[1.55rem] font-semibold tracking-[-0.04em] text-[#2f3f35]">{runCount}</p>
               </div>
-              <div className="rounded-[18px] bg-sage-50/70 px-3 py-3">
-                <p className="text-[11px] text-sage-500">Unlocks</p>
-                <p className="mt-2 text-lg font-semibold text-ink">{unlocksInPeriod.length}</p>
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.22em] text-sage-500">Unlocks</p>
+                <p className="mt-2 text-[1.55rem] font-semibold tracking-[-0.04em] text-[#2f3f35]">{unlocksInPeriod.length}</p>
               </div>
             </div>
           </section>
+          </div>
 
-          <MyScapeChartCard
-            title="Distance Distribution"
-            points={chartData}
-            emptyText="No run data in this period"
-          />
+          <MyScapeChartCard title="Distance Distribution" points={chartData} emptyText="No run data in this period" />
 
-          <section className="rounded-[24px] bg-white/82 px-4 py-4 shadow-[0_16px_38px_rgba(35,52,40,0.08)] ring-1 ring-white/85 backdrop-blur-xl">
+          <section className="mt-4 rounded-[24px] bg-white/82 px-4 py-4 shadow-[0_16px_38px_rgba(35,52,40,0.08)] ring-1 ring-white/85 backdrop-blur-xl">
             <h3 className="text-sm font-semibold text-ink">Unlocked This Period</h3>
             {unlocksInPeriod.length > 0 ? (
               <div className="mt-4 space-y-3">
-                {unlocksInPeriod.slice(-3).reverse().map((item) => (
-                  <div key={`${item.id}-${item.unlockedAt}`} className="rounded-[18px] bg-sage-50/70 px-4 py-3">
-                    <p className="text-sm font-semibold text-ink">{item.name}</p>
-                    <p className="mt-1 text-xs text-sage-600">
-                      {item.routeName} · {item.city}
-                    </p>
-                  </div>
-                ))}
+                {unlocksInPeriod
+                  .slice(-3)
+                  .reverse()
+                  .map((item: MyScapeUnlockEvent) => (
+                    <div key={`${item.id}-${item.unlockedAt}`} className="rounded-[18px] bg-sage-50/70 px-4 py-3">
+                      <p className="text-sm font-semibold text-ink">{item.name}</p>
+                      <p className="mt-1 text-xs text-sage-600">
+                        {item.routeName} · {item.city}
+                      </p>
+                    </div>
+                  ))}
               </div>
             ) : (
-              <div className="mt-4 rounded-[18px] bg-sage-50/70 px-4 py-6 text-sm text-sage-500">No new landmarks unlocked in this period.</div>
+              <div className="mt-4 rounded-[18px] bg-sage-50/70 px-4 py-6 text-sm text-sage-500">
+                No new landmarks unlocked in this period.
+              </div>
             )}
           </section>
         </div>

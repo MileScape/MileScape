@@ -6,6 +6,9 @@ export interface UnlockedLandmarkAsset extends Landmark {
   routeName: string;
   city: string;
   country: string;
+  imageSrc?: string;
+  assetType?: "landmark" | "decor";
+  defaultScale?: number;
 }
 
 export type MyScapeViewMode = "day" | "week" | "month" | "year";
@@ -22,7 +25,7 @@ export interface MyScapeChartPoint {
 export const MY_SCAPE_GRID_SIZE = 42;
 export const MY_SCAPE_MIN_SCALE = 0.8;
 export const MY_SCAPE_MAX_SCALE = 1.4;
-const BOARD_MARGIN = 28;
+const BOARD_FOOTPRINT = 90;
 
 export const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
@@ -34,11 +37,33 @@ export const clampToBoard = (
   boardHeight: number,
   itemScale = 1,
 ) => {
-  const footprint = 44 * itemScale;
+  const footprint = BOARD_FOOTPRINT * itemScale;
+  const maxX = Math.max(0, boardWidth - footprint);
+  const maxY = Math.max(0, boardHeight - footprint);
+  const clampedX = clamp(point.x, 0, maxX);
+  const clampedY = clamp(point.y, 0, maxY);
+  const centerX = clampedX + footprint / 2;
+  const centerY = clampedY + footprint / 2;
+  const halfWidth = Math.max(1, (boardWidth - footprint) / 2 + 10);
+  const halfHeight = Math.max(1, (boardHeight - footprint) / 2 + 50);
+  const distanceX = centerX - boardWidth / 2;
+  const distanceY = centerY - boardHeight / 2;
+  const normalizedDistance = Math.abs(distanceX) / halfWidth + Math.abs(distanceY) / halfHeight;
+
+  if (normalizedDistance <= 1) {
+    return {
+      x: clampedX,
+      y: clampedY,
+    };
+  }
+
+  const ratio = 1 / normalizedDistance;
+  const projectedCenterX = boardWidth / 2 + distanceX * ratio;
+  const projectedCenterY = boardHeight / 2 + distanceY * ratio;
 
   return {
-    x: clamp(point.x, BOARD_MARGIN, Math.max(BOARD_MARGIN, boardWidth - BOARD_MARGIN - footprint)),
-    y: clamp(point.y, BOARD_MARGIN, Math.max(BOARD_MARGIN, boardHeight - BOARD_MARGIN - footprint)),
+    x: clamp(projectedCenterX - footprint / 2, 0, maxX),
+    y: clamp(projectedCenterY - footprint / 2, 0, maxY),
   };
 };
 
@@ -47,14 +72,7 @@ export const normalizeBoardPosition = (
   boardWidth: number,
   boardHeight: number,
   itemScale = 1,
-) => {
-  const clamped = clampToBoard(point, boardWidth, boardHeight, itemScale);
-
-  return {
-    x: snapToGrid(clamped.x),
-    y: snapToGrid(clamped.y),
-  };
-};
+) => clampToBoard(point, boardWidth, boardHeight, itemScale);
 
 export const serializeMyScapeLayout = (placedLandmarks: MyScapePlacedLandmark[]): MyScapeLayout => ({
   placedLandmarks,
@@ -81,53 +99,191 @@ export const resolveUnlockedLandmarkAssets = (
         routeName: route.name,
         city: route.city,
         country: route.country,
+        assetType: "landmark" as const,
+        ...(landmark.id === "torii-gate"
+          ? {
+              imageSrc: "/models/landmarks/torii.png",
+              defaultScale: 1.16,
+            }
+          : {}),
+        ...(landmark.id === "tokyo-tower"
+          ? {
+              imageSrc: "/models/landmarks/tokyo tower.png",
+              defaultScale: 1.18,
+            }
+          : {}),
+        ...(landmark.id === "statue-of-liberty"
+          ? {
+              imageSrc: "/models/landmarks/statue-of-liberty.png",
+              defaultScale: 1.14,
+            }
+          : {}),
       }));
   });
 
+export const getMyScapeYearDemoAssets = (): UnlockedLandmarkAsset[] => [
+  {
+    id: "torii-gate",
+    name: "Torii Gate",
+    milestoneKm: 4,
+    description: "Tokyo route unlock.",
+    image: "/models/landmarks/torii.png",
+    imageSrc: "/models/landmarks/torii.png",
+    routeId: "tokyo-city-route",
+    routeName: "Tokyo City Route",
+    city: "Tokyo",
+    country: "Japan",
+    assetType: "landmark",
+    defaultScale: 1.16,
+  },
+  {
+    id: "tokyo-tower",
+    name: "Tokyo Tower",
+    milestoneKm: 10,
+    description: "Tokyo route unlock.",
+    image: "/models/landmarks/tokyo tower.png",
+    imageSrc: "/models/landmarks/tokyo tower.png",
+    routeId: "tokyo-city-route",
+    routeName: "Tokyo City Route",
+    city: "Tokyo",
+    country: "Japan",
+    assetType: "landmark",
+    defaultScale: 1.18,
+  },
+  {
+    id: "statue-of-liberty",
+    name: "Statue of Liberty",
+    milestoneKm: 2,
+    description: "Central Park route unlock.",
+    image: "/models/landmarks/statue-of-liberty.png",
+    imageSrc: "/models/landmarks/statue-of-liberty.png",
+    routeId: "central-park-loop",
+    routeName: "Central Park Loop",
+    city: "New York",
+    country: "United States",
+    assetType: "landmark",
+    defaultScale: 1.14,
+  },
+  {
+    id: "eiffel-tower-demo",
+    name: "Eiffel Tower",
+    milestoneKm: 16,
+    description: "Paris route demo asset.",
+    image: "/models/landmarks/eiffel-tower.png",
+    imageSrc: "/models/landmarks/eiffel-tower.png",
+    routeId: "paris-eiffel-route",
+    routeName: "Eiffel Tower Route",
+    city: "Paris",
+    country: "France",
+    assetType: "landmark",
+    defaultScale: 1.1,
+  },
+  {
+    id: "sydney-opera-demo",
+    name: "Sydney Opera",
+    milestoneKm: 8,
+    description: "Sydney demo asset.",
+    image: "/models/landmarks/sydney-opera.png",
+    imageSrc: "/models/landmarks/sydney-opera.png",
+    routeId: "sydney-harbor-demo",
+    routeName: "Sydney Harbor Demo",
+    city: "Sydney",
+    country: "Australia",
+    assetType: "landmark",
+    defaultScale: 1.08,
+  },
+  {
+    id: "london-bridge-demo",
+    name: "London Bridge",
+    milestoneKm: 7,
+    description: "London demo asset.",
+    image: "/models/landmarks/london-bridge.png",
+    imageSrc: "/models/landmarks/london-bridge.png",
+    routeId: "london-river-demo",
+    routeName: "London River Demo",
+    city: "London",
+    country: "United Kingdom",
+    assetType: "landmark",
+    defaultScale: 1.08,
+  },
+  {
+    id: "big-ben-demo",
+    name: "Big Ben",
+    milestoneKm: 5,
+    description: "London demo asset.",
+    image: "/models/landmarks/big-ben.png",
+    imageSrc: "/models/landmarks/big-ben.png",
+    routeId: "london-river-demo",
+    routeName: "London River Demo",
+    city: "London",
+    country: "United Kingdom",
+    assetType: "landmark",
+    defaultScale: 1.1,
+  },
+];
+
 export const getNextZIndex = (placedLandmarks: MyScapePlacedLandmark[]) =>
   placedLandmarks.reduce((max, item) => Math.max(max, item.zIndex), 0) + 1;
+
+const hasPlacementConflict = (
+  candidate: { x: number; y: number },
+  existing: MyScapePlacedLandmark[],
+  itemScale = 1,
+) => {
+  const candidateFootprint = BOARD_FOOTPRINT * itemScale;
+
+  return existing.some((item) => {
+    const existingFootprint = BOARD_FOOTPRINT * item.scale;
+    const minGap = (candidateFootprint + existingFootprint) / 2 - 10;
+    return Math.hypot(item.x - candidate.x, item.y - candidate.y) < minGap;
+  });
+};
 
 export const createPlacedLandmark = (
   landmarkId: string,
   existing: MyScapePlacedLandmark[],
   boardWidth: number,
   boardHeight: number,
+  initialScale = 1,
 ): MyScapePlacedLandmark => {
-  const centerX = Math.max(BOARD_MARGIN, boardWidth / 2 - MY_SCAPE_GRID_SIZE);
-  const centerY = Math.max(BOARD_MARGIN, boardHeight / 2 - MY_SCAPE_GRID_SIZE);
-  const candidateOffsets = [
-    { x: 0, y: 0 },
-    { x: 1, y: 0 },
-    { x: -1, y: 0 },
-    { x: 0, y: 1 },
-    { x: 0, y: -1 },
-    { x: 1, y: 1 },
-    { x: -1, y: 1 },
-    { x: 1, y: -1 },
-    { x: -1, y: -1 },
-    { x: 2, y: 0 },
-    { x: -2, y: 0 },
-    { x: 0, y: 2 },
-    { x: 0, y: -2 },
-  ];
+  const centerX = Math.max(0, boardWidth / 2 - BOARD_FOOTPRINT / 2);
+  const centerY = Math.max(0, boardHeight / 2 - BOARD_FOOTPRINT / 2);
+  const stepX = 34;
+  const stepY = 24;
+  const candidateOffsets = [{ x: 0, y: 0 }];
 
-  const occupiedKeys = new Set(existing.map((item) => `${snapToGrid(item.x)}:${snapToGrid(item.y)}`));
+  for (let ring = 1; ring <= 7; ring += 1) {
+    for (let xStep = -ring; xStep <= ring; xStep += 1) {
+      const yStep = ring - Math.abs(xStep);
+      candidateOffsets.push({ x: xStep * stepX, y: yStep * stepY });
+      if (yStep !== 0) {
+        candidateOffsets.push({ x: xStep * stepX, y: -yStep * stepY });
+      }
+    }
+  }
+
   const nextPoint =
     candidateOffsets
-      .map((offset) => ({
-        x: centerX + offset.x * MY_SCAPE_GRID_SIZE,
-        y: centerY + offset.y * MY_SCAPE_GRID_SIZE,
-      }))
-      .map((point) => normalizeBoardPosition(point, boardWidth, boardHeight))
-      .find((point) => !occupiedKeys.has(`${point.x}:${point.y}`)) ??
-    normalizeBoardPosition({ x: centerX, y: centerY }, boardWidth, boardHeight);
+      .map((offset) =>
+        normalizeBoardPosition(
+          {
+            x: centerX + offset.x,
+            y: centerY + offset.y,
+          },
+          boardWidth,
+          boardHeight,
+          initialScale,
+        ),
+      )
+      .find((point) => !hasPlacementConflict(point, existing, initialScale)) ??
+    normalizeBoardPosition({ x: centerX, y: centerY }, boardWidth, boardHeight, initialScale);
 
   return {
     id: crypto.randomUUID(),
     landmarkId,
     x: nextPoint.x,
     y: nextPoint.y,
-    scale: 1,
+    scale: initialScale,
     zIndex: getNextZIndex(existing),
   };
 };
@@ -290,6 +446,7 @@ export const buildMyScapeChartData = (
   mode: MyScapeViewMode,
 ): MyScapeChartPoint[] => {
   const runs = runHistory.filter((entry) => isWithinPeriod(entry.completedAt, anchorDate, mode));
+  const yearDemoValues = [18.4, 22.1, 26.8, 19.6, 31.2, 28.4, 34.1, 29.7, 24.5, 27.3, 21.8, 25.9];
 
   if (mode === "day") {
     return Array.from({ length: 24 }, (_, hour) => ({
@@ -340,12 +497,7 @@ export const buildMyScapeChartData = (
   }
 
   return Array.from({ length: 12 }, (_, month) => ({
-    label: `${month + 1}月`,
-    value: Number(
-      runs
-        .filter((entry) => new Date(entry.completedAt).getMonth() === month)
-        .reduce((sum, entry) => sum + entry.distanceKm, 0)
-        .toFixed(1),
-    ),
+    label: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][month] ?? "",
+    value: yearDemoValues[month] ?? 0,
   }));
 };

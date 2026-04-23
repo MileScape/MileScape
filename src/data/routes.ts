@@ -34,7 +34,7 @@ export const routes: Route[] = [
     sourceType: "personal",
     sourceCrewId: null,
     landmarks: [
-      { id: "bethesda-terrace", name: "Bethesda Terrace", milestoneKm: 2, description: "A quick early reward that makes the first run feel meaningful.", image: "" },
+      { id: "statue-of-liberty", name: "Statue of Liberty", milestoneKm: 2, description: "Your first New York memory appears after a real run in the park.", image: "" },
       { id: "bow-bridge", name: "Bow Bridge", milestoneKm: 5, description: "The midpoint unlock where consistency starts looking beautiful.", image: "" },
       { id: "belvedere-castle", name: "Belvedere Castle", milestoneKm: 8, description: "A near-finish reward that reframes the route as an adventure.", image: "" }
     ]
@@ -53,9 +53,8 @@ export const routes: Route[] = [
     sourceType: "personal",
     sourceCrewId: null,
     landmarks: [
-      { id: "shibuya-crossing", name: "Shibuya Crossing", milestoneKm: 4, description: "The energy-packed first reveal that turns progress into place.", image: "" },
-      { id: "meiji-shrine", name: "Meiji Shrine", milestoneKm: 10, description: "A calm, reflective midpoint reward that slows the rhythm beautifully.", image: "" },
-      { id: "tokyo-tower", name: "Tokyo Tower", milestoneKm: 17, description: "The final dramatic unlock before full route completion.", image: "" }
+      { id: "torii-gate", name: "Torii Gate", milestoneKm: 4, description: "The first Tokyo landmark arrives after your opening real run progress.", image: "" },
+      { id: "tokyo-tower", name: "Tokyo Tower", milestoneKm: 10, description: "A bigger Tokyo memory unlocks later as the route deepens.", image: "" }
     ]
   },
   {

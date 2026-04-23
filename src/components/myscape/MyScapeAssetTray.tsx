@@ -1,4 +1,4 @@
-import { CheckCircle2, Plus } from "lucide-react";
+import { CheckCircle2, Landmark, Plus } from "lucide-react";
 import type { UnlockedLandmarkAsset } from "../../utils/myScape";
 import { cn } from "../../utils/cn";
 
@@ -34,10 +34,16 @@ export const MyScapeAssetTray = ({ assets, placedLandmarkIds, onPlace }: MyScape
                 ? "border-sage-200 bg-[linear-gradient(180deg,rgba(242,247,242,0.92),rgba(255,255,255,0.88))]"
                 : "border-white/75 bg-white/78 hover:bg-white",
             )}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-[16px] bg-[linear-gradient(180deg,rgba(191,212,195,0.95),rgba(149,175,156,0.95))] text-white shadow-[0_10px_22px_rgba(62,85,69,0.14)]">
-                <Plus className="h-4 w-4" />
+            >
+              <div className="flex items-start justify-between gap-3">
+              <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-[16px] bg-[linear-gradient(180deg,rgba(191,212,195,0.95),rgba(149,175,156,0.95))] text-white shadow-[0_10px_22px_rgba(62,85,69,0.14)]">
+                {asset.imageSrc ? (
+                  <img src={asset.imageSrc} alt={asset.name} className="h-8 w-8 object-contain" draggable={false} />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Landmark className="h-4 w-4" />
+                  </div>
+                )}
               </div>
               {isPlaced ? <CheckCircle2 className="h-4 w-4 text-sage-500" /> : null}
             </div>
@@ -48,6 +54,12 @@ export const MyScapeAssetTray = ({ assets, placedLandmarkIds, onPlace }: MyScape
                 {isPlaced ? "Placed on board" : `${asset.city}, ${asset.country}`}
               </p>
             </div>
+            {!isPlaced ? (
+              <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-sage-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-sage-600">
+                <Plus className="h-3 w-3" />
+                Place on lawn
+              </div>
+            ) : null}
           </button>
         );
       })}
