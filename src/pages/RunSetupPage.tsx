@@ -61,6 +61,8 @@ export const RunSetupPage = () => {
   const [missionPickerOpen, setMissionPickerOpen] = useState(false);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const carouselScrollTimeoutRef = useRef<number | null>(null);
+  const carouselJumpingRef = useRef(false);
+  const carouselInitializedRef = useRef(false);
   const welcomeRevealThreshold = 100;
   const welcomeDistanceRatio = 0.86;
 
@@ -79,6 +81,7 @@ export const RunSetupPage = () => {
   }, [acceptedMissions.length]);
 
   const route = playableRoutes.find((entry) => entry.id === state.selectedRouteId) ?? playableRoutes[0];
+  const routeIndex = route ? playableRoutes.findIndex((entry) => entry.id === route.id) : -1;
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(acceptedMissions[0]?.mission.id ?? null);
 
   useEffect(() => {
@@ -176,6 +179,36 @@ export const RunSetupPage = () => {
         ? `${effectiveDistance.toFixed(1)} km selected / ${route.totalDistanceKm.toFixed(1)} km · ${routeExploredPercent}% explored`
         : `${effectiveDistance.toFixed(1)} km selected`;
   const hasWearablePriority = Boolean(state.wearableConnection && state.wearableConnection.autoSyncEnabled);
+  const carouselRoutes = useMemo(() => {
+    if (playableRoutes.length <= 1) {
+      return playableRoutes.map((item, index) => ({
+        item,
+        virtualIndex: index,
+        isClone: false,
+      }));
+    }
+
+    const firstRoute = playableRoutes[0];
+    const lastRoute = playableRoutes[playableRoutes.length - 1];
+
+    return [
+      {
+        item: lastRoute,
+        virtualIndex: 0,
+        isClone: true,
+      },
+      ...playableRoutes.map((item, index) => ({
+        item,
+        virtualIndex: index + 1,
+        isClone: false,
+      })),
+      {
+        item: firstRoute,
+        virtualIndex: playableRoutes.length + 1,
+        isClone: true,
+      },
+    ];
+  }, [playableRoutes]);
 
   const handleStartRun = () => {
     setIsSubmitting(true);
@@ -286,12 +319,28 @@ export const RunSetupPage = () => {
       return;
     }
 
-    const activeCard = carouselRef.current.querySelector<HTMLButtonElement>(`[data-route-id="${route.id}"]`);
-    activeCard?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-  }, [activeTargetType, route?.id]);
+    const targetVirtualIndex = playableRoutes.length > 1 ? routeIndex + 1 : routeIndex;
+    if (targetVirtualIndex < 0) {
+      return;
+    }
+
+    const activeCard = carouselRef.current.querySelector<HTMLButtonElement>(
+      `[data-carousel-index="${targetVirtualIndex}"]`,
+    );
+    if (!activeCard) {
+      return;
+    }
+
+    activeCard.scrollIntoView({
+      behavior: carouselInitializedRef.current ? "smooth" : "auto",
+      inline: "center",
+      block: "nearest",
+    });
+    carouselInitializedRef.current = true;
+  }, [activeTargetType, playableRoutes.length, routeIndex, route?.id]);
 
   const handleRouteCarouselScroll = () => {
-    if (!carouselRef.current) {
+    if (!carouselRef.current || carouselJumpingRef.current) {
       return;
     }
 
@@ -317,6 +366,28 @@ export const RunSetupPage = () => {
       }, null);
 
       const nextRouteId = nearestCard?.dataset.routeId;
+      const virtualIndex = Number(nearestCard?.dataset.carouselIndex);
+
+      if (playableRoutes.length > 1) {
+        const jumpToIndex =
+          virtualIndex === 0
+            ? playableRoutes.length
+            : virtualIndex === playableRoutes.length + 1
+              ? 1
+              : null;
+
+        if (jumpToIndex !== null) {
+          const jumpTarget = carousel.querySelector<HTMLButtonElement>(`[data-carousel-index="${jumpToIndex}"]`);
+          if (jumpTarget) {
+            carouselJumpingRef.current = true;
+            jumpTarget.scrollIntoView({ behavior: "auto", inline: "center", block: "nearest" });
+            window.setTimeout(() => {
+              carouselJumpingRef.current = false;
+            }, 40);
+          }
+        }
+      }
+
       if (nextRouteId && nextRouteId !== route?.id) {
         selectRoute(nextRouteId);
       }
@@ -463,7 +534,7 @@ export const RunSetupPage = () => {
               onScroll={handleRouteCarouselScroll}
               className="-mx-6 flex snap-x snap-mandatory overflow-x-auto pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-              {playableRoutes.map((item) => {
+              {carouselRoutes.map(({ item, virtualIndex, isClone }) => {
                 const active = item.id === route.id;
                 const itemLoggedDistanceKm = state.runHistory
                   .filter((entry) => entry.runTargetType === "personal" && entry.routeId === item.id)
@@ -476,14 +547,16 @@ export const RunSetupPage = () => {
 
                 return (
                   <button
-                    key={item.id}
+                    key={`${item.id}-${virtualIndex}`}
                     type="button"
                     data-route-id={item.id}
+                    data-carousel-index={virtualIndex}
                     onClick={() => selectRoute(item.id)}
                     className={`w-full min-w-full shrink-0 snap-start overflow-hidden px-6 py-1 text-left transition ${
                       active ? "opacity-100" : "opacity-35"
                     }`}
                     aria-label={`Select ${item.name}`}
+                    tabIndex={isClone ? -1 : 0}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
