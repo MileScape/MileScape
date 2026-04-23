@@ -16,6 +16,7 @@ export const AppShell = () => {
   const isWearableHome = location.pathname === "/wearable";
   const isWearablesHome = location.pathname === "/wearables";
   const isRunResult = location.pathname === "/run/result";
+  const isPaceportHome = location.pathname === "/paceport";
   const isPaceCrewSubpage = location.pathname.startsWith("/pacecrew/") && location.pathname !== "/pacecrew";
   const isWearablesSubpage = location.pathname.startsWith("/wearables/") && location.pathname !== "/wearables";
   const isWearablesFullBleed = isWearablesHome && !state.wearableConnection;
@@ -61,6 +62,8 @@ export const AppShell = () => {
             ? "hidden"
             : isRunResult
             ? "mb-[-4.35rem] pb-3 backdrop-blur-2xl bg-[linear-gradient(180deg,rgba(245,243,238,0.86)_0%,rgba(245,243,238,0.56)_42%,rgba(245,243,238,0.18)_72%,rgba(245,243,238,0)_100%)]"
+            : isPaceportHome
+            ? "mb-[-5.4rem] pb-5 backdrop-blur-[5px] bg-[linear-gradient(180deg,rgba(245,243,238,0.34)_0%,rgba(245,243,238,0.2)_48%,rgba(245,243,238,0)_100%)]"
             : isPrimaryHome || isWearableHome || isWearablesFullBleed
             ? "mb-[-4.75rem] pb-0"
             : "pb-3 backdrop-blur",
@@ -100,7 +103,12 @@ export const AppShell = () => {
                     : "/run/setup",
               )
             }
-            className="rounded-full bg-white/90 p-3 text-sage-700 shadow-card ring-1 ring-sage-100"
+            className={cn(
+              "rounded-full p-3 text-sage-700",
+              isPaceportHome
+                ? "bg-white/72 shadow-[0_10px_28px_rgba(24,43,29,0.11)] ring-1 ring-white/75 backdrop-blur-xl"
+                : "bg-white/90 shadow-card ring-1 ring-sage-100",
+            )}
             aria-label={
               isPaceCrewSubpage
                 ? "Return to PaceCrew"
