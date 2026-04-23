@@ -161,14 +161,53 @@ export const RouteArtwork = ({
 
     return [lngSum / activeSimulationPath.length, latSum / activeSimulationPath.length];
   }, [activeSimulationPath, isSimulationActive, view.center]);
+  const simulationBounds = useMemo(() => {
+    if (activeSimulationPath.length === 0) {
+      return null;
+    }
+
+    return activeSimulationPath.reduce(
+      (bounds, [lng, lat]) => ({
+        minLng: Math.min(bounds.minLng, lng),
+        maxLng: Math.max(bounds.maxLng, lng),
+        minLat: Math.min(bounds.minLat, lat),
+        maxLat: Math.max(bounds.maxLat, lat)
+      }),
+      {
+        minLng: activeSimulationPath[0][0],
+        maxLng: activeSimulationPath[0][0],
+        minLat: activeSimulationPath[0][1],
+        maxLat: activeSimulationPath[0][1]
+      }
+    );
+  }, [activeSimulationPath]);
+  const simulationZoomOffset = useMemo(() => {
+    if (!isSimulationActive) {
+      return 0;
+    }
+
+    if (routeId === "tokyo-city-route") {
+      return 0.65;
+    }
+
+    if (routeId === "central-park-loop") {
+      return 0.18;
+    }
+
+    if (routeId === "west-lake-loop") {
+      return 0.3;
+    }
+
+    return 0.55;
+  }, [isSimulationActive, routeId]);
   const cameraView = useMemo(
     () => ({
       center: simulationCameraCenter,
-      zoom: isSimulationActive ? view.zoom + 1.1 : view.zoom,
+      zoom: isSimulationActive ? view.zoom + simulationZoomOffset : view.zoom,
       pitch: isSimulationActive ? Math.max(view.pitch - 10, 52) : view.pitch,
       bearing: view.bearing
     }),
-    [isSimulationActive, simulationCameraCenter, view.bearing, view.pitch, view.zoom],
+    [isSimulationActive, simulationCameraCenter, simulationZoomOffset, view.bearing, view.pitch, view.zoom],
   );
   const simulationProgressTarget = useMemo(
     () =>
@@ -519,8 +558,10 @@ export const RouteArtwork = ({
       .addTo(map);
 
     const totalDurationMs = simulation.durationSeconds * 1000;
-    const followStrength = variant === "hero" ? 0.18 : 0.1;
-    const lookAheadOffset = 0.028;
+    const followStrength = variant === "hero" ? 0.13 : 0.08;
+    const lookAheadOffset = 0.022;
+    const lngPadding = simulationBounds ? (simulationBounds.maxLng - simulationBounds.minLng) * 0.18 : 0;
+    const latPadding = simulationBounds ? (simulationBounds.maxLat - simulationBounds.minLat) * 0.18 : 0;
 
     const tick = (timestamp: number) => {
       if (mapRef.current !== map) {
@@ -549,12 +590,24 @@ export const RouteArtwork = ({
         cameraView.center[0] * (1 - followStrength) + lookAheadCoordinate[0] * followStrength,
         cameraView.center[1] * (1 - followStrength) + lookAheadCoordinate[1] * followStrength
       ];
+      const clampedTargetCenter: LngLatTuple = simulationBounds
+        ? [
+            Math.min(
+              simulationBounds.maxLng + lngPadding,
+              Math.max(simulationBounds.minLng - lngPadding, targetCenter[0])
+            ),
+            Math.min(
+              simulationBounds.maxLat + latPadding,
+              Math.max(simulationBounds.minLat - latPadding, targetCenter[1])
+            )
+          ]
+        : targetCenter;
 
       const currentCenter = map.getCenter();
       map.jumpTo({
         center: [
-          currentCenter.lng + (targetCenter[0] - currentCenter.lng) * 0.14,
-          currentCenter.lat + (targetCenter[1] - currentCenter.lat) * 0.14
+          currentCenter.lng + (clampedTargetCenter[0] - currentCenter.lng) * 0.12,
+          currentCenter.lat + (clampedTargetCenter[1] - currentCenter.lat) * 0.12
         ],
         zoom: cameraView.zoom,
         pitch: cameraView.pitch,
@@ -583,6 +636,7 @@ export const RouteArtwork = ({
     mapReady,
     simulation?.active,
     simulation?.durationSeconds,
+    simulationBounds,
     simulationProgressTarget,
     variant,
     view.marker
