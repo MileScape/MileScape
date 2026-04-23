@@ -3,6 +3,14 @@ import { AlertCircle, MapIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { routeMapViews } from "../../data/routeMapViews";
 import { cn } from "../../utils/cn";
+import {
+  buildSimulationFeatureCollection,
+  buildSimulationPath,
+  getProgressCoordinate,
+  getSimulationProgressTarget,
+  routeWalkingWaypoints,
+  type LngLatTuple
+} from "../../utils/routeSimulation";
 
 interface RouteArtworkProps {
   routeId: string;
@@ -11,6 +19,12 @@ interface RouteArtworkProps {
   active?: boolean;
   variant?: "card" | "hero";
   className?: string;
+  simulation?: {
+    active: boolean;
+    durationSeconds: number;
+    distanceKm: number;
+    routeDistanceKm: number;
+  };
 }
 
 const palettes: Record<
@@ -55,6 +69,10 @@ const defaultView = {
   pitch: 0,
   bearing: 0
 };
+
+const SIMULATION_SOURCE_ID = "route-simulation-path";
+const SIMULATION_GHOST_LAYER_ID = "route-simulation-ghost";
+const SIMULATION_ACTIVE_LAYER_ID = "route-simulation-active";
 
 const simplifyMapLabels = (map: mapboxgl.Map) => {
   const setBasemapConfig = (property: string, value: boolean | string) => {
@@ -107,19 +125,102 @@ export const RouteArtwork = ({
   size = "lg",
   active = false,
   variant = "card",
-  className
+  className,
+  simulation
 }: RouteArtworkProps) => {
   const palette = palettes[routeId] ?? palettes["central-park-loop"];
   const sizeStyle = sizeStyles[size];
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const simulationMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const simulationFrameRef = useRef<number | null>(null);
+  const simulationStartRef = useRef<number | null>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [walkingSimulationPath, setWalkingSimulationPath] = useState<LngLatTuple[] | null>(null);
   const mapToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
   const view = useMemo(() => routeMapViews[routeId] ?? defaultView, [routeId]);
+  const isSimulationActive = Boolean(simulation?.active);
+  const simulationPath = useMemo(
+    () => buildSimulationPath(routeId, view.center, view.marker),
+    [routeId, view.center, view.marker],
+  );
+  const activeSimulationPath = walkingSimulationPath ?? simulationPath;
+  const simulationCameraCenter = useMemo<LngLatTuple>(() => {
+    if (!isSimulationActive || activeSimulationPath.length === 0) {
+      return view.center;
+    }
+
+    const [lngSum, latSum] = activeSimulationPath.reduce(
+      ([lngAcc, latAcc], [lng, lat]) => [lngAcc + lng, latAcc + lat],
+      [0, 0]
+    );
+
+    return [lngSum / activeSimulationPath.length, latSum / activeSimulationPath.length];
+  }, [activeSimulationPath, isSimulationActive, view.center]);
+  const cameraView = useMemo(
+    () => ({
+      center: simulationCameraCenter,
+      zoom: isSimulationActive ? view.zoom + 1.1 : view.zoom,
+      pitch: isSimulationActive ? Math.max(view.pitch - 10, 52) : view.pitch,
+      bearing: view.bearing
+    }),
+    [isSimulationActive, simulationCameraCenter, view.bearing, view.pitch, view.zoom],
+  );
+  const simulationProgressTarget = useMemo(
+    () =>
+      getSimulationProgressTarget(
+        simulation?.distanceKm ?? 0,
+        simulation?.routeDistanceKm ?? 0
+      ),
+    [simulation?.distanceKm, simulation?.routeDistanceKm],
+  );
+
+  useEffect(() => {
+    const waypoints = routeWalkingWaypoints[routeId];
+    if (!mapToken || !waypoints || waypoints.length < 2) {
+      setWalkingSimulationPath(null);
+      return;
+    }
+
+    const abortController = new AbortController();
+    const coordinateString = waypoints.map(([lng, lat]) => `${lng},${lat}`).join(";");
+    const requestUrl = new URL(`https://api.mapbox.com/directions/v5/mapbox/walking/${coordinateString}`);
+
+    requestUrl.searchParams.set("access_token", mapToken);
+    requestUrl.searchParams.set("geometries", "geojson");
+    requestUrl.searchParams.set("overview", "full");
+    requestUrl.searchParams.set("steps", "false");
+
+    fetch(requestUrl.toString(), { signal: abortController.signal })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Directions request failed: ${response.status}`);
+        }
+        return response.json() as Promise<{
+          routes?: Array<{ geometry?: { coordinates?: number[][] } }>;
+        }>;
+      })
+      .then((payload) => {
+        const coordinates = payload.routes?.[0]?.geometry?.coordinates;
+        if (!coordinates || coordinates.length < 2) {
+          setWalkingSimulationPath(null);
+          return;
+        }
+
+        setWalkingSimulationPath(coordinates.map(([lng, lat]) => [lng, lat] as LngLatTuple));
+      })
+      .catch(() => {
+        if (!abortController.signal.aborted) {
+          setWalkingSimulationPath(null);
+        }
+      });
+
+    return () => abortController.abort();
+  }, [mapToken, routeId]);
 
   useEffect(() => {
     if (!containerRef.current || !mapToken) {
@@ -143,10 +244,10 @@ export const RouteArtwork = ({
           showPlaceLabels: false
         }
       },
-      center: view.center,
-      zoom: view.zoom,
-      pitch: view.pitch,
-      bearing: view.bearing,
+      center: cameraView.center,
+      zoom: cameraView.zoom,
+      pitch: cameraView.pitch,
+      bearing: cameraView.bearing,
       interactive: false,
       attributionControl: false,
       logoPosition: "bottom-left",
@@ -237,7 +338,42 @@ export const RouteArtwork = ({
         }
       });
 
-      if (view.marker) {
+      map.addSource(SIMULATION_SOURCE_ID, {
+        type: "geojson",
+        data: buildSimulationFeatureCollection([]) as never
+      });
+
+      map.addLayer({
+        id: SIMULATION_GHOST_LAYER_ID,
+        type: "line",
+        source: SIMULATION_SOURCE_ID,
+        filter: ["==", ["get", "kind"], "ghost"],
+        layout: {
+          visibility: "none"
+        },
+        paint: {
+          "line-color": "#f4f8f4",
+          "line-width": variant === "hero" ? 5 : 3,
+          "line-opacity": 0.5
+        }
+      });
+
+      map.addLayer({
+        id: SIMULATION_ACTIVE_LAYER_ID,
+        type: "line",
+        source: SIMULATION_SOURCE_ID,
+        filter: ["==", ["get", "kind"], "active"],
+        layout: {
+          visibility: "none"
+        },
+        paint: {
+          "line-color": "#365342",
+          "line-width": variant === "hero" ? 5 : 3,
+          "line-opacity": 0.95
+        }
+      });
+
+      if (view.marker && !isSimulationActive) {
         const markerNode = document.createElement("div");
         markerNode.className =
           "h-3.5 w-3.5 rounded-full border-2 border-white bg-sage-700 shadow-[0_0_0_6px_rgba(255,255,255,0.24)]";
@@ -255,10 +391,17 @@ export const RouteArtwork = ({
         window.clearTimeout(transitionTimeoutRef.current);
         transitionTimeoutRef.current = null;
       }
+      if (simulationFrameRef.current) {
+        window.cancelAnimationFrame(simulationFrameRef.current);
+        simulationFrameRef.current = null;
+      }
+      simulationStartRef.current = null;
       resizeObserverRef.current?.disconnect();
       resizeObserverRef.current = null;
       markerRef.current?.remove();
       markerRef.current = null;
+      simulationMarkerRef.current?.remove();
+      simulationMarkerRef.current = null;
       map.remove();
       mapRef.current = null;
       setMapReady(false);
@@ -277,10 +420,10 @@ export const RouteArtwork = ({
     setIsTransitioning(true);
     mapRef.current.stop();
     mapRef.current.easeTo({
-      center: view.center,
-      zoom: view.zoom,
-      pitch: view.pitch,
-      bearing: view.bearing,
+      center: cameraView.center,
+      zoom: cameraView.zoom,
+      pitch: cameraView.pitch,
+      bearing: cameraView.bearing,
       duration: 720,
       essential: true
     });
@@ -291,6 +434,12 @@ export const RouteArtwork = ({
       setIsTransitioning(false);
       transitionTimeoutRef.current = null;
     }, 920);
+
+    if (isSimulationActive) {
+      markerRef.current?.remove();
+      markerRef.current = null;
+      return;
+    }
 
     if (markerRef.current && view.marker) {
       markerRef.current.setLngLat(view.marker);
@@ -305,7 +454,139 @@ export const RouteArtwork = ({
       markerRef.current.remove();
       markerRef.current = null;
     }
-  }, [mapReady, view]);
+  }, [cameraView, isSimulationActive, mapReady, view]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) {
+      return;
+    }
+
+    const resetSimulationState = () => {
+      if (mapRef.current !== map) {
+        simulationMarkerRef.current?.remove();
+        simulationMarkerRef.current = null;
+        return;
+      }
+
+      simulationMarkerRef.current?.remove();
+      simulationMarkerRef.current = null;
+
+      const source = map.getSource(SIMULATION_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+      if (source) {
+        source.setData(buildSimulationFeatureCollection([]) as never);
+      }
+
+      if (map.getLayer(SIMULATION_GHOST_LAYER_ID)) {
+        map.setLayoutProperty(SIMULATION_GHOST_LAYER_ID, "visibility", "none");
+      }
+
+      if (map.getLayer(SIMULATION_ACTIVE_LAYER_ID)) {
+        map.setLayoutProperty(SIMULATION_ACTIVE_LAYER_ID, "visibility", "none");
+      }
+    };
+
+    if (!map.isStyleLoaded()) {
+      return;
+    }
+
+    const source = map.getSource(SIMULATION_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+    if (!source) {
+      return;
+    }
+
+    if (simulationFrameRef.current) {
+      window.cancelAnimationFrame(simulationFrameRef.current);
+      simulationFrameRef.current = null;
+    }
+    simulationStartRef.current = null;
+
+    if (!simulation?.active || activeSimulationPath.length < 2 || simulationProgressTarget <= 0) {
+      resetSimulationState();
+      return;
+    }
+
+    map.setLayoutProperty(SIMULATION_GHOST_LAYER_ID, "visibility", "visible");
+    map.setLayoutProperty(SIMULATION_ACTIVE_LAYER_ID, "visibility", "visible");
+    source.setData(buildSimulationFeatureCollection(activeSimulationPath, 0) as never);
+
+    simulationMarkerRef.current?.remove();
+    const markerNode = document.createElement("div");
+    markerNode.className =
+      "h-5 w-5 rounded-full border-2 border-white bg-[#365342] shadow-[0_0_0_10px_rgba(255,255,255,0.18)]";
+    simulationMarkerRef.current = new mapboxgl.Marker({ element: markerNode, anchor: "center" })
+      .setLngLat(activeSimulationPath[0])
+      .addTo(map);
+
+    const totalDurationMs = simulation.durationSeconds * 1000;
+    const followStrength = variant === "hero" ? 0.18 : 0.1;
+    const lookAheadOffset = 0.028;
+
+    const tick = (timestamp: number) => {
+      if (mapRef.current !== map) {
+        simulationFrameRef.current = null;
+        return;
+      }
+
+      if (simulationStartRef.current === null) {
+        simulationStartRef.current = timestamp;
+      }
+
+      const elapsed = timestamp - simulationStartRef.current;
+      const animationProgress = Math.min(elapsed / totalDurationMs, 1);
+      const routeProgress = animationProgress * simulationProgressTarget;
+      const currentRunnerCoordinate = getProgressCoordinate(activeSimulationPath, routeProgress);
+      const lookAheadCoordinate = getProgressCoordinate(
+        activeSimulationPath,
+        Math.min(routeProgress + lookAheadOffset, simulationProgressTarget)
+      );
+
+      source.setData(buildSimulationFeatureCollection(activeSimulationPath, routeProgress) as never);
+
+      simulationMarkerRef.current?.setLngLat(currentRunnerCoordinate);
+
+      const targetCenter: LngLatTuple = [
+        cameraView.center[0] * (1 - followStrength) + lookAheadCoordinate[0] * followStrength,
+        cameraView.center[1] * (1 - followStrength) + lookAheadCoordinate[1] * followStrength
+      ];
+
+      const currentCenter = map.getCenter();
+      map.jumpTo({
+        center: [
+          currentCenter.lng + (targetCenter[0] - currentCenter.lng) * 0.14,
+          currentCenter.lat + (targetCenter[1] - currentCenter.lat) * 0.14
+        ],
+        zoom: cameraView.zoom,
+        pitch: cameraView.pitch,
+        bearing: cameraView.bearing
+      });
+
+      if (animationProgress < 1) {
+        simulationFrameRef.current = window.requestAnimationFrame(tick);
+      } else {
+        simulationFrameRef.current = null;
+      }
+    };
+
+    simulationFrameRef.current = window.requestAnimationFrame(tick);
+
+    return () => {
+      if (simulationFrameRef.current) {
+        window.cancelAnimationFrame(simulationFrameRef.current);
+        simulationFrameRef.current = null;
+      }
+      simulationStartRef.current = null;
+      resetSimulationState();
+    };
+  }, [
+    activeSimulationPath,
+    mapReady,
+    simulation?.active,
+    simulation?.durationSeconds,
+    simulationProgressTarget,
+    variant,
+    view.marker
+  ]);
 
   return (
     <div

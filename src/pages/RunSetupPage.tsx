@@ -6,6 +6,7 @@ import runnerIcon from "../assets/runner-slider.svg";
 import { RouteArtwork } from "../components/route/RouteArtwork";
 import { Button } from "../components/ui/Button";
 import { useAppState } from "../hooks/useAppState";
+import { getRunSimulationDurationSeconds } from "../utils/routeSimulation";
 import { getAcceptedMissionStatesForUser, getMissionProgress } from "../utils/paceCrew";
 import { markOnboardingSeen } from "../utils/storage";
 
@@ -60,7 +61,6 @@ export const RunSetupPage = () => {
   const [missionPickerOpen, setMissionPickerOpen] = useState(false);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const carouselScrollTimeoutRef = useRef<number | null>(null);
-  const runSimulationDurationSeconds = 10;
   const welcomeRevealThreshold = 100;
   const welcomeDistanceRatio = 0.86;
 
@@ -98,6 +98,10 @@ export const RunSetupPage = () => {
   const activeTargetType =
     targetType === "pacecrew_mission" && selectedMissionBundle ? "pacecrew_mission" : "personal";
   const effectiveDistance = selectedDistance;
+  const runSimulationDurationSeconds = useMemo(
+    () => getRunSimulationDurationSeconds(effectiveDistance),
+    [effectiveDistance],
+  );
 
   const preview = useMemo(() => {
     if (activeTargetType === "pacecrew_mission" && selectedMissionBundle) {
@@ -329,7 +333,17 @@ export const RunSetupPage = () => {
             transition={{ duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="block h-full w-full text-left">
-              <RouteArtwork routeId={route.id} variant="hero" className="h-full w-full" />
+              <RouteArtwork
+                routeId={route.id}
+                variant="hero"
+                className="h-full w-full"
+                simulation={{
+                  active: isSubmitting,
+                  durationSeconds: runSimulationDurationSeconds,
+                  distanceKm: effectiveDistance,
+                  routeDistanceKm: route.totalDistanceKm
+                }}
+              />
             </div>
             <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#0d1711]/24 via-[#0d1711]/10 to-transparent" />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#f5f3ee] via-[#f5f3ee]/82 to-transparent" />
