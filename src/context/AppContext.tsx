@@ -27,6 +27,22 @@ const createCrewId = (name: string) =>
 const createMissionId = (title: string) =>
   `${title.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-")}-${crypto.randomUUID().slice(0, 6)}`;
 
+const areMissionStatesEqual = (left: AppState["userMissionStates"], right: AppState["userMissionStates"]) =>
+  left.length === right.length &&
+  left.every((entry, index) => {
+    const other = right[index];
+    return (
+      other &&
+      entry.missionId === other.missionId &&
+      entry.crewId === other.crewId &&
+      entry.userId === other.userId &&
+      entry.acceptedAt === other.acceptedAt &&
+      entry.status === other.status &&
+      entry.depositPaid === other.depositPaid &&
+      entry.completedDistanceKm === other.completedDistanceKm
+    );
+  });
+
 const buildWearableHistoryFromState = (current: AppState): WearableSyncRecord[] => {
   const routeNameById = new Map(routes.map((route) => [route.id, route.name]));
   const syncedRuns = current.runHistory
@@ -154,11 +170,19 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   useEffect(() => {
     const synced = syncExpiredMissionStates(state);
-    if (JSON.stringify(synced.userMissionStates) !== JSON.stringify(state.userMissionStates)) {
+    if (!areMissionStatesEqual(synced.userMissionStates, state.userMissionStates)) {
       setState(synced);
-      return;
     }
-    saveState(state);
+  }, [state.paceCrewMissions, state.userMissionStates]);
+
+  useEffect(() => {
+    const saveTimer = window.setTimeout(() => {
+      saveState(state);
+    }, 120);
+
+    return () => {
+      window.clearTimeout(saveTimer);
+    };
   }, [state]);
 
   const playableRoutes = routes.filter(

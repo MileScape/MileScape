@@ -73,6 +73,66 @@ const defaultView = {
 const SIMULATION_SOURCE_ID = "route-simulation-path";
 const SIMULATION_GHOST_LAYER_ID = "route-simulation-ghost";
 const SIMULATION_ACTIVE_LAYER_ID = "route-simulation-active";
+const walkingPathCache = new Map<string, LngLatTuple[] | null>();
+const walkingPathRequestCache = new Map<string, Promise<LngLatTuple[] | null>>();
+type WindowWithIdleCallback = Window &
+  typeof globalThis & {
+    requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+    cancelIdleCallback?: (handle: number) => void;
+  };
+
+const fetchWalkingPath = async (routeId: string, mapToken: string) => {
+  if (walkingPathCache.has(routeId)) {
+    return walkingPathCache.get(routeId) ?? null;
+  }
+
+  const inFlightRequest = walkingPathRequestCache.get(routeId);
+  if (inFlightRequest) {
+    return inFlightRequest;
+  }
+
+  const waypoints = routeWalkingWaypoints[routeId];
+  if (!waypoints || waypoints.length < 2) {
+    walkingPathCache.set(routeId, null);
+    return null;
+  }
+
+  const request = (async () => {
+    try {
+      const coordinateString = waypoints.map(([lng, lat]) => `${lng},${lat}`).join(";");
+      const requestUrl = new URL(`https://api.mapbox.com/directions/v5/mapbox/walking/${coordinateString}`);
+      requestUrl.searchParams.set("access_token", mapToken);
+      requestUrl.searchParams.set("geometries", "geojson");
+      requestUrl.searchParams.set("overview", "full");
+      requestUrl.searchParams.set("steps", "false");
+
+      const response = await fetch(requestUrl.toString());
+      if (!response.ok) {
+        throw new Error(`Directions request failed: ${response.status}`);
+      }
+
+      const payload = (await response.json()) as {
+        routes?: Array<{ geometry?: { coordinates?: number[][] } }>;
+      };
+      const coordinates = payload.routes?.[0]?.geometry?.coordinates;
+      const nextPath =
+        coordinates && coordinates.length >= 2
+          ? coordinates.map(([lng, lat]) => [lng, lat] as LngLatTuple)
+          : null;
+
+      walkingPathCache.set(routeId, nextPath);
+      return nextPath;
+    } catch {
+      walkingPathCache.set(routeId, null);
+      return null;
+    } finally {
+      walkingPathRequestCache.delete(routeId);
+    }
+  })();
+
+  walkingPathRequestCache.set(routeId, request);
+  return request;
+};
 
 const simplifyMapLabels = (map: mapboxgl.Map) => {
   const setBasemapConfig = (property: string, value: boolean | string) => {
@@ -219,46 +279,52 @@ export const RouteArtwork = ({
   );
 
   useEffect(() => {
-    const waypoints = routeWalkingWaypoints[routeId];
-    if (!mapToken || !waypoints || waypoints.length < 2) {
+    if (!mapToken) {
       setWalkingSimulationPath(null);
       return;
     }
 
-    const abortController = new AbortController();
-    const coordinateString = waypoints.map(([lng, lat]) => `${lng},${lat}`).join(";");
-    const requestUrl = new URL(`https://api.mapbox.com/directions/v5/mapbox/walking/${coordinateString}`);
+    const cachedPath = walkingPathCache.get(routeId);
+    if (cachedPath) {
+      setWalkingSimulationPath(cachedPath);
+      return;
+    }
 
-    requestUrl.searchParams.set("access_token", mapToken);
-    requestUrl.searchParams.set("geometries", "geojson");
-    requestUrl.searchParams.set("overview", "full");
-    requestUrl.searchParams.set("steps", "false");
+    let active = true;
+    setWalkingSimulationPath(null);
 
-    fetch(requestUrl.toString(), { signal: abortController.signal })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Directions request failed: ${response.status}`);
-        }
-        return response.json() as Promise<{
-          routes?: Array<{ geometry?: { coordinates?: number[][] } }>;
-        }>;
-      })
-      .then((payload) => {
-        const coordinates = payload.routes?.[0]?.geometry?.coordinates;
-        if (!coordinates || coordinates.length < 2) {
-          setWalkingSimulationPath(null);
-          return;
-        }
+    fetchWalkingPath(routeId, mapToken).then((path) => {
+      if (active) {
+        setWalkingSimulationPath(path);
+      }
+    });
 
-        setWalkingSimulationPath(coordinates.map(([lng, lat]) => [lng, lat] as LngLatTuple));
-      })
-      .catch(() => {
-        if (!abortController.signal.aborted) {
-          setWalkingSimulationPath(null);
-        }
-      });
+    return () => {
+      active = false;
+    };
+  }, [mapToken, routeId]);
 
-    return () => abortController.abort();
+  useEffect(() => {
+    if (!mapToken) {
+      return;
+    }
+
+    const preload = () => {
+      Object.keys(routeWalkingWaypoints)
+        .filter((candidateRouteId) => candidateRouteId !== routeId && !walkingPathCache.has(candidateRouteId))
+        .forEach((candidateRouteId) => {
+          void fetchWalkingPath(candidateRouteId, mapToken);
+        });
+    };
+
+    const idleWindow = window as WindowWithIdleCallback;
+    if (idleWindow.requestIdleCallback && idleWindow.cancelIdleCallback) {
+      const idleId = idleWindow.requestIdleCallback(preload, { timeout: 1200 });
+      return () => idleWindow.cancelIdleCallback?.(idleId);
+    }
+
+    const timeoutId = window.setTimeout(preload, 280);
+    return () => window.clearTimeout(timeoutId);
   }, [mapToken, routeId]);
 
   useEffect(() => {

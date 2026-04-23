@@ -52,9 +52,13 @@ const ResultHero = ({
   imageUrl: string;
 }) => (
   <div className="fixed inset-x-0 top-0 z-0 h-[68vh] overflow-hidden">
-    <div
-      className="h-full w-full bg-cover bg-center"
-      style={{ backgroundImage: `url(${imageUrl})` }}
+    <img
+      src={imageUrl}
+      alt=""
+      className="h-full w-full object-cover"
+      loading="eager"
+      decoding="async"
+      fetchPriority="high"
     />
     <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#0d1711]/24 via-[#0d1711]/10 to-transparent" />
     <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(13,23,17,0.03)_0%,rgba(13,23,17,0.08)_36%,rgba(13,23,17,0.42)_100%)]" />
@@ -268,6 +272,31 @@ export const RunResultPage = () => {
     day: "numeric",
     year: "numeric",
   }).format(new Date());
+
+  useEffect(() => {
+    if (!summary) {
+      return;
+    }
+
+    const preloadImage = (imageUrl: string) => {
+      const img = new Image();
+      img.decoding = "async";
+      img.src = imageUrl;
+    };
+
+    if (summary.runTargetType === "personal" && summary.routeId) {
+      preloadImage(routePosterImages[summary.routeId] ?? defaultRunPosterImage);
+      return;
+    }
+
+    if (summary.runTargetType === "pacecrew_mission") {
+      const unlockedDestinationId = summary.unlockedDestinationIds?.[0];
+      const unlockedDestination = unlockedDestinationId
+        ? routes.find((entry) => entry.id === unlockedDestinationId)
+        : null;
+      preloadImage(unlockedDestination?.coverImage ?? defaultMissionPosterImage);
+    }
+  }, [routes, summary]);
 
   if (!summary) {
     return <Navigate to="/run/setup" replace />;
