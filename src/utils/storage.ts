@@ -2,6 +2,7 @@ import type { AppState } from "../types";
 
 const STORAGE_KEY = "milescape-state";
 const ONBOARDING_KEY = "milescape-onboarding-seen";
+const MY_SCAPE_LAYOUT_KEY = "milescape-myscape-layout";
 
 export const loadState = (): AppState | null => {
   if (typeof window === "undefined") {
@@ -46,4 +47,12 @@ export const markOnboardingSeen = () => {
   }
 
   window.localStorage.setItem(ONBOARDING_KEY, "true");
+};
+
+export const saveMyScapeLayout = (layout: unknown) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(MY_SCAPE_LAYOUT_KEY, JSON.stringify(layout));
 };

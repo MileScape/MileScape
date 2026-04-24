@@ -6,6 +6,15 @@ export interface Landmark {
   image: string;
 }
 
+export interface MyScapePlacedLandmark {
+  id: string;
+  landmarkId: string;
+  x: number;
+  y: number;
+  scale: number;
+  zIndex: number;
+}
+
 export type RouteTier = "Starter" | "Standard" | "Advanced" | "Premium";
 export type AchievementTier = "none" | "bronze" | "silver" | "gold" | "prism";
 export type PaceportStatus = "locked" | "owned" | "in_progress" | "completed";
