@@ -1,5 +1,5 @@
 import { motion, useSpring, useTransform } from "framer-motion";
-import { Flag, Route as RouteIcon, Users, Watch } from "lucide-react";
+import { ChevronsLeftRight, Flag, Route as RouteIcon, Users, Watch } from "lucide-react";
 import { type PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import runnerIcon from "../assets/runner-slider.svg";
@@ -8,7 +8,7 @@ import { Button } from "../components/ui/Button";
 import { useAppState } from "../hooks/useAppState";
 import { getRunSimulationDurationSeconds } from "../utils/routeSimulation";
 import { getAcceptedMissionStatesForUser, getMissionProgress } from "../utils/paceCrew";
-import { markOnboardingSeen } from "../utils/storage";
+import { hasSeenJourneySwipeGuide, markJourneySwipeGuideSeen, markOnboardingSeen } from "../utils/storage";
 
 export const RunSetupPage = () => {
   const navigate = useNavigate();
@@ -60,11 +60,14 @@ export const RunSetupPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [missionPickerOpen, setMissionPickerOpen] = useState(false);
   const carouselRef = useRef<HTMLDivElement | null>(null);
+  const journeyGuideCardRef = useRef<HTMLDivElement | null>(null);
   const carouselScrollTimeoutRef = useRef<number | null>(null);
   const carouselJumpingRef = useRef(false);
   const carouselInitializedRef = useRef(false);
+  const initialRouteIdRef = useRef<string | null>(null);
   const welcomeRevealThreshold = 100;
   const welcomeDistanceRatio = 0.86;
+  const [showSwipeGuide, setShowSwipeGuide] = useState(false);
 
   useEffect(() => {
     welcomeDrawProgress.set(welcomeSliderValue / 100);
@@ -209,6 +212,27 @@ export const RunSetupPage = () => {
       },
     ];
   }, [playableRoutes]);
+
+  useEffect(() => {
+    if (showWelcomeIntro || activeTargetType !== "personal" || !route || hasSeenJourneySwipeGuide()) {
+      setShowSwipeGuide(false);
+      return;
+    }
+
+    initialRouteIdRef.current = route.id;
+    setShowSwipeGuide(true);
+  }, [activeTargetType, route?.id, showWelcomeIntro]);
+
+  useEffect(() => {
+    if (!showSwipeGuide || !route) {
+      return;
+    }
+
+    if (initialRouteIdRef.current && route.id !== initialRouteIdRef.current) {
+      markJourneySwipeGuideSeen();
+      setShowSwipeGuide(false);
+    }
+  }, [route?.id, showSwipeGuide]);
 
   const handleStartRun = () => {
     setIsSubmitting(true);
@@ -394,6 +418,11 @@ export const RunSetupPage = () => {
     }, 90);
   };
 
+  const dismissSwipeGuide = () => {
+    markJourneySwipeGuideSeen();
+    setShowSwipeGuide(false);
+  };
+
   return (
     <>
       <div className="relative min-h-screen overflow-hidden bg-canvas pb-6">
@@ -455,6 +484,13 @@ export const RunSetupPage = () => {
             isSubmitting ? "flex items-center overflow-hidden py-4" : "pb-8 pt-5"
           }`}
         >
+          {showSwipeGuide && activeTargetType === "personal" && !isSubmitting ? (
+            <>
+              <div className="pointer-events-none absolute inset-0 z-10 rounded-t-[34px] bg-[rgba(246,244,238,0.52)] backdrop-blur-[10px]" />
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-24 bg-[linear-gradient(180deg,rgba(255,255,255,0.42),rgba(255,255,255,0))]" />
+            </>
+          ) : null}
+
           {showModeSwitcher && !isSubmitting ? (
             <div className="mb-6 inline-flex rounded-full bg-sage-900/6 p-1 ring-1 ring-sage-900/8">
               <button
@@ -529,11 +565,19 @@ export const RunSetupPage = () => {
               </div>
             </motion.div>
           ) : activeTargetType === "personal" && route ? (
-            <div
-              ref={carouselRef}
-              onScroll={handleRouteCarouselScroll}
-              className="-mx-6 flex snap-x snap-mandatory overflow-x-auto pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
+            <div className={`relative ${showSwipeGuide ? "z-30" : ""}`}>
+              {showSwipeGuide ? (
+                <div className="pointer-events-none absolute inset-x-0 -top-2 bottom-0 rounded-[28px] bg-white/18 ring-1 ring-white/70 shadow-[0_24px_40px_rgba(33,49,38,0.12)]" />
+              ) : null}
+              <div
+                ref={journeyGuideCardRef}
+                className="relative"
+              >
+                <div
+                  ref={carouselRef}
+                  onScroll={handleRouteCarouselScroll}
+                  className="-mx-6 flex snap-x snap-mandatory overflow-x-auto pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
               {carouselRoutes.map(({ item, virtualIndex, isClone }) => {
                 const active = item.id === route.id;
                 const itemLoggedDistanceKm = state.runHistory
@@ -588,6 +632,47 @@ export const RunSetupPage = () => {
                   </button>
                 );
               })}
+                </div>
+              </div>
+
+              {showSwipeGuide ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                  className="absolute inset-x-4 top-[calc(100%+0.4rem)] z-40"
+                >
+                  <div className="rounded-[22px] bg-white/82 px-4 py-3 shadow-[0_18px_34px_rgba(35,52,40,0.12)] ring-1 ring-white/88 backdrop-blur-xl">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-ink">Swipe to choose your next journey</p>
+                        <div className="mt-2 flex items-center gap-2 text-sage-500">
+                          <ChevronsLeftRight className="h-4 w-4 shrink-0" />
+                          <div className="relative h-5 w-16 overflow-hidden">
+                            <motion.div
+                              className="absolute left-0 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-sage-700/80"
+                              animate={{ x: [0, 28, 0] }}
+                              transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                            />
+                            <motion.div
+                              className="absolute left-1 top-1/2 h-[2px] w-12 -translate-y-1/2 rounded-full bg-[linear-gradient(90deg,rgba(95,117,103,0.18),rgba(95,117,103,0.5),rgba(95,117,103,0.18))]"
+                              animate={{ opacity: [0.45, 0.9, 0.45] }}
+                              transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={dismissSwipeGuide}
+                        className="pointer-events-auto shrink-0 rounded-full bg-sage-700 px-3 py-1.5 text-xs font-medium text-white shadow-[0_10px_20px_rgba(61,92,74,0.18)]"
+                      >
+                        Got it
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : null}
             </div>
           ) : (
             <div>

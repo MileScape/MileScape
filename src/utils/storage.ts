@@ -3,6 +3,7 @@ import type { AppState, MyScapeLayout } from "../types";
 const STORAGE_KEY = "milescape-state";
 const ONBOARDING_KEY = "milescape-onboarding-seen";
 const MY_SCAPE_LAYOUT_KEY = "milescape-my-scape-layout";
+const JOURNEY_SWIPE_GUIDE_SEEN_KEY = "milescape-journey-swipe-guide-seen";
 
 export const loadState = (): AppState | null => {
   if (typeof window === "undefined") {
@@ -68,4 +69,20 @@ export const saveMyScapeLayout = (layout: MyScapeLayout) => {
   }
 
   window.localStorage.setItem(MY_SCAPE_LAYOUT_KEY, JSON.stringify(layout));
+};
+
+export const hasSeenJourneySwipeGuide = () => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.localStorage.getItem(JOURNEY_SWIPE_GUIDE_SEEN_KEY) === "true";
+};
+
+export const markJourneySwipeGuideSeen = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(JOURNEY_SWIPE_GUIDE_SEEN_KEY, "true");
 };
