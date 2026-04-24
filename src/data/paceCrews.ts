@@ -8,7 +8,7 @@ export const paceCrews: PaceCrew[] = [
     organizerId: "ava",
     memberIds: ["ava", "marco", "nina"],
     createdAt: "2026-03-28T08:30:00.000Z",
-    exclusiveDestinationIds: ["aurora-harbor-route"]
+    exclusiveDestinationIds: []
   },
   {
     id: "night-owls",
@@ -17,7 +17,7 @@ export const paceCrews: PaceCrew[] = [
     organizerId: "marco",
     memberIds: ["marco", "jules"],
     createdAt: "2026-03-31T19:00:00.000Z",
-    exclusiveDestinationIds: ["midnight-river-route"]
+    exclusiveDestinationIds: []
   },
   {
     id: "campus-striders",

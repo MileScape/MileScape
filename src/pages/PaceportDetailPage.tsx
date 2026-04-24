@@ -1,4 +1,5 @@
-import { Lock, MapPin, Trophy } from "lucide-react";
+import { Lock, MapPin, Stamp, Trophy } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { LandmarkTimeline } from "../components/route/LandmarkTimeline";
 import { buttonStyles } from "../components/ui/Button";
@@ -19,8 +20,18 @@ export const achievementLabel = {
 
 export const PaceportDetailPage = () => {
   const { routeId } = useParams();
-  const { routes, state, selectRoute, t } = useAppState();
+  const { routes, state, purchaseRoute, selectRoute, t } = useAppState();
+  const [toast, setToast] = useState<string | null>(null);
   const route = routes.find((entry) => entry.id === routeId);
+
+  useEffect(() => {
+    if (!toast) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => setToast(null), 2200);
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
 
   if (!route) {
     return <Navigate to="/paceport" replace />;
@@ -29,12 +40,16 @@ export const PaceportDetailPage = () => {
   const summary = getPaceportSummary(route, state);
   const owned = summary.status !== "locked";
   const achievementTier = getAchievementTier(summary.runCount);
-  const sourceCrewName = route.sourceCrewId
-    ? state.paceCrews.find((crew) => crew.id === route.sourceCrewId)?.name
-    : null;
+  const canUnlock = state.currentStamps >= route.priceStamps;
 
   return (
     <div className="space-y-6">
+      {toast ? (
+        <div className="rounded-[22px] bg-sage-700 px-4 py-3 text-sm font-medium text-white shadow-card">
+          {toast}
+        </div>
+      ) : null}
+
       <section className="rounded-[36px] bg-white p-6 shadow-card ring-1 ring-sage-100">
         <div className="space-y-5">
           <div className="inline-flex items-center gap-2 rounded-full bg-sage-50 px-4 py-2 text-xs uppercase tracking-[0.2em] text-sage-700">
@@ -46,12 +61,9 @@ export const PaceportDetailPage = () => {
             <h1 className="text-3xl font-semibold tracking-tight text-ink">{route.name}</h1>
             {route.crewOnly ? (
               <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+                <span className="rounded-full bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700">
                   {t("paceport.pacecrewOnly")}
-                  </span>
-                {sourceCrewName ? (
-                  <span className="text-xs font-medium text-sage-500">{t("paceport.fromPaceCrew", { name: sourceCrewName })}</span>
-                ) : null}
+                </span>
               </div>
             ) : null}
           </div>
@@ -107,12 +119,23 @@ export const PaceportDetailPage = () => {
           <p className="text-xs uppercase tracking-[0.18em] text-sky-700">{t("paceport.exclusiveTeamReward")}</p>
         </div>
       ) : (
-        <Link to="/shop" className={buttonStyles({ fullWidth: true })}>
+        <button
+          type="button"
+          onClick={() => {
+            const result = purchaseRoute(route.id);
+            setToast(result.message);
+          }}
+          disabled={!canUnlock}
+          className={buttonStyles({
+            fullWidth: true,
+            className: !canUnlock ? "bg-sage-900/5 text-sage-400 shadow-none hover:bg-sage-900/5" : ""
+          })}
+        >
           <span className="inline-flex items-center gap-2">
-            <Lock className="h-4 w-4" />
-            {t("paceport.unlockInShop")}
+            {canUnlock ? <Stamp className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+            {canUnlock ? `Unlock for ${route.priceStamps} stamps` : `${state.currentStamps} / ${route.priceStamps} stamps`}
           </span>
-        </Link>
+        </button>
       )}
     </div>
   );

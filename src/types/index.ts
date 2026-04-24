@@ -6,15 +6,6 @@ export interface Landmark {
   image: string;
 }
 
-export interface MyScapePlacedLandmark {
-  id: string;
-  landmarkId: string;
-  x: number;
-  y: number;
-  scale: number;
-  zIndex: number;
-}
-
 export type RouteTier = "Starter" | "Standard" | "Advanced" | "Premium";
 export type AchievementTier = "none" | "bronze" | "silver" | "gold" | "prism";
 export type PaceportStatus = "locked" | "owned" | "in_progress" | "completed";
@@ -23,7 +14,9 @@ export type PaceCrewRole = "organizer" | "member";
 export type PaceCrewMissionStatus = "open" | "closed";
 export type UserMissionStatus = "accepted" | "completed" | "failed";
 export type RunTargetType = "personal" | "pacecrew_mission";
+export type RunDataSource = "wearable" | "manual";
 export type AppLanguage = "en" | "zh";
+export type WearableAvailability = "available" | "coming_soon";
 
 export interface UserProfile {
   id: string;
@@ -63,6 +56,9 @@ export interface RunHistoryItem {
   crewId?: string;
   runTargetType: RunTargetType;
   distanceKm: number;
+  plannedDistanceKm?: number;
+  dataSource?: RunDataSource;
+  sourceName?: string;
   completedAt: string;
 }
 
@@ -72,6 +68,10 @@ export interface RunResultSummary {
   crewId?: string;
   runTargetType: RunTargetType;
   runDistanceKm: number;
+  plannedDistanceKm?: number;
+  dataSource?: RunDataSource;
+  sourceName?: string;
+  fallbackReason?: string;
   appliedDistanceKm: number;
   overflowDistanceKm: number;
   previousDistanceKm: number;
@@ -134,6 +134,36 @@ export interface UserMissionState {
   completedDistanceKm: number;
 }
 
+export interface WearableConnection {
+  id: string;
+  name: string;
+  connectedAt: string;
+  lastSyncedAt: string;
+  autoSyncEnabled: boolean;
+}
+
+export interface WearableSyncRecord {
+  id: string;
+  title: string;
+  sourceName: string;
+  distanceKm: number;
+  syncedAt: string;
+}
+
+export interface MyScapePlacedLandmark {
+  id: string;
+  landmarkId: string;
+  x: number;
+  y: number;
+  scale: number;
+  zIndex: number;
+}
+
+export interface MyScapeLayout {
+  placedLandmarks: MyScapePlacedLandmark[];
+  updatedAt: string;
+}
+
 export interface AppState {
   language: AppLanguage;
   selectedRouteId: string | null;
@@ -148,6 +178,8 @@ export interface AppState {
   paceCrews: PaceCrew[];
   paceCrewMissions: PaceCrewMission[];
   userMissionStates: UserMissionState[];
+  wearableConnection: WearableConnection | null;
+  wearableSyncHistory: WearableSyncRecord[];
   lastRunResult: RunResultSummary | null;
 }
 
@@ -186,5 +218,10 @@ export interface AppContextValue {
     },
   ) => { success: boolean; message: string };
   acceptMission: (missionId: string) => { success: boolean; message: string };
+  connectWearable: (input: { id: string; name: string }) => { success: boolean; message: string };
+  disconnectWearable: () => { success: boolean; message: string };
+  reconnectWearable: () => { success: boolean; message: string };
+  syncWearableNow: () => { success: boolean; message: string };
+  setWearableAutoSync: (enabled: boolean) => { success: boolean; message: string };
   resetDemo: () => void;
 }

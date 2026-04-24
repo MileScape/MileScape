@@ -46,21 +46,32 @@ input {
 .ios-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  height: 24px;
-  width: 24px;
-  border-radius: 9999px;
-  background: #365342;
-  border: 5px solid #ffffff;
-  box-shadow: 0 10px 24px rgba(36, 50, 40, 0.14);
+  height: 30px;
+  width: 30px;
+  border-radius: 0;
+  background-color: transparent;
+  background-image: url("./assets/runner-slider.svg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 30px 30px;
+  border: 0;
+  box-shadow: none;
+  color: #365342;
+  margin-top: -14px;
 }
 
 .ios-slider::-moz-range-thumb {
-  height: 24px;
-  width: 24px;
-  border-radius: 9999px;
-  background: #365342;
-  border: 5px solid #ffffff;
-  box-shadow: 0 10px 24px rgba(36, 50, 40, 0.14);
+  height: 30px;
+  width: 30px;
+  border-radius: 0;
+  background-color: transparent;
+  background-image: url("./assets/runner-slider.svg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 30px 30px;
+  border: 0;
+  box-shadow: none;
+  color: #365342;
 }
 
 ::selection {
@@ -70,6 +81,8 @@ input {
 .route-map-shell .mapboxgl-ctrl-bottom-left {
   left: 10px;
   bottom: 8px;
+  z-index: 0 !important;
+  pointer-events: none !important;
 }
 
 .route-map-shell .mapboxgl-ctrl-attrib {
@@ -82,6 +95,7 @@ input {
   font-size: 8px !important;
   line-height: 1.1 !important;
   box-shadow: none !important;
+  pointer-events: none !important;
 }
 
 .route-map-shell .mapboxgl-ctrl-attrib a {
@@ -94,4 +108,5 @@ input {
   height: 12px;
   margin: 0 !important;
   filter: opacity(0.7);
+  pointer-events: none !important;
 }

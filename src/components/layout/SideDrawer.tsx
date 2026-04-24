@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, ShoppingBag, Sparkles, UserCircle2, Users, X } from "lucide-react";
+import { ChevronRight, Globe2, Sparkles, UserCircle2, Users, Watch, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAppState } from "../../hooks/useAppState";
 import { cn } from "../../utils/cn";
@@ -11,11 +11,13 @@ interface SideDrawerProps {
 
 export const SideDrawer = ({ open, onClose }: SideDrawerProps) => {
   const location = useLocation();
-  const { t } = useAppState();
+  const { state, t } = useAppState();
+  const wearablesEntryPath = state.wearableConnection ? "/wearables" : "/wearables/connect";
   const items = [
     { to: "/pacecrew", label: t("drawer.paceCrew"), icon: Users },
     { to: "/paceport", label: t("drawer.paceport"), icon: Sparkles },
-    { to: "/shop", label: t("drawer.shop"), icon: ShoppingBag },
+    { to: "/myscape", label: t("drawer.myScape"), icon: Globe2 },
+    { to: wearablesEntryPath, label: t("drawer.wearables"), icon: Watch },
     { to: "/dashboard", label: t("drawer.profile"), icon: UserCircle2 }
   ];
 
@@ -61,7 +63,9 @@ export const SideDrawer = ({ open, onClose }: SideDrawerProps) => {
 
             <div className="space-y-1">
               {items.map(({ to, label, icon: Icon }) => {
-                const active = location.pathname === to;
+                const active = to === wearablesEntryPath
+                  ? location.pathname === "/wearables" || location.pathname.startsWith("/wearables/")
+                  : location.pathname === to;
 
                 return (
                   <Link

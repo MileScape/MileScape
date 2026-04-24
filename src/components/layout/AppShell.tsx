@@ -9,10 +9,17 @@ export const AppShell = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { t } = useAppState();
+  const { state, t } = useAppState();
   const isPrimaryHome = location.pathname === "/run/setup";
   const isOnboarding = location.pathname === "/";
+  const isPaceCrewHome = location.pathname === "/pacecrew";
+  const isWearablesHome = location.pathname === "/wearables";
+  const isRunResult = location.pathname === "/run/result";
+  const isPaceportHome = location.pathname === "/paceport";
+  const isMyScapeHome = location.pathname === "/myscape";
   const isPaceCrewSubpage = location.pathname.startsWith("/pacecrew/") && location.pathname !== "/pacecrew";
+  const isWearablesSubpage = location.pathname.startsWith("/wearables/") && location.pathname !== "/wearables";
+  const isWearablesFullBleed = isWearablesHome && !state.wearableConnection;
 
   const pageTitles: Record<string, string> = {
     "/": t("app.welcome"),
@@ -22,9 +29,11 @@ export const AppShell = () => {
     "/pacecrew/discover": t("app.paceCrewDiscover"),
     "/pacecrew/missions": t("app.paceCrewMissions"),
     "/paceport": t("app.paceport"),
+    "/myscape": t("app.myScape"),
+    "/wearables": t("app.wearables"),
+    "/wearables/connect": "Connect Device",
     "/run/setup": t("app.chooseJourney"),
     "/run/result": t("app.runResult"),
-    "/shop": t("app.shop"),
     "/dashboard": t("app.profile")
   };
 
@@ -48,7 +57,15 @@ export const AppShell = () => {
       <header
         className={cn(
           "sticky top-0 z-30 flex items-center justify-between px-4 pt-5",
-          isPrimaryHome ? "mb-[-4.75rem] pb-0" : "pb-3 backdrop-blur",
+          isOnboarding
+            ? "hidden"
+            : isRunResult
+            ? "mb-[-4.35rem] pb-3 backdrop-blur-2xl bg-[linear-gradient(180deg,rgba(245,243,238,0.86)_0%,rgba(245,243,238,0.56)_42%,rgba(245,243,238,0.18)_72%,rgba(245,243,238,0)_100%)]"
+            : isPaceportHome
+            ? "mb-[-5.4rem] pb-5 backdrop-blur-[5px] bg-[linear-gradient(180deg,rgba(245,243,238,0.34)_0%,rgba(245,243,238,0.2)_48%,rgba(245,243,238,0)_100%)]"
+            : isPrimaryHome || isWearablesFullBleed
+            ? "mb-[-4.75rem] pb-0"
+            : "pb-3 backdrop-blur",
         )}
       >
         {isPrimaryHome ? (
@@ -65,9 +82,32 @@ export const AppShell = () => {
         ) : (
           <button
             type="button"
-            onClick={() => navigate(isPaceCrewSubpage ? "/pacecrew" : "/run/setup")}
-            className="rounded-full bg-white/90 p-3 text-sage-700 shadow-card ring-1 ring-sage-100"
-            aria-label={isPaceCrewSubpage ? "Return to PaceCrew" : "Return to Choose Journey"}
+            onClick={() =>
+              navigate(
+                isPaceCrewSubpage
+                  ? "/pacecrew"
+                  : isWearablesSubpage
+                    ? state.wearableConnection
+                      ? "/wearables"
+                      : "/run/setup"
+                    : "/run/setup",
+              )
+            }
+            className={cn(
+              "rounded-full p-3 text-sage-700",
+              isPaceportHome
+                ? "bg-white/72 shadow-[0_10px_28px_rgba(24,43,29,0.11)] ring-1 ring-white/75 backdrop-blur-xl"
+                : "bg-white/90 shadow-card ring-1 ring-sage-100",
+            )}
+            aria-label={
+              isPaceCrewSubpage
+                ? "Return to PaceCrew"
+                : isWearablesSubpage
+                  ? state.wearableConnection
+                    ? "Return to Wearables"
+                    : "Return to Choose Journey"
+                  : "Return to Choose Journey"
+            }
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -77,13 +117,22 @@ export const AppShell = () => {
           <p className={cn("uppercase tracking-[0.28em]", isPrimaryHome ? "text-[10px] text-white/92" : "text-[11px] text-sage-500")}>
             MILESCAPE
           </p>
-          {!isPrimaryHome ? <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1> : null}
+          {!isPrimaryHome && !isPaceCrewHome && !isWearablesFullBleed && !isMyScapeHome ? <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1> : null}
         </div>
 
         <div className="h-11 w-11" />
       </header>
 
-      <main className={cn("flex-1", isPrimaryHome ? "px-0 pb-0 pt-0" : "px-4 pb-8 pt-1")}>
+      <main
+        className={cn(
+          "flex-1",
+          isOnboarding || isPrimaryHome || isWearablesFullBleed
+            ? "px-0 pb-0 pt-0"
+            : isRunResult
+              ? "px-0 pb-8 pt-0"
+              : "px-4 pb-8 pt-1",
+        )}
+      >
         <Outlet />
       </main>
     </div>

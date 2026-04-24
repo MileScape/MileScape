@@ -9,16 +9,18 @@ import type {
   PaceCrewMission,
   Route,
   RouteProgress,
+  RunDataSource,
   RunHistoryItem,
   RunResultSummary,
-  UserMissionState
+  UserMissionState,
+  WearableSyncRecord
 } from "../types";
 import { getAchievementTier } from "./achievement";
 import { getMissionCompletionStampReward } from "./missionRewards";
 import { createMembership, syncExpiredMissionStates } from "./paceCrew";
 import { calculateEarnedStamps } from "./stamps";
 
-const defaultPurchasedRouteIds = ["west-lake-loop", "central-park-loop", "tokyo-city-route"];
+const defaultPurchasedRouteIds = ["tokyo-city-route", "west-lake-loop", "central-park-loop"];
 
 const createDefaultRouteProgress = (routeId: string): RouteProgress => ({
   routeId,
@@ -28,6 +30,8 @@ const createDefaultRouteProgress = (routeId: string): RouteProgress => ({
   achievementTier: "none" as AchievementTier,
   completed: false
 });
+
+const createDefaultWearableSyncHistory = (): WearableSyncRecord[] => [];
 
 export const createInitialState = (): AppState =>
   syncExpiredMissionStates({
@@ -47,6 +51,8 @@ export const createInitialState = (): AppState =>
     paceCrews: initialPaceCrews,
     paceCrewMissions: initialPaceCrewMissions,
     userMissionStates: [],
+    wearableConnection: null,
+    wearableSyncHistory: createDefaultWearableSyncHistory(),
     lastRunResult: null
   });
 
@@ -101,6 +107,8 @@ export const normalizeState = (loadedState: Partial<AppState> | null): AppState 
         ...missionState,
         completedDistanceKm: missionState.completedDistanceKm ?? 0
       })) ?? [],
+    wearableConnection: loadedState.wearableConnection ?? null,
+    wearableSyncHistory: loadedState.wearableSyncHistory ?? createDefaultWearableSyncHistory(),
     lastRunResult: loadedState.lastRunResult ?? null
   });
 };
@@ -118,8 +126,23 @@ export const calculateUnlockedLandmarks = (route: Route, completedDistanceKm: nu
 
 const buildRunHistoryItem = (
   input:
-    | { targetType: "personal"; routeId: string; distanceKm: number }
-    | { targetType: "pacecrew_mission"; missionId: string; crewId: string; distanceKm: number },
+    | {
+        targetType: "personal";
+        routeId: string;
+        distanceKm: number;
+        plannedDistanceKm?: number;
+        dataSource?: RunDataSource;
+        sourceName?: string;
+      }
+    | {
+        targetType: "pacecrew_mission";
+        missionId: string;
+        crewId: string;
+        distanceKm: number;
+        plannedDistanceKm?: number;
+        dataSource?: RunDataSource;
+        sourceName?: string;
+      },
 ): RunHistoryItem => ({
   id: crypto.randomUUID(),
   runTargetType: input.targetType,
@@ -127,6 +150,9 @@ const buildRunHistoryItem = (
   missionId: input.targetType === "pacecrew_mission" ? input.missionId : undefined,
   crewId: input.targetType === "pacecrew_mission" ? input.crewId : undefined,
   distanceKm: input.distanceKm,
+  plannedDistanceKm: input.plannedDistanceKm,
+  dataSource: input.dataSource,
+  sourceName: input.sourceName,
   completedAt: new Date().toISOString()
 });
 
@@ -134,6 +160,12 @@ export const applyPersonalRunToState = (
   previousState: AppState,
   route: Route,
   distanceKm: number,
+  options?: {
+    plannedDistanceKm?: number;
+    dataSource?: RunDataSource;
+    sourceName?: string;
+    fallbackReason?: string;
+  },
 ): { nextState: AppState; summary: RunResultSummary } => {
   const routeProgress = getRouteProgress(route.id, previousState);
   const previousDistanceKm = routeProgress.completedDistanceKm;
@@ -164,6 +196,10 @@ export const applyPersonalRunToState = (
     routeId: route.id,
     runTargetType: "personal",
     runDistanceKm: distanceKm,
+    plannedDistanceKm: options?.plannedDistanceKm,
+    dataSource: options?.dataSource,
+    sourceName: options?.sourceName,
+    fallbackReason: options?.fallbackReason,
     appliedDistanceKm,
     overflowDistanceKm,
     previousDistanceKm,
@@ -186,7 +222,17 @@ export const applyPersonalRunToState = (
       routeProgress: previousState.routeProgress.map((entry) =>
         entry.routeId === route.id ? nextRouteProgress : entry,
       ),
-      runHistory: [buildRunHistoryItem({ targetType: "personal", routeId: route.id, distanceKm }), ...previousState.runHistory],
+      runHistory: [
+        buildRunHistoryItem({
+          targetType: "personal",
+          routeId: route.id,
+          distanceKm,
+          plannedDistanceKm: options?.plannedDistanceKm,
+          dataSource: options?.dataSource,
+          sourceName: options?.sourceName
+        }),
+        ...previousState.runHistory
+      ],
       currentStamps: updatedStampsBalance,
       totalStampsEarned: previousState.totalStampsEarned + earnedStamps,
       lastRunResult: summary
@@ -199,6 +245,12 @@ export const applyMissionRunToState = (
   previousState: AppState,
   mission: PaceCrewMission,
   distanceKm: number,
+  options?: {
+    plannedDistanceKm?: number;
+    dataSource?: RunDataSource;
+    sourceName?: string;
+    fallbackReason?: string;
+  },
 ): { nextState: AppState; summary: RunResultSummary } => {
   const missionState = previousState.userMissionStates.find(
     (entry) => entry.missionId === mission.id && entry.userId === currentUserId,
@@ -240,6 +292,10 @@ export const applyMissionRunToState = (
     crewId: mission.crewId,
     runTargetType: "pacecrew_mission",
     runDistanceKm: distanceKm,
+    plannedDistanceKm: options?.plannedDistanceKm,
+    dataSource: options?.dataSource,
+    sourceName: options?.sourceName,
+    fallbackReason: options?.fallbackReason,
     appliedDistanceKm,
     overflowDistanceKm,
     previousDistanceKm,
@@ -270,7 +326,10 @@ export const applyMissionRunToState = (
           targetType: "pacecrew_mission",
           missionId: mission.id,
           crewId: mission.crewId,
-          distanceKm
+          distanceKm,
+          plannedDistanceKm: options?.plannedDistanceKm,
+          dataSource: options?.dataSource,
+          sourceName: options?.sourceName
         }),
         ...previousState.runHistory
       ],

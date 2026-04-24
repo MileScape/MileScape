@@ -1,14 +1,14 @@
-import type { Route, RouteProgress, RunHistoryItem, MyScapePlacedLandmark } from "../types";
+import type { Landmark, MyScapeLayout, MyScapePlacedLandmark, Route, RouteProgress, RunHistoryItem } from "../types";
+import { loadMyScapeLayout } from "./storage";
 
-export type MyScapeViewMode = "day" | "week" | "month" | "year";
-
-export interface UnlockedLandmarkAsset {
-  id: string;
-  name: string;
-  city: string;
+export interface UnlockedLandmarkAsset extends Landmark {
   routeId: string;
   routeName: string;
+  city: string;
+  country: string;
 }
+
+export type MyScapeViewMode = "day" | "week" | "month" | "year";
 
 export interface MyScapeUnlockEvent extends UnlockedLandmarkAsset {
   unlockedAt: string;
@@ -19,264 +19,333 @@ export interface MyScapeChartPoint {
   value: number;
 }
 
-export const MY_SCAPE_MIN_SCALE = 0.7;
-export const MY_SCAPE_MAX_SCALE = 1.6;
+export const MY_SCAPE_GRID_SIZE = 42;
+export const MY_SCAPE_MIN_SCALE = 0.8;
+export const MY_SCAPE_MAX_SCALE = 1.4;
+const BOARD_MARGIN = 28;
 
-const MY_SCAPE_STORAGE_KEY = "milescape-myscape-layout";
-const ITEM_WIDTH = 92;
-const ITEM_HEIGHT = 112;
+export const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-const isPlacedLandmark = (value: unknown): value is MyScapePlacedLandmark => {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
+export const snapToGrid = (value: number, gridSize = MY_SCAPE_GRID_SIZE) => Math.round(value / gridSize) * gridSize;
 
-  const item = value as Record<string, unknown>;
-  return typeof item.id === "string"
-    && typeof item.landmarkId === "string"
-    && typeof item.x === "number"
-    && typeof item.y === "number"
-    && typeof item.scale === "number"
-    && typeof item.zIndex === "number";
+export const clampToBoard = (
+  point: { x: number; y: number },
+  boardWidth: number,
+  boardHeight: number,
+  itemScale = 1,
+) => {
+  const footprint = 44 * itemScale;
+
+  return {
+    x: clamp(point.x, BOARD_MARGIN, Math.max(BOARD_MARGIN, boardWidth - BOARD_MARGIN - footprint)),
+    y: clamp(point.y, BOARD_MARGIN, Math.max(BOARD_MARGIN, boardHeight - BOARD_MARGIN - footprint)),
+  };
 };
-
-export const getNextZIndex = (placedLandmarks: MyScapePlacedLandmark[]) =>
-  placedLandmarks.reduce((max, item) => Math.max(max, item.zIndex), 0) + 1;
 
 export const normalizeBoardPosition = (
   point: { x: number; y: number },
   boardWidth: number,
   boardHeight: number,
-  scale: number,
+  itemScale = 1,
 ) => {
-  const maxX = Math.max(boardWidth - (ITEM_WIDTH * scale), 0);
-  const maxY = Math.max(boardHeight - (ITEM_HEIGHT * scale), 0);
+  const clamped = clampToBoard(point, boardWidth, boardHeight, itemScale);
 
   return {
-    x: Math.min(Math.max(point.x, 0), maxX),
-    y: Math.min(Math.max(point.y, 0), maxY),
+    x: snapToGrid(clamped.x),
+    y: snapToGrid(clamped.y),
   };
 };
 
-export const createPlacedLandmark = (
-  landmarkId: string,
-  placedLandmarks: MyScapePlacedLandmark[],
-  boardWidth: number,
-  boardHeight: number,
-): MyScapePlacedLandmark => {
-  const nextIndex = placedLandmarks.length;
-  const position = normalizeBoardPosition(
-    {
-      x: 24 + (nextIndex % 3) * 56,
-      y: 36 + Math.floor(nextIndex / 3) * 48,
-    },
-    boardWidth,
-    boardHeight,
-    1,
-  );
+export const serializeMyScapeLayout = (placedLandmarks: MyScapePlacedLandmark[]): MyScapeLayout => ({
+  placedLandmarks,
+  updatedAt: new Date().toISOString(),
+});
 
-  return {
-    id: `myscape-${landmarkId}-${Date.now()}-${nextIndex}`,
-    landmarkId,
-    x: position.x,
-    y: position.y,
-    scale: 1,
-    zIndex: getNextZIndex(placedLandmarks),
-  };
-};
-
-export const serializeMyScapeLayout = (placedLandmarks: MyScapePlacedLandmark[]) => placedLandmarks;
-
-export const restoreMyScapeLayout = (): MyScapePlacedLandmark[] => {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  try {
-    const raw = window.localStorage.getItem(MY_SCAPE_STORAGE_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? parsed.filter(isPlacedLandmark) : [];
-  } catch {
-    return [];
-  }
-};
+export const restoreMyScapeLayout = () => loadMyScapeLayout()?.placedLandmarks ?? [];
 
 export const resolveUnlockedLandmarkAssets = (
   routes: Route[],
   routeProgress: RouteProgress[],
-): UnlockedLandmarkAsset[] => {
-  const progressMap = new Map(
-    routeProgress.map((entry) => [entry.routeId, new Set(entry.unlockedLandmarkIds)]),
-  );
+): UnlockedLandmarkAsset[] =>
+  routes.flatMap((route) => {
+    const progress = routeProgress.find((entry) => entry.routeId === route.id);
+    if (!progress || progress.unlockedLandmarkIds.length === 0) {
+      return [];
+    }
 
-  return routes.flatMap((route) =>
-    route.landmarks
-      .filter((landmark) => progressMap.get(route.id)?.has(landmark.id))
+    return route.landmarks
+      .filter((landmark) => progress.unlockedLandmarkIds.includes(landmark.id))
       .map((landmark) => ({
-        id: landmark.id,
-        name: landmark.name,
-        city: route.city,
+        ...landmark,
         routeId: route.id,
         routeName: route.name,
-      })),
-  );
+        city: route.city,
+        country: route.country,
+      }));
+  });
+
+export const getNextZIndex = (placedLandmarks: MyScapePlacedLandmark[]) =>
+  placedLandmarks.reduce((max, item) => Math.max(max, item.zIndex), 0) + 1;
+
+export const createPlacedLandmark = (
+  landmarkId: string,
+  existing: MyScapePlacedLandmark[],
+  boardWidth: number,
+  boardHeight: number,
+): MyScapePlacedLandmark => {
+  const centerX = Math.max(BOARD_MARGIN, boardWidth / 2 - MY_SCAPE_GRID_SIZE);
+  const centerY = Math.max(BOARD_MARGIN, boardHeight / 2 - MY_SCAPE_GRID_SIZE);
+  const candidateOffsets = [
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+    { x: -1, y: 0 },
+    { x: 0, y: 1 },
+    { x: 0, y: -1 },
+    { x: 1, y: 1 },
+    { x: -1, y: 1 },
+    { x: 1, y: -1 },
+    { x: -1, y: -1 },
+    { x: 2, y: 0 },
+    { x: -2, y: 0 },
+    { x: 0, y: 2 },
+    { x: 0, y: -2 },
+  ];
+
+  const occupiedKeys = new Set(existing.map((item) => `${snapToGrid(item.x)}:${snapToGrid(item.y)}`));
+  const nextPoint =
+    candidateOffsets
+      .map((offset) => ({
+        x: centerX + offset.x * MY_SCAPE_GRID_SIZE,
+        y: centerY + offset.y * MY_SCAPE_GRID_SIZE,
+      }))
+      .map((point) => normalizeBoardPosition(point, boardWidth, boardHeight))
+      .find((point) => !occupiedKeys.has(`${point.x}:${point.y}`)) ??
+    normalizeBoardPosition({ x: centerX, y: centerY }, boardWidth, boardHeight);
+
+  return {
+    id: crypto.randomUUID(),
+    landmarkId,
+    x: nextPoint.x,
+    y: nextPoint.y,
+    scale: 1,
+    zIndex: getNextZIndex(existing),
+  };
 };
 
-export const buildMyScapeUnlockTimeline = (
-  routes: Route[],
-  runHistory: RunHistoryItem[],
-): MyScapeUnlockEvent[] => {
+const padDate = (value: number) => `${value}`.padStart(2, "0");
+
+export const getPeriodStart = (anchorDate: Date, mode: MyScapeViewMode) => {
+  const start = new Date(anchorDate);
+  start.setHours(0, 0, 0, 0);
+
+  if (mode === "day") {
+    return start;
+  }
+
+  if (mode === "week") {
+    const day = start.getDay();
+    const offset = day === 0 ? -6 : 1 - day;
+    start.setDate(start.getDate() + offset);
+    return start;
+  }
+
+  if (mode === "month") {
+    start.setDate(1);
+    return start;
+  }
+
+  start.setMonth(0, 1);
+  return start;
+};
+
+export const getPeriodEnd = (anchorDate: Date, mode: MyScapeViewMode) => {
+  const end = new Date(getPeriodStart(anchorDate, mode));
+
+  if (mode === "day") {
+    end.setDate(end.getDate() + 1);
+    return end;
+  }
+
+  if (mode === "week") {
+    end.setDate(end.getDate() + 7);
+    return end;
+  }
+
+  if (mode === "month") {
+    end.setMonth(end.getMonth() + 1);
+    return end;
+  }
+
+  end.setFullYear(end.getFullYear() + 1);
+  return end;
+};
+
+export const shiftAnchorDate = (anchorDate: Date, mode: MyScapeViewMode, step: number) => {
+  const next = new Date(anchorDate);
+
+  if (mode === "day") {
+    next.setDate(next.getDate() + step);
+    return next;
+  }
+
+  if (mode === "week") {
+    next.setDate(next.getDate() + step * 7);
+    return next;
+  }
+
+  if (mode === "month") {
+    next.setMonth(next.getMonth() + step);
+    return next;
+  }
+
+  next.setFullYear(next.getFullYear() + step);
+  return next;
+};
+
+export const isFuturePeriod = (anchorDate: Date, mode: MyScapeViewMode) => {
+  const currentPeriodStart = getPeriodStart(new Date(), mode).getTime();
+  const targetPeriodStart = getPeriodStart(anchorDate, mode).getTime();
+  return targetPeriodStart > currentPeriodStart;
+};
+
+const isToday = (value: Date) => {
+  const today = new Date();
+  return value.toDateString() === today.toDateString();
+};
+
+export const formatMyScapePeriodLabel = (anchorDate: Date, mode: MyScapeViewMode) => {
+  if (mode === "day") {
+    const formatted = anchorDate.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    const suffix = isToday(anchorDate) ? " (Today)" : "";
+    return `${formatted}${suffix}`;
+  }
+
+  if (mode === "week") {
+    const start = getPeriodStart(anchorDate, mode);
+    const end = new Date(getPeriodEnd(anchorDate, mode));
+    end.setDate(end.getDate() - 1);
+    const startLabel = start.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const endLabel = end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    return `${startLabel} - ${endLabel}`;
+  }
+
+  if (mode === "month") {
+    return anchorDate.toLocaleDateString("en-US", { year: "numeric", month: "long" });
+  }
+
+  return `${anchorDate.getFullYear()}`;
+};
+
+export const isWithinPeriod = (value: string, anchorDate: Date, mode: MyScapeViewMode) => {
+  const current = new Date(value).getTime();
+  const start = getPeriodStart(anchorDate, mode).getTime();
+  const end = getPeriodEnd(anchorDate, mode).getTime();
+  return current >= start && current < end;
+};
+
+export const buildMyScapeUnlockTimeline = (routes: Route[], runHistory: RunHistoryItem[]): MyScapeUnlockEvent[] => {
+  const routeProgressById = new Map<string, number>();
   const routeMap = new Map(routes.map((route) => [route.id, route]));
-  const distanceByRoute = new Map<string, number>();
-  const emitted = new Set<string>();
-  const timeline: MyScapeUnlockEvent[] = [];
+  const orderedRuns = [...runHistory]
+    .filter((entry) => entry.runTargetType === "personal" && entry.routeId)
+    .sort((left, right) => new Date(left.completedAt).getTime() - new Date(right.completedAt).getTime());
 
-  [...runHistory]
-    .sort((left, right) => new Date(left.completedAt).getTime() - new Date(right.completedAt).getTime())
-    .forEach((entry) => {
-      if (!entry.routeId) {
-        return;
-      }
+  const unlocks: MyScapeUnlockEvent[] = [];
 
-      const route = routeMap.get(entry.routeId);
-      if (!route) {
-        return;
-      }
+  orderedRuns.forEach((run) => {
+    const route = routeMap.get(run.routeId ?? "");
+    if (!route) {
+      return;
+    }
 
-      const nextDistance = (distanceByRoute.get(route.id) ?? 0) + entry.distanceKm;
-      distanceByRoute.set(route.id, nextDistance);
+    const previousDistance = routeProgressById.get(route.id) ?? 0;
+    const nextDistance = Math.min(route.totalDistanceKm, previousDistance + run.distanceKm);
 
-      route.landmarks.forEach((landmark) => {
-        const key = `${route.id}:${landmark.id}`;
-        if (emitted.has(key) || nextDistance < landmark.milestoneKm) {
-          return;
-        }
-
-        emitted.add(key);
-        timeline.push({
-          id: landmark.id,
-          name: landmark.name,
-          city: route.city,
+    route.landmarks
+      .filter((landmark) => landmark.milestoneKm > previousDistance && landmark.milestoneKm <= nextDistance)
+      .forEach((landmark) => {
+        unlocks.push({
+          ...landmark,
           routeId: route.id,
           routeName: route.name,
-          unlockedAt: entry.completedAt,
+          city: route.city,
+          country: route.country,
+          unlockedAt: run.completedAt,
         });
       });
-    });
 
-  return timeline;
-};
+    routeProgressById.set(route.id, nextDistance);
+  });
 
-export const getPeriodStart = (anchorDate: Date, viewMode: MyScapeViewMode) => {
-  const date = new Date(anchorDate);
-
-  if (viewMode === "day") {
-    date.setHours(0, 0, 0, 0);
-    return date;
-  }
-
-  if (viewMode === "week") {
-    const day = date.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    date.setDate(date.getDate() + diff);
-    date.setHours(0, 0, 0, 0);
-    return date;
-  }
-
-  if (viewMode === "month") {
-    return new Date(date.getFullYear(), date.getMonth(), 1);
-  }
-
-  return new Date(date.getFullYear(), 0, 1);
-};
-
-export const getPeriodEnd = (anchorDate: Date, viewMode: MyScapeViewMode) => {
-  const start = getPeriodStart(anchorDate, viewMode);
-
-  if (viewMode === "day") {
-    return new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
-  }
-
-  if (viewMode === "week") {
-    return new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7);
-  }
-
-  if (viewMode === "month") {
-    return new Date(start.getFullYear(), start.getMonth() + 1, 1);
-  }
-
-  return new Date(start.getFullYear() + 1, 0, 1);
-};
-
-export const shiftAnchorDate = (anchorDate: Date, viewMode: MyScapeViewMode, direction: -1 | 1) => {
-  const date = new Date(anchorDate);
-
-  if (viewMode === "day") {
-    date.setDate(date.getDate() + direction);
-  } else if (viewMode === "week") {
-    date.setDate(date.getDate() + (direction * 7));
-  } else if (viewMode === "month") {
-    date.setMonth(date.getMonth() + direction);
-  } else {
-    date.setFullYear(date.getFullYear() + direction);
-  }
-
-  return date;
-};
-
-export const isFuturePeriod = (anchorDate: Date, viewMode: MyScapeViewMode) =>
-  getPeriodStart(anchorDate, viewMode).getTime() > getPeriodStart(new Date(), viewMode).getTime();
-
-export const formatMyScapePeriodLabel = (anchorDate: Date, viewMode: MyScapeViewMode) => {
-  const start = getPeriodStart(anchorDate, viewMode);
-
-  if (viewMode === "day") {
-    return start.toLocaleDateString();
-  }
-
-  if (viewMode === "week") {
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
-  }
-
-  if (viewMode === "month") {
-    return start.toLocaleDateString(undefined, { year: "numeric", month: "long" });
-  }
-
-  return String(start.getFullYear());
+  return unlocks;
 };
 
 export const buildMyScapeChartData = (
   runHistory: RunHistoryItem[],
   anchorDate: Date,
-  viewMode: MyScapeViewMode,
+  mode: MyScapeViewMode,
 ): MyScapeChartPoint[] => {
-  const start = getPeriodStart(anchorDate, viewMode);
-  const end = getPeriodEnd(anchorDate, viewMode);
-  const buckets = new Map<string, number>();
+  const runs = runHistory.filter((entry) => isWithinPeriod(entry.completedAt, anchorDate, mode));
 
-  runHistory.forEach((entry) => {
-    const date = new Date(entry.completedAt);
-    if (date < start || date >= end) {
-      return;
-    }
+  if (mode === "day") {
+    return Array.from({ length: 24 }, (_, hour) => ({
+      label: `${padDate(hour)}:00`,
+      value: Number(
+        runs
+          .filter((entry) => new Date(entry.completedAt).getHours() === hour)
+          .reduce((sum, entry) => sum + entry.distanceKm, 0)
+          .toFixed(1),
+      ),
+    }));
+  }
 
-    let label = "";
-    if (viewMode === "day") {
-      label = `${String(date.getHours()).padStart(2, "0")}:00`;
-    } else if (viewMode === "year") {
-      label = date.toLocaleDateString(undefined, { month: "short" });
-    } else {
-      label = `${date.getMonth() + 1}/${date.getDate()}`;
-    }
+  if (mode === "week") {
+    const start = getPeriodStart(anchorDate, mode);
+    return Array.from({ length: 7 }, (_, index) => {
+      const current = new Date(start);
+      current.setDate(start.getDate() + index);
+      return {
+        label: ["一", "二", "三", "四", "五", "六", "日"][index] ?? "",
+        value: Number(
+          runs
+            .filter((entry) => new Date(entry.completedAt).toDateString() === current.toDateString())
+            .reduce((sum, entry) => sum + entry.distanceKm, 0)
+            .toFixed(1),
+        ),
+      };
+    });
+  }
 
-    buckets.set(label, (buckets.get(label) ?? 0) + entry.distanceKm);
-  });
+  if (mode === "month") {
+    const start = getPeriodStart(anchorDate, mode);
+    const end = getPeriodEnd(anchorDate, mode);
+    const dayCount = Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
+    return Array.from({ length: dayCount }, (_, index) => {
+      const current = new Date(start);
+      current.setDate(start.getDate() + index);
+      return {
+        label: `${index + 1}`,
+        value: Number(
+          runs
+            .filter((entry) => new Date(entry.completedAt).toDateString() === current.toDateString())
+            .reduce((sum, entry) => sum + entry.distanceKm, 0)
+            .toFixed(1),
+        ),
+      };
+    });
+  }
 
-  return Array.from(buckets.entries()).map(([label, value]) => ({ label, value }));
+  return Array.from({ length: 12 }, (_, month) => ({
+    label: `${month + 1}月`,
+    value: Number(
+      runs
+        .filter((entry) => new Date(entry.completedAt).getMonth() === month)
+        .reduce((sum, entry) => sum + entry.distanceKm, 0)
+        .toFixed(1),
+    ),
+  }));
 };

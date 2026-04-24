@@ -161,12 +161,12 @@ export const routes: Route[] = [
     totalDistanceKm: 14,
     coverImage: "",
     description: "A PaceCrew-only shoreline route unlocked through shared missions and held as a team reward.",
-    motivation: "This destination belongs to your social archive rather than the solo run shop.",
+    motivation: "This destination belongs to your social archive rather than the solo unlock flow.",
     tier: "Standard",
     priceStamps: 0,
     sourceType: "pacecrew",
     crewOnly: true,
-    sourceCrewId: "sunrise-collective",
+    sourceCrewId: null,
     landmarks: [
       { id: "glass-harbor", name: "Glass Harbor", milestoneKm: 3, description: "A reflective waterfront stop held inside the crew archive.", image: "" },
       { id: "aurora-point", name: "Aurora Point", milestoneKm: 8, description: "A northern-light memory unlocked for viewing in Paceport.", image: "" },
@@ -186,7 +186,7 @@ export const routes: Route[] = [
     priceStamps: 0,
     sourceType: "pacecrew",
     crewOnly: true,
-    sourceCrewId: "night-owls",
+    sourceCrewId: null,
     landmarks: [
       { id: "neon-quay", name: "Neon Quay", milestoneKm: 4, description: "A night-lit river opening preserved as a crew unlock.", image: "" },
       { id: "skybridge-deck", name: "Skybridge Deck", milestoneKm: 9, description: "A central reward that marks shared team effort.", image: "" },
