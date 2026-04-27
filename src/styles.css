@@ -1,0 +1,112 @@
+@import url("https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #243228;
+  background: #f5f3ee;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(220, 232, 221, 0.95), transparent 28%),
+    #f5f3ee;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.font-destination-display {
+  font-family: "Alegreya SC", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+}
+
+.ios-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 30px;
+  width: 30px;
+  border-radius: 0;
+  background-color: transparent;
+  background-image: url("./assets/runner-slider.svg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 30px 30px;
+  border: 0;
+  box-shadow: none;
+  color: #365342;
+  margin-top: -14px;
+}
+
+.ios-slider::-moz-range-thumb {
+  height: 30px;
+  width: 30px;
+  border-radius: 0;
+  background-color: transparent;
+  background-image: url("./assets/runner-slider.svg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 30px 30px;
+  border: 0;
+  box-shadow: none;
+  color: #365342;
+}
+
+::selection {
+  background: rgba(120, 146, 132, 0.22);
+}
+
+.route-map-shell .mapboxgl-ctrl-bottom-left {
+  left: 10px;
+  bottom: 8px;
+  z-index: 0 !important;
+  pointer-events: none !important;
+}
+
+.route-map-shell .mapboxgl-ctrl-attrib {
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.74) !important;
+  font-size: 8px !important;
+  line-height: 1.1 !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+
+.route-map-shell .mapboxgl-ctrl-attrib a {
+  color: inherit !important;
+  text-decoration: none !important;
+}
+
+.route-map-shell .mapboxgl-ctrl-attrib-button {
+  width: 12px;
+  height: 12px;
+  margin: 0 !important;
+  filter: opacity(0.7);
+  pointer-events: none !important;
+}
