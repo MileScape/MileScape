@@ -16,13 +16,13 @@ export const paceCrewMissions: PaceCrewMission[] = [
   {
     id: "mission-river-push",
     crewId: "night-owls",
-    title: "River Push",
-    description: "Log 4 km this week and unlock a darker late-city route for the whole team archive.",
+    title: "Bay Push",
+    description: "Log 4 km this week and unlock a Melbourne city route for the whole team archive.",
     targetDistanceKm: 4,
     depositStamps: 25,
     rewardStamps: 60,
     deadline: "2026-12-31T23:00:00.000Z",
-    destinationRewardId: "midnight-river-route",
+    destinationRewardId: "ha-long-bay-route",
     status: "open"
   },
   {

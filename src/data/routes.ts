@@ -77,41 +77,41 @@ export const routes: Route[] = [
     ]
   },
   {
-    id: "seoul-river-route",
-    name: "Seoul River Route",
-    city: "Seoul",
-    country: "South Korea",
+    id: "barcelona-coast-route",
+    name: "Barcelona Coast Route",
+    city: "Barcelona",
+    country: "Spain",
     totalDistanceKm: 12,
     coverImage: "",
-    description: "A balanced urban route with riverfront momentum and landmark pacing that fits routine training.",
-    motivation: "Stack everyday runs into a smooth city journey with clear mid-length milestones.",
+    description: "A balanced Mediterranean city route with beachside rhythm and landmark pacing for routine training.",
+    motivation: "Stack everyday runs into a bright coastal journey from Gaudi icons to the waterfront.",
     tier: "Standard",
     priceStamps: 80,
     sourceType: "personal",
     sourceCrewId: null,
     landmarks: [
-      { id: "banpo-bridge", name: "Banpo Bridge", milestoneKm: 3, description: "A calm early unlock over the river.", image: "" },
-      { id: "namsan-view", name: "Namsan View", milestoneKm: 7, description: "A midpoint reward that makes the route feel expansive.", image: "" },
-      { id: "dongdaemun-design", name: "Dongdaemun Design Plaza", milestoneKm: 11, description: "A near-finish reveal with a futuristic feel.", image: "" }
+      { id: "sagrada-familia", name: "Sagrada Familia", milestoneKm: 3, description: "A vivid early unlock that anchors the route in Barcelona.", image: "" },
+      { id: "barceloneta-beach", name: "Barceloneta Beach", milestoneKm: 7, description: "A breezy midpoint reward that opens the route toward the sea.", image: "" },
+      { id: "park-guell", name: "Park Guell", milestoneKm: 11, description: "A near-finish reveal with color, height, and city views.", image: "" }
     ]
   },
   {
-    id: "manhattan-landmark-route",
-    name: "Manhattan Landmark Route",
-    city: "New York",
-    country: "United States",
+    id: "london-landmark-route",
+    name: "London Landmark Route",
+    city: "London",
+    country: "United Kingdom",
     totalDistanceKm: 22,
     coverImage: "",
-    description: "A longer city route stitched through iconic Manhattan stops for users chasing bigger progression.",
+    description: "A longer city route stitched through iconic London stops for users chasing bigger progression.",
     motivation: "Build a serious travel arc through repeated sessions and visible achievement pacing.",
     tier: "Advanced",
     priceStamps: 150,
     sourceType: "personal",
     sourceCrewId: null,
     landmarks: [
-      { id: "flatiron-building", name: "Flatiron Building", milestoneKm: 5, description: "A recognizable early unlock that makes the route feel ambitious.", image: "" },
-      { id: "times-square", name: "Times Square", milestoneKm: 12, description: "A bright midpoint reward for sustained consistency.", image: "" },
-      { id: "brooklyn-view", name: "Brooklyn Bridge View", milestoneKm: 19, description: "A late-route landmark before full completion.", image: "" }
+      { id: "tower-bridge", name: "Tower Bridge", milestoneKm: 5, description: "A recognizable early unlock that makes the route feel ambitious.", image: "" },
+      { id: "big-ben", name: "Big Ben", milestoneKm: 12, description: "A classic midpoint reward for sustained consistency.", image: "" },
+      { id: "hyde-park", name: "Hyde Park", milestoneKm: 19, description: "A late-route green landmark before full completion.", image: "" }
     ]
   },
   {
@@ -173,23 +173,23 @@ export const routes: Route[] = [
     ]
   },
   {
-    id: "midnight-river-route",
-    name: "Midnight River Route",
-    city: "Singapore",
-    country: "Singapore",
-    totalDistanceKm: 16,
+    id: "ha-long-bay-route",
+    name: "Melbourne Laneway Route",
+    city: "Melbourne",
+    country: "Australia",
+    totalDistanceKm: 12,
     coverImage: "",
-    description: "A PaceCrew-only night route granted as a mission reward and displayed as a team-earned destination.",
-    motivation: "This route cannot be bought or run individually. It exists as a crew reward inside Paceport.",
+    description: "A PaceCrew-only city route granted as a mission reward and displayed as a team-earned destination.",
+    motivation: "This route cannot be bought or run individually. It exists as a shared crew reward inside Paceport.",
     tier: "Advanced",
     priceStamps: 0,
     sourceType: "pacecrew",
     crewOnly: true,
     sourceCrewId: null,
     landmarks: [
-      { id: "neon-quay", name: "Neon Quay", milestoneKm: 4, description: "A night-lit river opening preserved as a crew unlock.", image: "" },
-      { id: "skybridge-deck", name: "Skybridge Deck", milestoneKm: 9, description: "A central reward that marks shared team effort.", image: "" },
-      { id: "lantern-market", name: "Lantern Market", milestoneKm: 15, description: "A late memory that stays marked as PaceCrew-only.", image: "" }
+      { id: "flinders-street", name: "Flinders Street Station", milestoneKm: 3, description: "A classic city opening preserved as a crew unlock.", image: "" },
+      { id: "hosier-lane", name: "Hosier Lane", milestoneKm: 7, description: "A central reward that marks shared team effort.", image: "" },
+      { id: "royal-botanic-gardens", name: "Royal Botanic Gardens", milestoneKm: 11, description: "A late green memory that stays marked as PaceCrew-only.", image: "" }
     ]
   }
 ];

@@ -35,19 +35,19 @@ export const routeMapViews: Record<string, RouteMapView> = {
     bearing: -34,
     marker: [-9.1287, 38.7124]
   },
-  "seoul-river-route": {
-    center: [126.9976, 37.5283],
-    zoom: 12.4,
+  "barcelona-coast-route": {
+    center: [2.1734, 41.3851],
+    zoom: 12.5,
     pitch: 64,
-    bearing: -20,
-    marker: [126.9958, 37.5286]
+    bearing: -22,
+    marker: [2.1744, 41.4036]
   },
-  "manhattan-landmark-route": {
-    center: [-73.9854, 40.758],
+  "london-landmark-route": {
+    center: [-0.1276, 51.5072],
     zoom: 12.1,
     pitch: 67,
-    bearing: 22,
-    marker: [-73.9851, 40.7587]
+    bearing: 18,
+    marker: [-0.0754, 51.5055]
   },
   "paris-eiffel-route": {
     center: [2.2945, 48.8584],
@@ -70,11 +70,11 @@ export const routeMapViews: Record<string, RouteMapView> = {
     bearing: -12,
     marker: [-21.9426, 64.1487]
   },
-  "midnight-river-route": {
-    center: [103.852, 1.2897],
-    zoom: 12.8,
+  "ha-long-bay-route": {
+    center: [144.9631, -37.8136],
+    zoom: 12.4,
     pitch: 66,
-    bearing: 20,
-    marker: [103.8545, 1.2903]
+    bearing: -18,
+    marker: [144.9671, -37.8183]
   }
 };
