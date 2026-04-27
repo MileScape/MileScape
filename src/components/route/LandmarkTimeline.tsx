@@ -5,15 +5,18 @@ import { cn } from "../../utils/cn";
 interface LandmarkTimelineProps {
   landmarks: Landmark[];
   unlockedIds: string[];
+  getLandmarkImageSrc?: (landmark: Landmark) => string | undefined;
 }
 
 export const LandmarkTimeline = ({
   landmarks,
-  unlockedIds
+  unlockedIds,
+  getLandmarkImageSrc
 }: LandmarkTimelineProps) => (
   <div className="space-y-4">
     {landmarks.map((landmark) => {
       const unlocked = unlockedIds.includes(landmark.id);
+      const imageSrc = getLandmarkImageSrc?.(landmark);
 
       return (
         <div
@@ -27,11 +30,22 @@ export const LandmarkTimeline = ({
         >
           <div
             className={cn(
-              "flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px]",
-              unlocked ? "bg-gradient-to-br from-sage-100 to-sky-100" : "bg-white",
+              "flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[20px]",
+              imageSrc ? "bg-white" : unlocked ? "bg-gradient-to-br from-sage-100 to-sky-100" : "bg-white",
             )}
           >
-            <Star className={cn("h-8 w-8", unlocked ? "text-sage-700" : "text-sage-300")} />
+            {imageSrc ? (
+              <img
+                src={imageSrc}
+                alt={landmark.name}
+                className={cn(
+                  "h-full w-full object-contain p-2",
+                  unlocked ? "opacity-100" : "opacity-45 grayscale",
+                )}
+              />
+            ) : (
+              <Star className={cn("h-8 w-8", unlocked ? "text-sage-700" : "text-sage-300")} />
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-4">

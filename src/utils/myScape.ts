@@ -27,6 +27,41 @@ export const MY_SCAPE_MIN_SCALE = 0.8;
 export const MY_SCAPE_MAX_SCALE = 1.4;
 const BOARD_FOOTPRINT = 90;
 
+const myScapeLandmarkImages: Record<string, { imageSrc: string; defaultScale: number }> = {
+  "big-ben": {
+    imageSrc: "/models/landmarks/big-ben.png",
+    defaultScale: 1.1,
+  },
+  "eiffel-tower": {
+    imageSrc: "/models/landmarks/eiffel-tower.png",
+    defaultScale: 1.1,
+  },
+  "leifeng-pagoda": {
+    imageSrc: "/models/landmarks/leifeng-pagoda.png",
+    defaultScale: 1.12,
+  },
+  "statue-of-liberty": {
+    imageSrc: "/models/landmarks/statue-of-liberty.png",
+    defaultScale: 1.14,
+  },
+  "three-pools": {
+    imageSrc: "/models/landmarks/three-pools.png",
+    defaultScale: 1.12,
+  },
+  "tokyo-tower": {
+    imageSrc: "/models/landmarks/tokyo tower.png",
+    defaultScale: 1.18,
+  },
+  "torii-gate": {
+    imageSrc: "/models/landmarks/torii.png",
+    defaultScale: 1.16,
+  },
+  "tower-bridge": {
+    imageSrc: "/models/landmarks/london-bridge.png",
+    defaultScale: 1.08,
+  },
+};
+
 export const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
 export const snapToGrid = (value: number, gridSize = MY_SCAPE_GRID_SIZE) => Math.round(value / gridSize) * gridSize;
@@ -93,32 +128,19 @@ export const resolveUnlockedLandmarkAssets = (
 
     return route.landmarks
       .filter((landmark) => progress.unlockedLandmarkIds.includes(landmark.id))
-      .map((landmark) => ({
-        ...landmark,
-        routeId: route.id,
-        routeName: route.name,
-        city: route.city,
-        country: route.country,
-        assetType: "landmark" as const,
-        ...(landmark.id === "torii-gate"
-          ? {
-              imageSrc: "/models/landmarks/torii.png",
-              defaultScale: 1.16,
-            }
-          : {}),
-        ...(landmark.id === "tokyo-tower"
-          ? {
-              imageSrc: "/models/landmarks/tokyo tower.png",
-              defaultScale: 1.18,
-            }
-          : {}),
-        ...(landmark.id === "statue-of-liberty"
-          ? {
-              imageSrc: "/models/landmarks/statue-of-liberty.png",
-              defaultScale: 1.14,
-            }
-          : {}),
-      }));
+      .map((landmark) => {
+        const landmarkImage = myScapeLandmarkImages[landmark.id];
+
+        return {
+          ...landmark,
+          routeId: route.id,
+          routeName: route.name,
+          city: route.city,
+          country: route.country,
+          assetType: "landmark" as const,
+          ...(landmarkImage ?? {}),
+        };
+      });
   });
 
 export const getMyScapeYearDemoAssets = (): UnlockedLandmarkAsset[] => [

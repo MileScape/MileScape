@@ -1,6 +1,7 @@
 import { ChevronRight, Plus, Search, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { MissionDepositDialog } from "../components/pacecrew/MissionDepositDialog";
 import { useAppState } from "../hooks/useAppState";
 import type { PaceCrew, PaceCrewMission, Route } from "../types";
 import {
@@ -215,6 +216,7 @@ export const PaceCrewPage = () => {
   const [missionReward, setMissionReward] = useState("45");
   const [missionDeadline, setMissionDeadline] = useState("");
   const [missionDestinationId, setMissionDestinationId] = useState("");
+  const [pendingMission, setPendingMission] = useState<PaceCrewMission | null>(null);
 
   useEffect(() => {
     if (!toast) {
@@ -298,8 +300,22 @@ export const PaceCrewPage = () => {
     showToast(result.message);
   };
 
-  const handleAcceptMission = (missionId: string) => {
-    const result = acceptMission(missionId);
+  const handleAcceptMission = (mission: PaceCrewMission) => {
+    if (state.currentStamps < mission.depositStamps) {
+      showToast(`Mission acceptance failed: ${mission.depositStamps} Stamps deposit required, ${state.currentStamps} available.`);
+      return;
+    }
+
+    setPendingMission(mission);
+  };
+
+  const confirmAcceptMission = () => {
+    if (!pendingMission) {
+      return;
+    }
+
+    const result = acceptMission(pendingMission.id);
+    setPendingMission(null);
     showToast(result.message);
   };
 
@@ -657,9 +673,20 @@ export const PaceCrewPage = () => {
   return (
     <div className="pb-32">
       {toast ? (
-        <div className="sticky top-2 z-30 mb-4 rounded-[22px] bg-sage-700 px-4 py-3 text-sm font-medium text-white shadow-[0_14px_36px_rgba(40,62,50,0.18)]">
-          {toast}
+        <div className="fixed left-1/2 top-4 z-[70] w-[calc(100%-2rem)] max-w-[430px] -translate-x-1/2">
+          <div className="rounded-[22px] bg-sage-700 px-4 py-3 text-sm font-medium text-white shadow-[0_18px_46px_rgba(40,62,50,0.24)] ring-1 ring-white/20">
+            {toast}
+          </div>
         </div>
+      ) : null}
+
+      {pendingMission ? (
+        <MissionDepositDialog
+          mission={pendingMission}
+          currentStamps={state.currentStamps}
+          onCancel={() => setPendingMission(null)}
+          onConfirm={confirmAcceptMission}
+        />
       ) : null}
 
       <section className="space-y-3 pt-2">
@@ -729,7 +756,7 @@ export const PaceCrewPage = () => {
                   selectedCrewMissions.map((mission: PaceCrewMission) => {
                     const missionState = getAcceptedMissionState(state, mission.id);
                     const canAccept =
-                      !missionState && selectedCrewIsMember && state.currentStamps >= mission.depositStamps && mission.status === "open";
+                      !missionState && selectedCrewIsMember && mission.status === "open";
 
                     return (
                       <div key={mission.id} className="rounded-[24px] bg-white/72 p-4 ring-1 ring-sage-900/8">
@@ -754,7 +781,7 @@ export const PaceCrewPage = () => {
                         ) : canAccept ? (
                           <button
                             type="button"
-                            onClick={() => handleAcceptMission(mission.id)}
+                            onClick={() => handleAcceptMission(mission)}
                             className="mt-4 rounded-full bg-sage-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sage-800"
                           >
                             Accept mission

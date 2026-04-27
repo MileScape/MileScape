@@ -6,6 +6,7 @@ import { buttonStyles } from "../components/ui/Button";
 import { ProgressBar } from "../components/ui/ProgressBar";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { useAppState } from "../hooks/useAppState";
+import type { Landmark } from "../types";
 import { getAchievementTier } from "../utils/achievement";
 import { getPaceportSummary } from "../utils/paceport";
 import { formatDistance } from "../utils/progress";
@@ -17,6 +18,20 @@ export const achievementLabel = {
   gold: "Gold",
   prism: "Prism"
 } as const;
+
+const paceportLandmarkImages: Record<string, string> = {
+  "big-ben": "/models/landmarks/big-ben.png",
+  "eiffel-tower": "/models/landmarks/eiffel-tower.png",
+  "leifeng-pagoda": "/models/landmarks/leifeng-pagoda.png",
+  "statue-of-liberty": "/models/landmarks/statue-of-liberty.png",
+  "three-pools": "/models/landmarks/three-pools.png",
+  "tokyo-tower": "/models/landmarks/tokyo tower.png",
+  "torii-gate": "/models/landmarks/torii.png",
+  "tower-bridge": "/models/landmarks/london-bridge.png"
+};
+
+const getPaceportLandmarkImageSrc = (landmark: Landmark) =>
+  landmark.image || paceportLandmarkImages[landmark.id];
 
 export const PaceportDetailPage = () => {
   const { routeId } = useParams();
@@ -103,6 +118,7 @@ export const PaceportDetailPage = () => {
         <LandmarkTimeline
           landmarks={route.landmarks}
           unlockedIds={summary.progress.unlockedLandmarkIds}
+          getLandmarkImageSrc={getPaceportLandmarkImageSrc}
         />
       </section>
 

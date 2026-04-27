@@ -1,17 +1,20 @@
 import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import { MissionDepositDialog } from "../components/pacecrew/MissionDepositDialog";
 import { PaceCrewMemberList } from "../components/pacecrew/PaceCrewMemberList";
 import { PaceCrewMissionCard } from "../components/pacecrew/PaceCrewMissionCard";
 import { PaceCrewMissionForm } from "../components/pacecrew/PaceCrewMissionForm";
 import { buttonStyles } from "../components/ui/Button";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { useAppState } from "../hooks/useAppState";
+import type { PaceCrewMission } from "../types";
 import { getCrewMemberProfiles, isCrewMember, isCrewOrganizer } from "../utils/paceCrew";
 
 export const PaceCrewDetailPage = () => {
   const { crewId } = useParams();
   const { routes, state, acceptMission, createMission, dissolvePaceCrew, joinPaceCrew, leavePaceCrew, removePaceCrewMember, users, t } = useAppState();
   const [toast, setToast] = useState<string | null>(null);
+  const [pendingMission, setPendingMission] = useState<PaceCrewMission | null>(null);
   const crew = state.paceCrews.find((entry) => entry.id === crewId);
 
   if (!crew) {
@@ -40,9 +43,43 @@ export const PaceCrewDetailPage = () => {
     window.setTimeout(() => setToast(null), 2200);
   };
 
+  const handleAcceptMission = (mission: PaceCrewMission) => {
+    if (state.currentStamps < mission.depositStamps) {
+      showToast(`Mission acceptance failed: ${mission.depositStamps} Stamps deposit required, ${state.currentStamps} available.`);
+      return;
+    }
+
+    setPendingMission(mission);
+  };
+
+  const confirmAcceptMission = () => {
+    if (!pendingMission) {
+      return;
+    }
+
+    const result = acceptMission(pendingMission.id);
+    setPendingMission(null);
+    showToast(result.message);
+  };
+
   return (
     <div className="space-y-6">
-      {toast ? <div className="rounded-[24px] bg-sage-700 px-4 py-3 text-sm font-medium text-white shadow-card">{toast}</div> : null}
+      {toast ? (
+        <div className="fixed left-1/2 top-4 z-[70] w-[calc(100%-2rem)] max-w-[430px] -translate-x-1/2">
+          <div className="rounded-[22px] bg-sage-700 px-4 py-3 text-sm font-medium text-white shadow-[0_18px_46px_rgba(40,62,50,0.24)] ring-1 ring-white/20">
+            {toast}
+          </div>
+        </div>
+      ) : null}
+
+      {pendingMission ? (
+        <MissionDepositDialog
+          mission={pendingMission}
+          currentStamps={state.currentStamps}
+          onCancel={() => setPendingMission(null)}
+          onConfirm={confirmAcceptMission}
+        />
+      ) : null}
 
       <section className="rounded-[36px] bg-white p-6 shadow-card ring-1 ring-sage-100">
         <p className="text-xs uppercase tracking-[0.22em] text-sage-500">PaceCrew</p>
@@ -116,8 +153,8 @@ export const PaceCrewDetailPage = () => {
                 key={mission.id}
                 mission={mission}
                 missionState={missionState}
-                canAccept={isMember && !missionState && mission.status === "open" && state.currentStamps >= mission.depositStamps}
-                onAccept={() => showToast(acceptMission(mission.id).message)}
+                canAccept={isMember && !missionState && mission.status === "open"}
+                onAccept={() => handleAcceptMission(mission)}
                 destinationRewardName={rewardDestinationName}
               />
             );
