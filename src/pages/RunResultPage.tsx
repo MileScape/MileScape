@@ -18,6 +18,13 @@ const routePosterImages: Record<string, string> = {
   "west-lake-loop": "/posters/westlake.jpg",
   "central-park-loop": "/posters/centralpark.jpg",
   "tokyo-city-route": "/posters/Tokyo.jpg",
+  "lisbon-tram-route": "/posters/Lisbon.jpg",
+  "barcelona-coast-route": "/posters/Barcelona.jpg",
+  "london-landmark-route": "/posters/london.jpg",
+  "paris-eiffel-route": "/posters/paris.jpg",
+  "mount-fuji-route": "/posters/fuji.jpg",
+  "aurora-harbor-route": "/posters/Reykjavik.jpg",
+  "melbourne-laneway-route": "/posters/Melbourne.jpg",
 };
 
 const formatPace = (distanceKm: number) => {

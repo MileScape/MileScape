@@ -30,51 +30,51 @@ export const routeMapViews: Record<string, RouteMapView> = {
   },
   "lisbon-tram-route": {
     center: [-9.1303, 38.7111],
-    zoom: 13.1,
-    pitch: 63,
+    zoom: 13.45,
+    pitch: 76,
     bearing: -34,
     marker: [-9.1287, 38.7124]
   },
-  "seoul-river-route": {
-    center: [126.9976, 37.5283],
-    zoom: 12.4,
-    pitch: 64,
-    bearing: -20,
-    marker: [126.9958, 37.5286]
+  "barcelona-coast-route": {
+    center: [2.1734, 41.3851],
+    zoom: 12.95,
+    pitch: 76,
+    bearing: -22,
+    marker: [2.1744, 41.4036]
   },
-  "manhattan-landmark-route": {
-    center: [-73.9854, 40.758],
-    zoom: 12.1,
-    pitch: 67,
-    bearing: 22,
-    marker: [-73.9851, 40.7587]
+  "london-landmark-route": {
+    center: [-0.1276, 51.5072],
+    zoom: 12.85,
+    pitch: 77,
+    bearing: 18,
+    marker: [-0.0754, 51.5055]
   },
   "paris-eiffel-route": {
     center: [2.2945, 48.8584],
-    zoom: 12.1,
-    pitch: 66,
+    zoom: 12.85,
+    pitch: 76,
     bearing: -16,
     marker: [2.2945, 48.8584]
   },
   "mount-fuji-route": {
     center: [138.7274, 35.3606],
-    zoom: 10.8,
-    pitch: 68,
+    zoom: 11.55,
+    pitch: 76,
     bearing: 8,
     marker: [138.7274, 35.3606]
   },
   "aurora-harbor-route": {
     center: [-21.9382, 64.1466],
-    zoom: 11.8,
-    pitch: 62,
+    zoom: 12.55,
+    pitch: 75,
     bearing: -12,
     marker: [-21.9426, 64.1487]
   },
-  "midnight-river-route": {
-    center: [103.852, 1.2897],
-    zoom: 12.8,
-    pitch: 66,
-    bearing: 20,
-    marker: [103.8545, 1.2903]
+  "melbourne-laneway-route": {
+    center: [144.9631, -37.8136],
+    zoom: 12.95,
+    pitch: 76,
+    bearing: -18,
+    marker: [144.9671, -37.8183]
   }
 };

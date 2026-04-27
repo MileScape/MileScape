@@ -50,11 +50,11 @@ const palettes: Record<
     glow: "from-amber-100/80 to-sky-100/35",
     accent: "bg-amber-500"
   },
-  "seoul-river-route": {
-    glow: "from-teal-100/80 to-blue-100/35",
-    accent: "bg-teal-500"
+  "barcelona-coast-route": {
+    glow: "from-orange-100/80 to-sky-100/35",
+    accent: "bg-orange-500"
   },
-  "manhattan-landmark-route": {
+  "london-landmark-route": {
     glow: "from-stone-100/80 to-cyan-100/35",
     accent: "bg-slate-500"
   },
@@ -70,7 +70,7 @@ const palettes: Record<
     glow: "from-cyan-100/80 to-emerald-100/35",
     accent: "bg-emerald-500"
   },
-  "midnight-river-route": {
+  "melbourne-laneway-route": {
     glow: "from-indigo-100/80 to-cyan-100/35",
     accent: "bg-indigo-500"
   }
@@ -290,11 +290,11 @@ export const RouteArtwork = ({
       return 0.32;
     }
 
-    if (routeId === "seoul-river-route") {
-      return 0.28;
+    if (routeId === "barcelona-coast-route") {
+      return 0.34;
     }
 
-    if (routeId === "manhattan-landmark-route") {
+    if (routeId === "london-landmark-route") {
       return 0.42;
     }
 
@@ -310,7 +310,7 @@ export const RouteArtwork = ({
       return 0.35;
     }
 
-    if (routeId === "midnight-river-route") {
+    if (routeId === "melbourne-laneway-route") {
       return 0.38;
     }
 

@@ -29,12 +29,12 @@ const mapStyle = "mapbox://styles/mapbox/standard";
 const alpha3ByAlpha2: Record<string, string> = {
   AU: "AUS",
   CN: "CHN",
+  ES: "ESP",
   FR: "FRA",
+  GB: "GBR",
   IS: "ISL",
   JP: "JPN",
-  KR: "KOR",
   PT: "PRT",
-  SG: "SGP",
   US: "USA",
 };
 
@@ -77,8 +77,8 @@ const createFillColorExpression = (
   createCountryMatchExpression(visitedCountryCodes),
   "#91ad91",
   createCountryMatchExpression(unlockedCountryCodes),
-  "#b8cbb8",
-  "#cfd6cf",
+  "#9fb99f",
+  "#9fb99f",
 ];
 
 const getCountryCodeFromFeature = (feature?: mapboxgl.MapboxGeoJSONFeature) => {
@@ -255,7 +255,7 @@ export const WorldProgressMap = ({ countries, selectedCountryCode, onSelectCount
               0.66,
               createCountryMatchExpression(countryGroups.unlockedCountryCodes),
               0.5,
-              0.3,
+              0.5,
             ],
           },
         });
@@ -313,7 +313,7 @@ export const WorldProgressMap = ({ countries, selectedCountryCode, onSelectCount
         const countryCode = getCountryCodeFromFeature(event.features?.[0]);
         const summary = countryCode ? countrySummariesRef.current.get(countryCode) : undefined;
 
-        if (countryCode && summary && summary.unlockedRouteCount > 0) {
+        if (countryCode && summary) {
           onSelectCountryRef.current(countryCode);
         }
       });
@@ -321,7 +321,7 @@ export const WorldProgressMap = ({ countries, selectedCountryCode, onSelectCount
       map.on("mousemove", routeFillLayerId, (event) => {
         const countryCode = getCountryCodeFromFeature(event.features?.[0]);
         const summary = countryCode ? countrySummariesRef.current.get(countryCode) : undefined;
-        map.getCanvas().style.cursor = summary && summary.unlockedRouteCount > 0 ? "pointer" : "";
+        map.getCanvas().style.cursor = summary ? "pointer" : "";
       });
 
       map.on("mouseleave", routeFillLayerId, () => {
@@ -367,7 +367,7 @@ export const WorldProgressMap = ({ countries, selectedCountryCode, onSelectCount
         0.66,
         createCountryMatchExpression(countryGroups.unlockedCountryCodes),
         0.5,
-        0.3,
+        0.5,
       ]);
     }
 

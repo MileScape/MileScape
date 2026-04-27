@@ -11,10 +11,10 @@ const countryCodeByName: Record<string, string> = {
   "United States": "US",
   Japan: "JP",
   Portugal: "PT",
-  "South Korea": "KR",
+  Spain: "ES",
+  "United Kingdom": "GB",
   France: "FR",
   Iceland: "IS",
-  Singapore: "SG",
   Australia: "AU"
 };
 
@@ -87,17 +87,16 @@ export const PaceportOverviewPage = () => {
   );
 
   useEffect(() => {
-    const selectableCountries = countryCollections.filter((country) =>
-      country.routes.some((route) => route.status !== "locked"),
-    );
-
-    if (!selectableCountries.length) {
+    if (!countryCollections.length) {
       setSelectedCountryCode(null);
       return;
     }
 
-    if (!selectedCountryCode || !selectableCountries.some((country) => country.code === selectedCountryCode)) {
-      setSelectedCountryCode(selectableCountries[0].code);
+    if (!selectedCountryCode || !countryCollections.some((country) => country.code === selectedCountryCode)) {
+      const firstUnlockedCountry = countryCollections.find((country) =>
+        country.routes.some((route) => route.status !== "locked"),
+      );
+      setSelectedCountryCode((firstUnlockedCountry ?? countryCollections[0]).code);
     }
   }, [countryCollections, selectedCountryCode]);
 
@@ -112,11 +111,7 @@ export const PaceportOverviewPage = () => {
 
   const selectedCountry =
     countryCollections.find((country) => country.code === selectedCountryCode) ?? countryCollections[0] ?? null;
-  const selectedCountryIsUnlocked = selectedCountry?.routes.some((route) => route.status !== "locked") ?? false;
-  const selectedMapCountryCode = selectedCountryIsUnlocked ? selectedCountry?.code ?? null : null;
-  const illuminatedCountryCount = countryCollections.filter((country) =>
-    country.routes.some((route) => route.status !== "locked"),
-  ).length;
+  const selectableCountryCount = countryCollections.length;
   const exploredDestinationCount = countryCollections.reduce(
     (sum, country) => sum + country.routes.filter((route) => route.status !== "locked").length,
     0,
@@ -147,8 +142,8 @@ export const PaceportOverviewPage = () => {
 
       <div className="pointer-events-none fixed left-1/2 top-0 z-[80] flex w-full max-w-[430px] -translate-x-1/2 justify-start px-4 pt-20">
         <div className="inline-flex items-center gap-2 rounded-full bg-transparent px-3.5 py-2 text-[11px] font-medium text-sage-700 ring-1 ring-white/28 backdrop-blur-[22px] [box-shadow:inset_0_1px_0_rgba(255,255,255,0.38)]">
-          <span className="text-sm font-semibold text-ink">{illuminatedCountryCount}</span>
-          <span>Lit countries</span>
+          <span className="text-sm font-semibold text-ink">{selectableCountryCount}</span>
+          <span>Selectable countries</span>
         </div>
       </div>
 
@@ -156,7 +151,7 @@ export const PaceportOverviewPage = () => {
         <div className="absolute inset-0">
           <WorldProgressMap
             countries={mapCountries}
-            selectedCountryCode={selectedMapCountryCode}
+            selectedCountryCode={selectedCountry?.code ?? null}
             onSelectCountry={setSelectedCountryCode}
           />
         </div>
@@ -175,13 +170,40 @@ export const PaceportOverviewPage = () => {
           )}
         </div>
 
+        <div className="absolute bottom-52 left-0 right-0 z-10 overflow-x-auto px-6 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex min-w-max gap-2">
+            {countryCollections.map((country) => {
+              const active = country.code === selectedCountry?.code;
+              const unlockedRouteCount = country.routes.filter((route) => route.status !== "locked").length;
+
+              return (
+                <button
+                  key={country.code}
+                  type="button"
+                  onClick={() => setSelectedCountryCode(country.code)}
+                  className={`rounded-full px-3.5 py-2 text-[11px] font-medium shadow-[0_10px_24px_rgba(34,49,38,0.08)] ring-1 transition ${
+                    active
+                      ? "bg-sage-700 text-white ring-sage-700"
+                      : "bg-white/66 text-sage-700 ring-white/80 backdrop-blur-xl"
+                  }`}
+                >
+                  <span>{country.name}</span>
+                  <span className={active ? "ml-2 text-white/72" : "ml-2 text-sage-500"}>
+                    {unlockedRouteCount}/{country.routes.length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="absolute bottom-40 left-6 right-6 z-10 flex items-center justify-between rounded-full bg-white/58 px-4 py-2.5 text-[11px] font-medium text-sage-600 shadow-[0_12px_30px_rgba(34,49,38,0.07)] ring-1 ring-white/80 backdrop-blur-xl">
           <span>{exploredDestinationCount} unlocked maps</span>
           <span>{completedDestinationCount} completed</span>
         </div>
       </section>
 
-      {selectedCountry && selectedCountryIsUnlocked ? (
+      {selectedCountry ? (
         <section className="relative z-20 mt-6">
           <PaceportSummaryCard
             countryName={selectedCountry.name}
