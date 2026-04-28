@@ -16,7 +16,7 @@ export const LandmarkTimeline = ({
   <div className="space-y-4">
     {landmarks.map((landmark) => {
       const unlocked = unlockedIds.includes(landmark.id);
-      const imageSrc = getLandmarkImageSrc?.(landmark);
+      const imageSrc = getLandmarkImageSrc?.(landmark) ?? (landmark.image || undefined);
 
       return (
         <div

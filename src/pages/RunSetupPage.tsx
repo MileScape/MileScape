@@ -11,6 +11,30 @@ import { getRunSimulationDurationSeconds } from "../utils/routeSimulation";
 import { getAcceptedMissionStatesForUser, getMissionProgress } from "../utils/paceCrew";
 import { hasSeenJourneySwipeGuide, markJourneySwipeGuideSeen, markOnboardingSeen } from "../utils/storage";
 
+const getRouteTitleSizeClassName = (routeName: string, variant: "compact" | "hero") => {
+  if (variant === "compact") {
+    if (routeName.length >= 22) {
+      return "text-[1.32rem]";
+    }
+
+    if (routeName.length >= 19) {
+      return "text-[1.46rem]";
+    }
+
+    return "text-[1.62rem]";
+  }
+
+  if (routeName.length >= 22) {
+    return "text-[1.92rem]";
+  }
+
+  if (routeName.length >= 19) {
+    return "text-[2.1rem]";
+  }
+
+  return "text-[2.35rem]";
+};
+
 export const RunSetupPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -441,10 +465,10 @@ export const RunSetupPage = () => {
 
   return (
     <>
-      <div className="relative min-h-screen overflow-hidden bg-canvas pb-6">
+      <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-canvas">
         {activeTargetType === "personal" && route ? (
           <motion.div
-            className="relative overflow-hidden"
+            className="relative shrink-0 overflow-hidden"
             animate={{ height: isSubmitting ? "calc(100vh - 104px)" : "62vh" }}
             transition={{ duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
           >
@@ -500,8 +524,8 @@ export const RunSetupPage = () => {
             height: isSubmitting ? 136 : "auto",
           }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className={`relative z-20 -mt-8 rounded-t-[34px] border-t border-white/75 bg-[linear-gradient(180deg,rgba(250,249,245,0.94)_0%,rgba(245,243,238,0.98)_100%)] px-6 shadow-[0_-14px_32px_rgba(34,49,38,0.08)] backdrop-blur-2xl ${
-            isSubmitting ? "flex items-center overflow-hidden py-4" : "pb-8 pt-5"
+          className={`relative z-20 -mt-8 min-h-0 rounded-t-[34px] border-t border-white/75 bg-[linear-gradient(180deg,rgba(250,249,245,0.94)_0%,rgba(245,243,238,0.98)_100%)] px-6 shadow-[0_-14px_32px_rgba(34,49,38,0.08)] backdrop-blur-2xl ${
+            isSubmitting ? "flex items-center overflow-hidden py-4" : "pb-6 pt-5"
           }`}
         >
           {showSwipeGuide && activeTargetType === "personal" && !isSubmitting ? (
@@ -552,7 +576,10 @@ export const RunSetupPage = () => {
                 <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">
                   {route.city.toUpperCase()} · {route.country.toUpperCase()}
                 </p>
-                <h2 className="mt-1.5 truncate font-destination-display text-[1.62rem] leading-[0.94] tracking-[0.01em] text-ink">
+                <h2
+                  className={`mt-1.5 overflow-hidden text-ellipsis whitespace-nowrap font-destination-display leading-[0.94] tracking-[0.01em] text-ink ${getRouteTitleSizeClassName(route.name, "compact")}`}
+                  title={route.name}
+                >
                   {route.name}
                 </h2>
               </div>
@@ -633,7 +660,10 @@ export const RunSetupPage = () => {
                         <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">
                           {item.city.toUpperCase()} · {item.country.toUpperCase()}
                         </p>
-                        <h2 className="mt-3 truncate font-destination-display text-[2.35rem] leading-[0.94] tracking-[0.01em] text-ink">
+                        <h2
+                          className={`mt-3 overflow-hidden text-ellipsis whitespace-nowrap font-destination-display leading-[0.94] tracking-[0.01em] text-ink ${getRouteTitleSizeClassName(item.name, "hero")}`}
+                          title={item.name}
+                        >
                           {item.name}
                         </h2>
                       </div>
@@ -704,7 +734,10 @@ export const RunSetupPage = () => {
             <div>
               <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">{locationLabel}</p>
               <div className="mt-3 flex items-start justify-between gap-3">
-                <h2 className="font-destination-display text-[2.35rem] leading-[0.94] tracking-[0.01em] text-ink">
+                <h2
+                  className={`overflow-hidden text-ellipsis whitespace-nowrap font-destination-display leading-[0.94] tracking-[0.01em] text-ink ${getRouteTitleSizeClassName(preview?.targetTitle ?? "", "hero")}`}
+                  title={preview?.targetTitle}
+                >
                   {preview?.targetTitle}
                 </h2>
                 {hasWearablePriority ? (

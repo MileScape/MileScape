@@ -31,7 +31,7 @@ const decoration = (
 export const routes: Route[] = [
   {
     id: "central-park-loop",
-    name: "New York Landmark Route",
+    name: "Manhattan Lights Trail",
     city: "New York",
     country: "United States",
     totalDistanceKm: 10,
@@ -59,7 +59,7 @@ export const routes: Route[] = [
   },
   {
     id: "tokyo-city-route",
-    name: "Tokyo City Route",
+    name: "Neon Sakura Circuit",
     city: "Tokyo",
     country: "Japan",
     totalDistanceKm: 18,
@@ -86,7 +86,7 @@ export const routes: Route[] = [
   },
   {
     id: "barcelona-coast-route",
-    name: "Barcelona Coast Route",
+    name: "Gaudi Coastline Walk",
     city: "Barcelona",
     country: "Spain",
     totalDistanceKm: 12,
@@ -113,7 +113,7 @@ export const routes: Route[] = [
   },
   {
     id: "london-landmark-route",
-    name: "London Landmark Route",
+    name: "Thames Crown Trail",
     city: "London",
     country: "United Kingdom",
     totalDistanceKm: 22,
@@ -142,7 +142,7 @@ export const routes: Route[] = [
   },
   {
     id: "paris-eiffel-route",
-    name: "Paris Landmark Route",
+    name: "Seine Romance Path",
     city: "Paris",
     country: "France",
     totalDistanceKm: 30,
@@ -169,7 +169,7 @@ export const routes: Route[] = [
   },
   {
     id: "cairo-pyramid-route",
-    name: "Cairo Pyramid Route",
+    name: "Nile Pyramid Quest",
     city: "Cairo",
     country: "Egypt",
     totalDistanceKm: 16,
@@ -196,7 +196,7 @@ export const routes: Route[] = [
   },
   {
     id: "seoul-heritage-route",
-    name: "Seoul Heritage Route",
+    name: "Han River Memory Trail",
     city: "Seoul",
     country: "South Korea",
     totalDistanceKm: 12,
@@ -223,7 +223,7 @@ export const routes: Route[] = [
   },
   {
     id: "sydney-harbor-route",
-    name: "Sydney Harbor Route",
+    name: "Harbour Horizon Run",
     city: "Sydney",
     country: "Australia",
     totalDistanceKm: 14,
@@ -251,7 +251,7 @@ export const routes: Route[] = [
   },
   {
     id: "rome-heritage-route",
-    name: "Rome Heritage Route",
+    name: "Eternal City Path",
     city: "Rome",
     country: "Italy",
     totalDistanceKm: 18,
@@ -279,7 +279,7 @@ export const routes: Route[] = [
   },
   {
     id: "california-discovery-route",
-    name: "California Discovery Route",
+    name: "Pacific Golden Trail",
     city: "California",
     country: "United States",
     totalDistanceKm: 20,
@@ -306,7 +306,7 @@ export const routes: Route[] = [
   },
   {
     id: "taipei-skyline-route",
-    name: "Taipei Skyline Route",
+    name: "Elephant Mountain Glow",
     city: "Taipei",
     country: "Taiwan",
     totalDistanceKm: 16,
@@ -331,7 +331,7 @@ export const routes: Route[] = [
   },
   {
     id: "bangkok-floating-route",
-    name: "Bangkok Floating Route",
+    name: "Chao Phraya Drift",
     city: "Bangkok",
     country: "Thailand",
     totalDistanceKm: 9,

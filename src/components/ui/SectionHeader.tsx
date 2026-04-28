@@ -7,7 +7,7 @@ interface SectionHeaderProps {
 export const SectionHeader = ({
   eyebrow,
   title,
-  description: _description
+  description
 }: SectionHeaderProps) => (
   <div className="space-y-2">
     {eyebrow ? (
@@ -17,6 +17,7 @@ export const SectionHeader = ({
     ) : null}
     <div className="space-y-1">
       <h2 className="text-2xl font-semibold tracking-tight text-ink">{title}</h2>
+      {description ? <p className="max-w-2xl text-sm leading-6 text-sage-700">{description}</p> : null}
     </div>
   </div>
 );

@@ -127,9 +127,9 @@ export const AppShell = () => {
 
       <main
         className={cn(
-          "flex-1",
+          "flex-1 min-h-0",
           isOnboarding || isPrimaryHome || isWearablesFullBleed
-            ? "px-0 pb-0 pt-0"
+            ? "overflow-hidden px-0 pb-0 pt-0"
             : isRunResult
               ? "px-0 pb-8 pt-0"
               : "px-4 pb-8 pt-1",
