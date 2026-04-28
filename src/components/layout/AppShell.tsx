@@ -117,7 +117,9 @@ export const AppShell = () => {
           <p className={cn("uppercase tracking-[0.28em]", isPrimaryHome ? "text-[10px] text-white/92" : "text-[11px] text-sage-500")}>
             MILESCAPE
           </p>
-          {!isPrimaryHome && !isPaceCrewHome && !isWearablesFullBleed && !isMyScapeHome ? <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1> : null}
+          {!isPrimaryHome && !isPaceCrewHome && !isWearablesFullBleed && !isMyScapeHome && !isRunResult ? (
+            <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1>
+          ) : null}
         </div>
 
         <div className="h-11 w-11" />

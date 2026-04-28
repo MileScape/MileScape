@@ -84,8 +84,8 @@ export const routes: Route[] = [
       {
         id: "tokyo-tower",
         name: "Tokyo Tower",
-        milestoneKm: 15,
-        description: "A late-route Tokyo memory finishes the set with the refreshed landmark style.",
+        milestoneKm: 18,
+        description: "The final Tokyo landmark now unlocks only when you fully complete the route.",
         image: "/models/landmarks/tokyo-route/tokyo-tower.png"
       }
     ],
