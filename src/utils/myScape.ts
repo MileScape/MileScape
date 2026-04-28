@@ -33,15 +33,23 @@ const myScapeLandmarkImages: Record<string, { imageSrc: string; defaultScale: nu
     defaultScale: 1.1,
   },
   "eiffel-tower": {
-    imageSrc: "/models/landmarks/eiffel-tower.png",
+    imageSrc: "/models/landmarks/paris-route/eiffel-tower.png",
     defaultScale: 1.1,
+  },
+  "louvre-courtyard": {
+    imageSrc: "/models/landmarks/paris-route/louvre-courtyard.png",
+    defaultScale: 1.08,
+  },
+  "arc-de-triomphe": {
+    imageSrc: "/models/landmarks/paris-route/arc-de-triomphe.png",
+    defaultScale: 1.08,
   },
   "leifeng-pagoda": {
     imageSrc: "/models/landmarks/leifeng-pagoda.png",
     defaultScale: 1.12,
   },
   "statue-of-liberty": {
-    imageSrc: "/models/landmarks/statue-of-liberty.png",
+    imageSrc: "/models/landmarks/central-park-route/statue-of-liberty.png",
     defaultScale: 1.14,
   },
   "three-pools": {
@@ -196,8 +204,8 @@ export const getMyScapeYearDemoAssets = (): UnlockedLandmarkAsset[] => [
     name: "Statue of Liberty",
     milestoneKm: 2,
     description: "Central Park route unlock.",
-    image: "/models/landmarks/statue-of-liberty.png",
-    imageSrc: "/models/landmarks/statue-of-liberty.png",
+    image: "/models/landmarks/central-park-route/statue-of-liberty.png",
+    imageSrc: "/models/landmarks/central-park-route/statue-of-liberty.png",
     routeId: "central-park-loop",
     routeName: "Central Park Loop",
     city: "New York",
@@ -210,14 +218,14 @@ export const getMyScapeYearDemoAssets = (): UnlockedLandmarkAsset[] => [
     name: "Eiffel Tower",
     milestoneKm: 16,
     description: "Paris route demo asset.",
-    image: "/models/landmarks/eiffel-tower.png",
-    imageSrc: "/models/landmarks/eiffel-tower.png",
     routeId: "paris-eiffel-route",
     routeName: "Eiffel Tower Route",
     city: "Paris",
     country: "France",
     assetType: "landmark",
     defaultScale: 1.1,
+    image: "/models/landmarks/paris-route/eiffel-tower.png",
+    imageSrc: "/models/landmarks/paris-route/eiffel-tower.png",
   },
   {
     id: "sydney-opera-demo",

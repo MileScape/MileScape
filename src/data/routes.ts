@@ -41,16 +41,52 @@ export const routes: Route[] = [
     sourceType: "personal",
     sourceCrewId: null,
     landmarks: [
-      { id: "statue-of-liberty", name: "Statue of Liberty", milestoneKm: 2, description: "Your first New York memory appears after a real run in the park.", image: "" },
+      {
+        id: "statue-of-liberty",
+        name: "Statue of Liberty",
+        milestoneKm: 2,
+        description: "Your first New York memory appears after a real run in the park.",
+        image: "/models/landmarks/central-park-route/statue-of-liberty.png"
+      },
       { id: "bow-bridge", name: "Bow Bridge", milestoneKm: 5, description: "The midpoint unlock where consistency starts looking beautiful.", image: "" },
       { id: "belvedere-castle", name: "Belvedere Castle", milestoneKm: 8, description: "A near-finish reward that reframes the route as an adventure.", image: "" }
     ],
     decorations: [
-      { id: "park-hotdog-cart", name: "Park Hot Dog Cart", rarity: "common", description: "A tiny cart from the edge of the loop." },
-      { id: "maple-bench", name: "Maple Bench", rarity: "common", description: "A quiet bench beneath autumn leaves." },
-      { id: "jazz-sax", name: "Jazz Sax", rarity: "rare", description: "A street-performance keepsake from the park paths." },
-      { id: "rowboat-cluster", name: "Rowboat Cluster", rarity: "epic", description: "A cinematic boating-lake display." },
-      { id: "twilight-skyscraper-arch", name: "Twilight Skyscraper Arch", rarity: "legendary", description: "A skyline centerpiece that turns the route into a postcard." }
+      {
+        id: "thanksgiving-turkey",
+        name: "Thanksgiving Turkey",
+        rarity: "common",
+        description: "A classic holiday table drop from the New York route.",
+        image: "/models/decoration/central-park-route/thanksgiving-turkey.png"
+      },
+      {
+        id: "smartphone",
+        name: "Smartphone",
+        rarity: "common",
+        description: "A city-life collectible for quick Central Park loops.",
+        image: "/models/decoration/central-park-route/smartphone.png"
+      },
+      {
+        id: "cola-bottle",
+        name: "Cola Bottle",
+        rarity: "rare",
+        description: "A familiar refreshment reward from the updated New York set.",
+        image: "/models/decoration/central-park-route/cola-bottle.png"
+      },
+      {
+        id: "basketball",
+        name: "Basketball",
+        rarity: "rare",
+        description: "A pickup-game collectible inspired by the city courts.",
+        image: "/models/decoration/central-park-route/basketball.png"
+      },
+      {
+        id: "fast-food-spot",
+        name: "Fast Food Spot",
+        rarity: "epic",
+        description: "A bright street-corner reward from the New York route pool.",
+        image: "/models/decoration/central-park-route/fast-food-spot.png"
+      }
     ]
   },
   {
@@ -226,16 +262,71 @@ export const routes: Route[] = [
     sourceType: "personal",
     sourceCrewId: null,
     landmarks: [
-      { id: "louvre-courtyard", name: "Louvre Courtyard", milestoneKm: 8, description: "An elegant early landmark that sets the tone for the route.", image: "" },
-      { id: "eiffel-tower", name: "Eiffel Tower", milestoneKm: 16, description: "The route’s central reward and emotional midpoint.", image: "" },
-      { id: "arc-de-triomphe", name: "Arc de Triomphe", milestoneKm: 27, description: "A premium late-route reveal before the final push.", image: "" }
+      {
+        id: "louvre-courtyard",
+        name: "Louvre Courtyard",
+        milestoneKm: 8,
+        description: "An elegant early landmark that sets the tone for the route.",
+        image: "/models/landmarks/paris-route/louvre-courtyard.png"
+      },
+      {
+        id: "eiffel-tower",
+        name: "Eiffel Tower",
+        milestoneKm: 16,
+        description: "The route’s central reward and emotional midpoint.",
+        image: "/models/landmarks/paris-route/eiffel-tower.png"
+      },
+      {
+        id: "arc-de-triomphe",
+        name: "Arc de Triomphe",
+        milestoneKm: 27,
+        description: "A premium late-route reveal before the final push.",
+        image: "/models/landmarks/paris-route/arc-de-triomphe.png"
+      }
     ],
     decorations: [
-      { id: "macaron-box", name: "Macaron Box", rarity: "common", description: "A pastel bakery reward for steady progress." },
-      { id: "street-cafe-chair", name: "Street Cafe Chair", rarity: "common", description: "A tiny cafe accent from a Paris sidewalk." },
-      { id: "perfume-flacon", name: "Perfume Flacon", rarity: "rare", description: "A refined collectible with boutique flair." },
-      { id: "seine-bookstall", name: "Seine Bookstall", rarity: "epic", description: "A riverfront stall stacked with old stories." },
-      { id: "midnight-eiffel-marquee", name: "Midnight Eiffel Marquee", rarity: "legendary", description: "A dramatic Paris display piece for dedicated runners." }
+      {
+        id: "baguette",
+        name: "Baguette",
+        rarity: "common",
+        description: "A classic bakery drop from the Paris route.",
+        image: "/models/decoration/paris-route/baguette.png"
+      },
+      {
+        id: "chartreux",
+        name: "Chartreux",
+        rarity: "common",
+        description: "A quiet Parisian cat collectible for repeat runs.",
+        image: "/models/decoration/paris-route/chartreux.png"
+      },
+      {
+        id: "clafoutis",
+        name: "Clafoutis",
+        rarity: "rare",
+        description: "A warm dessert reward from the updated Paris set.",
+        image: "/models/decoration/paris-route/clafoutis.png"
+      },
+      {
+        id: "peach-melba",
+        name: "Peach Melba",
+        rarity: "rare",
+        description: "A polished cafe dessert from the Paris route pool.",
+        image: "/models/decoration/paris-route/peach-melba.png"
+      },
+      {
+        id: "cabernet-sauvignon",
+        name: "Cabernet Sauvignon",
+        rarity: "epic",
+        description: "A refined bottle reward for deeper Paris progress.",
+        image: "/models/decoration/paris-route/cabernet-sauvignon.png"
+      },
+      {
+        id: "luxury-bag",
+        name: "Luxury Bag",
+        rarity: "legendary",
+        description: "A fashion showpiece reserved for dedicated Paris runners.",
+        image: "/models/decoration/paris-route/luxury-bag.png"
+      }
     ]
   },
   {
