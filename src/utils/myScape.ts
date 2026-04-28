@@ -29,7 +29,7 @@ const BOARD_FOOTPRINT = 90;
 
 const myScapeLandmarkImages: Record<string, { imageSrc: string; defaultScale: number }> = {
   "big-ben": {
-    imageSrc: "/models/landmarks/big-ben.png",
+    imageSrc: "/models/landmarks/london-route/BigBen.png",
     defaultScale: 1.1,
   },
   "eiffel-tower": {
@@ -69,7 +69,7 @@ const myScapeLandmarkImages: Record<string, { imageSrc: string; defaultScale: nu
     defaultScale: 1.14,
   },
   "tower-bridge": {
-    imageSrc: "/models/landmarks/london-bridge.png",
+    imageSrc: "/models/landmarks/london-route/TowerBridge.png",
     defaultScale: 1.08,
   },
 };

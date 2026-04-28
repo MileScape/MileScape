@@ -7,15 +7,17 @@ import type { Route } from "../types";
 import { getPaceportSummary } from "../utils/paceport";
 
 const countryCodeByName: Record<string, string> = {
-  China: "CN",
-  "United States": "US",
-  Japan: "JP",
-  Portugal: "PT",
+  Australia: "AU",
+  Egypt: "EG",
   Spain: "ES",
-  "United Kingdom": "GB",
   France: "FR",
-  Iceland: "IS",
-  Australia: "AU"
+  Italy: "IT",
+  Japan: "JP",
+  "South Korea": "KR",
+  Taiwan: "TW",
+  Thailand: "TH",
+  "United Kingdom": "GB",
+  "United States": "US"
 };
 
 interface CountryCollection {

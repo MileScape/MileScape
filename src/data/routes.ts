@@ -1,92 +1,60 @@
-import type { Route } from "../types";
+import type { Decoration, Landmark, Rarity, Route } from "../types";
+
+const landmark = (
+  id: string,
+  name: string,
+  milestoneKm: number,
+  description: string,
+  image: string,
+): Landmark => ({
+  id,
+  name,
+  milestoneKm,
+  description,
+  image,
+});
+
+const decoration = (
+  id: string,
+  name: string,
+  rarity: Rarity,
+  description: string,
+  image: string,
+): Decoration => ({
+  id,
+  name,
+  rarity,
+  description,
+  image,
+});
 
 export const routes: Route[] = [
   {
-    id: "west-lake-loop",
-    name: "West Lake Loop",
-    city: "Hangzhou",
-    country: "China",
-    totalDistanceKm: 20,
-    coverImage: "/posters/westlake.jpg",
-    description: "A poetic lakeside route that turns short neighborhood runs into a slow unfolding travel story.",
-    motivation: "Collect waterside memories one kilometer at a time and let every run reveal a calmer view.",
-    tier: "Advanced",
-    priceStamps: 140,
-    sourceType: "personal",
-    sourceCrewId: null,
-    landmarks: [
-      { id: "broken-bridge", name: "Broken Bridge", milestoneKm: 3, description: "Your first iconic stop, where the route begins to feel real.", image: "" },
-      { id: "leifeng-pagoda", name: "Leifeng Pagoda", milestoneKm: 9, description: "A milestone with elevation, history, and a sense of earned momentum.", image: "" },
-      { id: "three-pools", name: "Three Pools Mirroring the Moon", milestoneKm: 16, description: "A quiet late-route unlock that marks serious commitment.", image: "" }
-    ],
-    decorations: [
-      { id: "lotus-fan", name: "Lotus Fan", rarity: "common", description: "A breezy keepsake from the lake promenade." },
-      { id: "tea-pavilion-lamp", name: "Tea Pavilion Lamp", rarity: "common", description: "A warm lantern for waterside evenings." },
-      { id: "silk-parasol", name: "Silk Parasol", rarity: "rare", description: "A polished travel memento with Hangzhou flair." },
-      { id: "jade-koi", name: "Jade Koi", rarity: "epic", description: "A carved lucky fish from the lake district." },
-      { id: "moon-bridge-arch", name: "Moon Bridge Arch", rarity: "legendary", description: "A grand collectible inspired by the route's reflected skyline." }
-    ]
-  },
-  {
     id: "central-park-loop",
-    name: "Central Park Loop",
+    name: "New York Landmark Route",
     city: "New York",
     country: "United States",
     totalDistanceKm: 10,
     coverImage: "/posters/centralpark.jpg",
-    description: "A brisk city escape built for users who want fast progress and satisfying unlocks.",
-    motivation: "Turn ordinary training days into a cinematic park circuit filled with familiar landmarks.",
+    description: "A compact New York route rebuilt around the city landmarks now available in the collection.",
+    motivation: "Turn short runs into a sharp city archive from Liberty Island to the skyline.",
     tier: "Standard",
     priceStamps: 70,
     sourceType: "personal",
     sourceCrewId: null,
     landmarks: [
-      {
-        id: "statue-of-liberty",
-        name: "Statue of Liberty",
-        milestoneKm: 2,
-        description: "Your first New York memory appears after a real run in the park.",
-        image: "/models/landmarks/central-park-route/statue-of-liberty.png"
-      },
-      { id: "bow-bridge", name: "Bow Bridge", milestoneKm: 5, description: "The midpoint unlock where consistency starts looking beautiful.", image: "" },
-      { id: "belvedere-castle", name: "Belvedere Castle", milestoneKm: 8, description: "A near-finish reward that reframes the route as an adventure.", image: "" }
+      landmark("statue-of-liberty", "Statue of Liberty", 2, "The opening New York icon for your first real progress.", "/models/landmarks/central-park-route/statue-of-liberty.png"),
+      landmark("metropolitan-museum", "The Metropolitan Museum of Art", 5, "A cultural midpoint reward from the park edge.", "/models/landmarks/central-park-route/The-Metropolitan-Museum-of-Art.png"),
+      landmark("chrysler-building", "Chrysler Building", 8, "A polished skyline landmark for steady city miles.", "/models/landmarks/central-park-route/Chrysler-Building.png"),
+      landmark("one-world-trade-center", "One World Trade Center", 10, "The route completion landmark for the New York set.", "/models/landmarks/central-park-route/one-world-trade-center.png")
     ],
     decorations: [
-      {
-        id: "thanksgiving-turkey",
-        name: "Thanksgiving Turkey",
-        rarity: "common",
-        description: "A classic holiday table drop from the New York route.",
-        image: "/models/decoration/central-park-route/thanksgiving-turkey.png"
-      },
-      {
-        id: "smartphone",
-        name: "Smartphone",
-        rarity: "common",
-        description: "A city-life collectible for quick Central Park loops.",
-        image: "/models/decoration/central-park-route/smartphone.png"
-      },
-      {
-        id: "cola-bottle",
-        name: "Cola Bottle",
-        rarity: "rare",
-        description: "A familiar refreshment reward from the updated New York set.",
-        image: "/models/decoration/central-park-route/cola-bottle.png"
-      },
-      {
-        id: "basketball",
-        name: "Basketball",
-        rarity: "rare",
-        description: "A pickup-game collectible inspired by the city courts.",
-        image: "/models/decoration/central-park-route/basketball.png"
-      },
-      {
-        id: "fast-food-spot",
-        name: "Fast Food Spot",
-        rarity: "epic",
-        description: "A bright street-corner reward from the New York route pool.",
-        image: "/models/decoration/central-park-route/fast-food-spot.png"
-      }
+      decoration("bethesda-fountain", "Bethesda Fountain", "common", "A park keepsake from the Central Park collection.", "/models/decoration/central-park-route/Bethesda-Fountain.png"),
+      decoration("subway", "Subway", "common", "A daily city token from New York runs.", "/models/decoration/New York-route/subway.png"),
+      decoration("jazz-club", "Jazz Club", "rare", "A night-scene collectible from the city rhythm.", "/models/decoration/New York-route/jazz-club.png"),
+      decoration("empire-state-building", "Empire State Building", "rare", "A skyline souvenir for repeat route progress.", "/models/decoration/New York-route/Empire-State-Building.png"),
+      decoration("one-vanderbilt-building", "One Vanderbilt Building", "epic", "A modern tower reward from deeper New York runs.", "/models/decoration/New York-route/One-Vanderbilt-Building.png"),
+      decoration("rockefeller-center-tree", "Rockefeller Center Christmas Tree", "legendary", "A festive showpiece for dedicated New York runners.", "/models/decoration/New York-route/Rockefeller-Center-Christmas-Tree.png")
     ]
   },
   {
@@ -96,104 +64,24 @@ export const routes: Route[] = [
     country: "Japan",
     totalDistanceKm: 18,
     coverImage: "/posters/Tokyo.jpg",
-    description: "A neon-to-tranquil city journey that rewards persistence with memorable urban scenes.",
-    motivation: "Build a personal travel diary through repeated short runs and unlock Tokyo piece by piece.",
+    description: "A neon-to-temple Tokyo journey using the refreshed route-specific landmark set.",
+    motivation: "Build a Tokyo travel diary one landmark unlock at a time.",
     tier: "Advanced",
     priceStamps: 130,
     sourceType: "personal",
     sourceCrewId: null,
     landmarks: [
-      {
-        id: "shibuya",
-        name: "Shibuya Crossing",
-        milestoneKm: 4,
-        description: "Your first Tokyo unlock now opens with the route's busiest, brightest street energy.",
-        image: "/models/landmarks/tokyo-route/shibuya.png"
-      },
-      {
-        id: "senso-ji",
-        name: "Senso-ji",
-        milestoneKm: 10,
-        description: "Mid-route progress shifts from neon pace to a calmer historic Tokyo landmark.",
-        image: "/models/landmarks/tokyo-route/senso-ji.png"
-      },
-      {
-        id: "tokyo-tower",
-        name: "Tokyo Tower",
-        milestoneKm: 18,
-        description: "The final Tokyo landmark now unlocks only when you fully complete the route.",
-        image: "/models/landmarks/tokyo-route/tokyo-tower.png"
-      }
+      landmark("shibuya", "Shibuya Crossing", 4, "Your first Tokyo unlock opens with the city's busiest street energy.", "/models/landmarks/tokyo-route/shibuya.png"),
+      landmark("senso-ji", "Senso-ji", 10, "Mid-route progress shifts from neon pace to historic Tokyo.", "/models/landmarks/tokyo-route/senso-ji.png"),
+      landmark("tokyo-tower", "Tokyo Tower", 18, "The final Tokyo landmark unlocks when you complete the route.", "/models/landmarks/tokyo-route/tokyo-tower.png")
     ],
     decorations: [
-      {
-        id: "sakura",
-        name: "Sakura",
-        rarity: "common",
-        description: "A soft seasonal drop pulled from the refreshed Tokyo set.",
-        image: "/models/decoration/tokyo-route/sakura.png"
-      },
-      {
-        id: "maneki-neko",
-        name: "Maneki Neko",
-        rarity: "common",
-        description: "A lucky cat decoration for repeat Tokyo runs.",
-        image: "/models/decoration/tokyo-route/maneki-neko.png"
-      },
-      {
-        id: "omamori",
-        name: "Omamori",
-        rarity: "rare",
-        description: "A shrine charm that starts appearing more often as route familiarity grows.",
-        image: "/models/decoration/tokyo-route/omamori.png"
-      },
-      {
-        id: "takoyaki",
-        name: "Takoyaki",
-        rarity: "rare",
-        description: "A classic street-food collectible from the Tokyo route pool.",
-        image: "/models/decoration/tokyo-route/Takoyaki.png"
-      },
-      {
-        id: "sukiyaki",
-        name: "Sukiyaki",
-        rarity: "epic",
-        description: "A richer food-themed reward from the updated Tokyo collection.",
-        image: "/models/decoration/tokyo-route/Sukiyaki.png"
-      },
-      {
-        id: "torii-gate-decoration",
-        name: "Torii Gate",
-        rarity: "legendary",
-        description: "A ceremonial Tokyo decoration using the new route-specific art set.",
-        image: "/models/decoration/tokyo-route/torri-gate.png"
-      }
-    ]
-  },
-  {
-    id: "lisbon-tram-route",
-    name: "Lisbon Tram Route",
-    city: "Lisbon",
-    country: "Portugal",
-    totalDistanceKm: 7,
-    coverImage: "/posters/Lisbon.jpg",
-    description: "A short scenic climb through bright streets and postcard turns, ideal for first shop unlocks.",
-    motivation: "A compact route that gives fast payoff and makes even a short run feel collectible.",
-    tier: "Starter",
-    priceStamps: 50,
-    sourceType: "personal",
-    sourceCrewId: null,
-    landmarks: [
-      { id: "alfama-view", name: "Alfama Viewpoint", milestoneKm: 2, description: "A quick panoramic unlock above the city roofs.", image: "" },
-      { id: "yellow-tram", name: "Historic Tram", milestoneKm: 4, description: "A route memory that turns progress into a recognizable city icon.", image: "" },
-      { id: "commerce-square", name: "Commerce Square", milestoneKm: 6, description: "A late-route reward before full completion.", image: "" }
-    ],
-    decorations: [
-      { id: "azulejo-tile", name: "Azulejo Tile", rarity: "common", description: "A blue ceramic pattern from Lisbon walls." },
-      { id: "tram-ticket", name: "Tram Ticket", rarity: "common", description: "A bright little token from the yellow line." },
-      { id: "fado-guitar", name: "Fado Guitar", rarity: "rare", description: "A soulful souvenir from the hilltop neighborhoods." },
-      { id: "sunset-miradouro", name: "Sunset Miradouro", rarity: "epic", description: "A scenic overlook captured in warm evening light." },
-      { id: "golden-tram-car", name: "Golden Tram Car", rarity: "legendary", description: "A gleaming tram display for repeat route veterans." }
+      decoration("sakura", "Sakura", "common", "A soft seasonal drop from the Tokyo set.", "/models/decoration/tokyo-route/sakura.png"),
+      decoration("maneki-neko", "Maneki Neko", "common", "A lucky cat decoration for repeat Tokyo runs.", "/models/decoration/tokyo-route/maneki-neko.png"),
+      decoration("omamori", "Omamori", "rare", "A shrine charm for growing route familiarity.", "/models/decoration/tokyo-route/omamori.png"),
+      decoration("takoyaki", "Takoyaki", "rare", "A street-food collectible from the Tokyo route pool.", "/models/decoration/tokyo-route/Takoyaki.png"),
+      decoration("sukiyaki", "Sukiyaki", "epic", "A richer food-themed reward from the Tokyo collection.", "/models/decoration/tokyo-route/Sukiyaki.png"),
+      decoration("torii-gate-decoration", "Torii Gate", "legendary", "A ceremonial Tokyo decoration using the route art set.", "/models/decoration/tokyo-route/torri-gate.png")
     ]
   },
   {
@@ -203,23 +91,24 @@ export const routes: Route[] = [
     country: "Spain",
     totalDistanceKm: 12,
     coverImage: "/posters/Barcelona.jpg",
-    description: "A balanced Mediterranean city route with beachside rhythm and landmark pacing for routine training.",
-    motivation: "Stack everyday runs into a bright coastal journey from Gaudi icons to the waterfront.",
+    description: "A Spanish city route rebuilt around the Barcelona landmark assets now in the project.",
+    motivation: "Stack everyday runs into a bright Mediterranean landmark collection.",
     tier: "Standard",
     priceStamps: 80,
     sourceType: "personal",
     sourceCrewId: null,
     landmarks: [
-      { id: "sagrada-familia", name: "Sagrada Familia", milestoneKm: 3, description: "A vivid early unlock that anchors the route in Barcelona.", image: "" },
-      { id: "barceloneta-beach", name: "Barceloneta Beach", milestoneKm: 7, description: "A breezy midpoint reward that opens the route toward the sea.", image: "" },
-      { id: "park-guell", name: "Park Guell", milestoneKm: 11, description: "A near-finish reveal with color, height, and city views.", image: "" }
+      landmark("sagrada-familia", "La Sagrada Familia", 3, "A vivid early unlock that anchors the route in Barcelona.", "/models/landmarks/Barcelona/LaSagradaFamilia.png"),
+      landmark("bullring", "Bullring", 7, "A strong midpoint landmark from the Spanish route set.", "/models/landmarks/Barcelona/Bullring.png"),
+      landmark("mestalla-stadium", "Mestalla Stadium", 12, "The completion landmark for the Spanish city route.", "/models/landmarks/Barcelona/MestallaStadium.png")
     ],
     decorations: [
-      { id: "mosaic-shell", name: "Mosaic Shell", rarity: "common", description: "A beachside tile motif with Mediterranean color." },
-      { id: "citrus-awning", name: "Citrus Awning", rarity: "common", description: "A bright striped market awning." },
-      { id: "gaudi-lizard", name: "Gaudi Lizard", rarity: "rare", description: "A playful art-piece collectible." },
-      { id: "beach-chiringuito", name: "Beach Chiringuito", rarity: "epic", description: "A full snack stand from the coast route." },
-      { id: "sunburst-cathedral-window", name: "Sunburst Cathedral Window", rarity: "legendary", description: "A radiant showpiece inspired by Barcelona's skyline." }
+      decoration("olive-oil", "Olive Oil", "common", "A kitchen-table collectible from the Spanish route set.", "/models/decoration/Barcelona/OliveOil.png"),
+      decoration("fuet", "Fuet", "common", "A savory snack drop for easy route repeats.", "/models/decoration/Barcelona/Fuet.png"),
+      decoration("gambas-al-ajillo", "Gambas al Ajillo", "rare", "A warm tapas reward from the city pool.", "/models/decoration/Barcelona/GambasalAjillo.png"),
+      decoration("paella", "Paella", "rare", "A classic shared-table collectible.", "/models/decoration/Barcelona/Paella.png"),
+      decoration("burnt-basque-cheesecake", "Burnt Basque Cheesecake", "epic", "A rich dessert reward from deeper progress.", "/models/decoration/Barcelona/BurntBasqueCheesecake.png"),
+      decoration("guernica", "Guernica", "legendary", "An art landmark decoration for dedicated Spanish route runners.", "/models/decoration/Barcelona/Guernica.png")
     ]
   },
   {
@@ -229,170 +118,241 @@ export const routes: Route[] = [
     country: "United Kingdom",
     totalDistanceKm: 22,
     coverImage: "/posters/london.jpg",
-    description: "A longer city route stitched through iconic London stops for users chasing bigger progression.",
+    description: "A longer London route rebuilt around the five available landmark models.",
     motivation: "Build a serious travel arc through repeated sessions and visible achievement pacing.",
     tier: "Advanced",
     priceStamps: 150,
     sourceType: "personal",
     sourceCrewId: null,
     landmarks: [
-      { id: "tower-bridge", name: "Tower Bridge", milestoneKm: 5, description: "A recognizable early unlock that makes the route feel ambitious.", image: "" },
-      { id: "big-ben", name: "Big Ben", milestoneKm: 12, description: "A classic midpoint reward for sustained consistency.", image: "" },
-      { id: "hyde-park", name: "Hyde Park", milestoneKm: 19, description: "A late-route green landmark before full completion.", image: "" }
+      landmark("big-ben", "Big Ben", 4, "A classic opening reward for the London route.", "/models/landmarks/london-route/BigBen.png"),
+      landmark("westminster-abbey", "Westminster Abbey", 8, "A historic midpoint step toward the city core.", "/models/landmarks/london-route/WestminsterAbbey.png"),
+      landmark("museum", "Museum", 12, "A cultural unlock for sustained consistency.", "/models/landmarks/london-route/Museum.png"),
+      landmark("tower-bridge", "Tower Bridge", 17, "A recognizable late-route London landmark.", "/models/landmarks/london-route/TowerBridge.png"),
+      landmark("windsor-castle", "Windsor Castle", 22, "The completion reward for the London collection.", "/models/landmarks/london-route/WindsorCastle.png")
     ],
     decorations: [
-      { id: "tea-caddy", name: "Tea Caddy", rarity: "common", description: "A polished tin from a London pantry shelf." },
-      { id: "rainy-umbrella", name: "Rainy Umbrella", rarity: "common", description: "A dependable city-weather keepsake." },
-      { id: "red-phone-box", name: "Red Phone Box", rarity: "rare", description: "An unmistakable London street collectible." },
-      { id: "double-decker-stop", name: "Double-Decker Stop", rarity: "epic", description: "A full bus-stop scene for your collection." },
-      { id: "crown-archway", name: "Crown Archway", rarity: "legendary", description: "A regal route centerpiece earned through repeated long runs." }
+      decoration("english-breakfast", "English Breakfast", "common", "A hearty London drop for easy repeats.", "/models/decoration/london-route/EnglishBreakfast.png"),
+      decoration("newsboy-cap", "Newsboy Cap", "common", "A city-street collectible with London character.", "/models/decoration/london-route/NewsboyCap.png"),
+      decoration("fish-and-chips", "Fish and Chips", "rare", "A classic food reward from the route pool.", "/models/decoration/london-route/FishandChips.png"),
+      decoration("red-telephone-box", "Red Telephone Box", "rare", "A bright street icon for your collection.", "/models/decoration/london-route/RedTelephoneBox.png"),
+      decoration("double-decker-bus", "Double-Decker Bus", "epic", "A full city transport showpiece.", "/models/decoration/london-route/Double-Decker Bus.png"),
+      decoration("victorian-tea-set", "Victorian Tea Set", "legendary", "A polished London reward for dedicated runners.", "/models/decoration/london-route/VictorianTeaSet.png")
     ]
   },
   {
     id: "paris-eiffel-route",
-    name: "Eiffel Tower Route",
+    name: "Paris Landmark Route",
     city: "Paris",
     country: "France",
     totalDistanceKm: 30,
     coverImage: "/posters/paris.jpg",
-    description: "A premium city journey for long-term players who want a more aspirational map to unlock.",
+    description: "A premium Paris route rebuilt around the Louvre, Eiffel Tower, and Arc de Triomphe set.",
     motivation: "Save stamps, unlock Paris, and turn consistency into a richer destination chase.",
     tier: "Premium",
     priceStamps: 210,
     sourceType: "personal",
     sourceCrewId: null,
     landmarks: [
-      {
-        id: "louvre-courtyard",
-        name: "Louvre Courtyard",
-        milestoneKm: 8,
-        description: "An elegant early landmark that sets the tone for the route.",
-        image: "/models/landmarks/paris-route/louvre-courtyard.png"
-      },
-      {
-        id: "eiffel-tower",
-        name: "Eiffel Tower",
-        milestoneKm: 16,
-        description: "The route’s central reward and emotional midpoint.",
-        image: "/models/landmarks/paris-route/eiffel-tower.png"
-      },
-      {
-        id: "arc-de-triomphe",
-        name: "Arc de Triomphe",
-        milestoneKm: 27,
-        description: "A premium late-route reveal before the final push.",
-        image: "/models/landmarks/paris-route/arc-de-triomphe.png"
-      }
+      landmark("louvre-courtyard", "Louvre Courtyard", 8, "An elegant early landmark that sets the route tone.", "/models/landmarks/paris-route/louvre-courtyard.png"),
+      landmark("eiffel-tower", "Eiffel Tower", 16, "The route's central reward and emotional midpoint.", "/models/landmarks/paris-route/eiffel-tower.png"),
+      landmark("arc-de-triomphe", "Arc de Triomphe", 30, "A premium completion reveal for the final push.", "/models/landmarks/paris-route/arc-de-triomphe.png")
     ],
     decorations: [
-      {
-        id: "baguette",
-        name: "Baguette",
-        rarity: "common",
-        description: "A classic bakery drop from the Paris route.",
-        image: "/models/decoration/paris-route/baguette.png"
-      },
-      {
-        id: "chartreux",
-        name: "Chartreux",
-        rarity: "common",
-        description: "A quiet Parisian cat collectible for repeat runs.",
-        image: "/models/decoration/paris-route/chartreux.png"
-      },
-      {
-        id: "clafoutis",
-        name: "Clafoutis",
-        rarity: "rare",
-        description: "A warm dessert reward from the updated Paris set.",
-        image: "/models/decoration/paris-route/clafoutis.png"
-      },
-      {
-        id: "peach-melba",
-        name: "Peach Melba",
-        rarity: "rare",
-        description: "A polished cafe dessert from the Paris route pool.",
-        image: "/models/decoration/paris-route/peach-melba.png"
-      },
-      {
-        id: "cabernet-sauvignon",
-        name: "Cabernet Sauvignon",
-        rarity: "epic",
-        description: "A refined bottle reward for deeper Paris progress.",
-        image: "/models/decoration/paris-route/cabernet-sauvignon.png"
-      },
-      {
-        id: "luxury-bag",
-        name: "Luxury Bag",
-        rarity: "legendary",
-        description: "A fashion showpiece reserved for dedicated Paris runners.",
-        image: "/models/decoration/paris-route/luxury-bag.png"
-      }
+      decoration("baguette", "Baguette", "common", "A classic bakery drop from the Paris route.", "/models/decoration/paris-route/baguette.png"),
+      decoration("chartreux", "Chartreux", "common", "A quiet Parisian cat collectible for repeat runs.", "/models/decoration/paris-route/chartreux.png"),
+      decoration("clafoutis", "Clafoutis", "rare", "A warm dessert reward from the Paris set.", "/models/decoration/paris-route/clafoutis.png"),
+      decoration("peach-melba", "Peach Melba", "rare", "A polished cafe dessert from the Paris route pool.", "/models/decoration/paris-route/peach-melba.png"),
+      decoration("cabernet-sauvignon", "Cabernet Sauvignon", "epic", "A refined bottle reward for deeper Paris progress.", "/models/decoration/paris-route/cabernet-sauvignon.png"),
+      decoration("luxury-bag", "Luxury Bag", "legendary", "A fashion showpiece reserved for dedicated Paris runners.", "/models/decoration/paris-route/luxury-bag.png")
     ]
   },
   {
-    id: "mount-fuji-route",
-    name: "Mount Fuji Route",
-    city: "Shizuoka",
-    country: "Japan",
-    totalDistanceKm: 35,
-    coverImage: "/posters/fuji.jpg",
-    description: "A high-value premium route that frames long-term effort as a slow ascent toward a legendary view.",
-    motivation: "Reserve this for players who want their next major unlock target to feel special.",
-    tier: "Premium",
-    priceStamps: 250,
+    id: "cairo-pyramid-route",
+    name: "Cairo Pyramid Route",
+    city: "Cairo",
+    country: "Egypt",
+    totalDistanceKm: 16,
+    coverImage: "/posters/Reykjavik.jpg",
+    description: "A desert-history route using the Cairo landmark models now available in the asset library.",
+    motivation: "Move from citadel stone to ancient icons as your weekly distance grows.",
+    tier: "Advanced",
+    priceStamps: 130,
     sourceType: "personal",
     sourceCrewId: null,
     landmarks: [
-      { id: "torii-gate", name: "Torii Gate", milestoneKm: 9, description: "A quiet early unlock that signals the route’s atmosphere.", image: "" },
-      { id: "fuji-base-camp", name: "Fuji Base Camp", milestoneKm: 18, description: "The midpoint checkpoint where the route starts feeling substantial.", image: "" },
-      { id: "fuji-summit-view", name: "Summit View", milestoneKm: 32, description: "A premium late-route memory before completion.", image: "" }
+      landmark("cairo-citadel", "Cairo Citadel", 4, "A fortified opening landmark for the Cairo route.", "/models/landmarks/egpty-route/CairoCitadel.png"),
+      landmark("the-sphinx", "The Sphinx", 9, "A mythic midpoint reward from the Egyptian set.", "/models/landmarks/egpty-route/The Sphinx.png"),
+      landmark("the-great-pyramid", "The Great Pyramid", 16, "The completion landmark for the Cairo collection.", "/models/landmarks/egpty-route/TheGreatPyramid.png")
     ],
     decorations: [
-      { id: "trail-bell", name: "Trail Bell", rarity: "common", description: "A mountain-path charm with a clear ring." },
-      { id: "cedar-wayfinder", name: "Cedar Wayfinder", rarity: "common", description: "A weathered marker from the ascent trail." },
-      { id: "summit-stamp", name: "Summit Stamp", rarity: "rare", description: "A climber's mark from higher elevation." },
-      { id: "cloud-shrine", name: "Cloud Shrine", rarity: "epic", description: "A misty ridge shrine framed by the route." },
-      { id: "fuji-sunrise-panorama", name: "Fuji Sunrise Panorama", rarity: "legendary", description: "A sweeping sunrise scene reserved for your longest journeys." }
+      decoration("anubis", "Anubis", "common", "A guardian figure from the Cairo route pool.", "/models/decoration/Cairo-route/Anubis.png"),
+      decoration("egyptian-mummy", "Egyptian Mummy", "common", "A museum-style collectible for repeat runs.", "/models/decoration/Cairo-route/EgyptianMummy.png"),
+      decoration("egyptian-sun-barge", "Egyptian Sun Barge", "rare", "A ceremonial reward from deeper progress.", "/models/decoration/Cairo-route/EgyptianSunBarge.png"),
+      decoration("catacombs-kom-el-shoqafa", "Catacombs of Kom El Shoqafa", "rare", "A subterranean history drop from the route.", "/models/decoration/Cairo-route/CatacombsofKomElShoqafa.png"),
+      decoration("pharaoh-crook-flail", "Pharaoh's Crook and Flail", "epic", "A royal symbol for committed route runs.", "/models/decoration/Cairo-route/Pharaoh'sCrookandFlail.png"),
+      decoration("pharaoh-nemes", "Pharaoh's Nemes", "legendary", "A legendary Egyptian showpiece.", "/models/decoration/Cairo-route/PharaohsNemes.png")
     ]
   },
   {
-    id: "aurora-harbor-route",
-    name: "Aurora Harbor Route",
-    city: "Reykjavik",
-    country: "Iceland",
-    totalDistanceKm: 14,
-    coverImage: "/posters/Reykjavik.jpg",
-    description: "A PaceCrew-only shoreline route unlocked through shared missions and held as a team reward.",
-    motivation: "This destination belongs to your social archive rather than the solo unlock flow.",
-    tier: "Standard",
-    priceStamps: 0,
-    sourceType: "pacecrew",
-    crewOnly: true,
-    sourceCrewId: null,
-    landmarks: [
-      { id: "glass-harbor", name: "Glass Harbor", milestoneKm: 3, description: "A reflective waterfront stop held inside the crew archive.", image: "" },
-      { id: "aurora-point", name: "Aurora Point", milestoneKm: 8, description: "A northern-light memory unlocked for viewing in Paceport.", image: "" },
-      { id: "lighthouse-dock", name: "Lighthouse Dock", milestoneKm: 13, description: "A late archive reward that stays exclusive to PaceCrew progress.", image: "" }
-    ]
-  },
-  {
-    id: "melbourne-laneway-route",
-    name: "Melbourne Laneway Route",
-    city: "Melbourne",
-    country: "Australia",
+    id: "seoul-heritage-route",
+    name: "Seoul Heritage Route",
+    city: "Seoul",
+    country: "South Korea",
     totalDistanceKm: 12,
+    coverImage: "/posters/Tokyo.jpg",
+    description: "A compact Seoul route built from the Korean landmark models currently in the project.",
+    motivation: "Collect palace, mountain, and memorial landmarks through steady short runs.",
+    tier: "Standard",
+    priceStamps: 85,
+    sourceType: "personal",
+    sourceCrewId: null,
+    landmarks: [
+      landmark("gyeongbokgung-palace", "Gyeongbokgung Palace", 3, "The opening palace landmark for the Seoul route.", "/models/landmarks/koera-route/GyeongbokgungPalace.png"),
+      landmark("korean-tomb", "Korean Tomb", 7, "A quiet historical midpoint reward.", "/models/landmarks/koera-route/KoreanTomb.png"),
+      landmark("mountain-side-elevator", "Mountain-side Elevator", 12, "The completion landmark for the Seoul set.", "/models/landmarks/koera-route/Mountain-sideElevator.png")
+    ],
+    decorations: [
+      decoration("kimchi", "Kimchi", "common", "A staple food collectible from the Seoul route.", "/models/decoration/Seoul-route/Kimchi.png"),
+      decoration("tteokbokki", "Tteokbokki", "common", "A street-food drop for short route repeats.", "/models/decoration/Seoul-route/Tteokbokki.png"),
+      decoration("soju", "Soju", "rare", "A small bottle reward from the city pool.", "/models/decoration/Seoul-route/Soju.png"),
+      decoration("buldak-bokkeum-myeon", "Buldak Bokkeum Myeon", "rare", "A spicy route collectible for regular runners.", "/models/decoration/Seoul-route/Buldak Bokkeum Myeon.png"),
+      decoration("korean-fried-chicken", "Korean Fried Chicken", "epic", "A rich food reward from deeper progress.", "/models/decoration/Seoul-route/Korean Fried Chicken.png"),
+      decoration("korean-hanbok", "Korean Hanbok", "legendary", "A ceremonial showpiece from the Seoul collection.", "/models/decoration/Seoul-route/Korean Hanbok.png")
+    ]
+  },
+  {
+    id: "sydney-harbor-route",
+    name: "Sydney Harbor Route",
+    city: "Sydney",
+    country: "Australia",
+    totalDistanceKm: 14,
     coverImage: "/posters/Melbourne.jpg",
-    description: "A PaceCrew-only city route granted as a mission reward and displayed as a team-earned destination.",
-    motivation: "This route cannot be bought or run individually. It exists as a shared crew reward inside Paceport.",
-    tier: "Advanced",
-    priceStamps: 0,
+    description: "A harbor route rebuilt around the Sydney landmark images in the asset library.",
+    motivation: "Run toward the opera house, bridge, and skyline as a clean crew-worthy destination.",
+    tier: "Standard",
+    priceStamps: 95,
     sourceType: "pacecrew",
     crewOnly: true,
     sourceCrewId: null,
     landmarks: [
-      { id: "flinders-street", name: "Flinders Street Station", milestoneKm: 3, description: "A classic city opening preserved as a crew unlock.", image: "" },
-      { id: "hosier-lane", name: "Hosier Lane", milestoneKm: 7, description: "A central reward that marks shared team effort.", image: "" },
-      { id: "royal-botanic-gardens", name: "Royal Botanic Gardens", milestoneKm: 11, description: "A late green memory that stays marked as PaceCrew-only.", image: "" }
+      landmark("sydney-opera-house", "Sydney Opera House", 4, "The opening harbor icon for this route.", "/models/landmarks/sydney-route/SydneyOperaHouse.png"),
+      landmark("harbour-bridge", "Harbour Bridge", 9, "A strong midpoint landmark across the water.", "/models/landmarks/sydney-route/HarbourBridge.png"),
+      landmark("sydney-skyline", "Sydney Skyline", 14, "The completion view for the Sydney route.", "/models/landmarks/sydney-route/Skyline.png")
+    ],
+    decorations: [
+      decoration("australian-meat-pie", "Australian Meat Pie", "common", "A savory local drop from the Sydney set.", "/models/decoration/Sydney-route/AustralianMeatPie.png"),
+      decoration("boomerang", "Boomerang", "common", "A curved keepsake from the route pool.", "/models/decoration/Sydney-route/Boomerang.png"),
+      decoration("coral-reef", "Coral Reef", "rare", "A bright coastal reward for repeated runs.", "/models/decoration/Sydney-route/CoralReef.png"),
+      decoration("koala", "Koala", "rare", "A soft wildlife collectible.", "/models/decoration/Sydney-route/Koala.png"),
+      decoration("platypus", "Platypus", "epic", "A distinctive wildlife reward.", "/models/decoration/Sydney-route/Platypus.png"),
+      decoration("wallaby", "Wallaby", "legendary", "A rare animal showpiece for the Sydney set.", "/models/decoration/Sydney-route/Wallaby.png")
+    ]
+  },
+  {
+    id: "rome-heritage-route",
+    name: "Rome Heritage Route",
+    city: "Rome",
+    country: "Italy",
+    totalDistanceKm: 18,
+    coverImage: "/posters/paris.jpg",
+    description: "A classical heritage route using the Rome landmark models currently in the project.",
+    motivation: "Turn longer sessions into a collection of ancient stone, baths, and arenas.",
+    tier: "Advanced",
+    priceStamps: 145,
+    sourceType: "personal",
+    sourceCrewId: null,
+    landmarks: [
+      landmark("colosseum", "Colosseum", 4, "The route opens with Rome's arena landmark.", "/models/landmarks/roma/Colosseum.png"),
+      landmark("roman-bath", "Roman Bath", 8, "A historical midpoint reward from the route set.", "/models/landmarks/roma/Roman Bath.png"),
+      landmark("greek-amphitheater", "Greek Amphitheater", 13, "A classical stage landmark for sustained progress.", "/models/landmarks/roma/GreekAmphitheater.png"),
+      landmark("parthenon", "Parthenon", 18, "The completion landmark for the classical route.", "/models/landmarks/roma/Parthenon.png")
+    ],
+    decorations: [
+      decoration("espresso", "Espresso", "common", "A quick cafe drop from the Rome set.", "/models/decoration/roma/Espresso.png"),
+      decoration("margherita-pizza", "Margherita Pizza", "common", "A classic food collectible.", "/models/decoration/roma/MargheritaPizza.png"),
+      decoration("lasagne", "Lasagne", "rare", "A rich route reward from repeat runs.", "/models/decoration/roma/Lasagne.png"),
+      decoration("roman-laurel-wreath", "Roman Laurel Wreath", "rare", "A victory symbol for steady progress.", "/models/decoration/roma/RomanLaurelWreath.png"),
+      decoration("roman-gladiator-helmet", "Roman Gladiator Helmet", "epic", "A bold arena reward.", "/models/decoration/roma/RomanGladiatorHelmet.png"),
+      decoration("roman-mosaic-floor", "Roman Mosaic Floor", "legendary", "A patterned showpiece for dedicated runners.", "/models/decoration/roma/RomanMosaicFloor.png")
+    ]
+  },
+  {
+    id: "california-discovery-route",
+    name: "California Discovery Route",
+    city: "California",
+    country: "United States",
+    totalDistanceKm: 20,
+    coverImage: "/posters/centralpark.jpg",
+    description: "A California route rebuilt around the San folder landmark models.",
+    motivation: "Move from tech campus to observatory to national-park scale.",
+    tier: "Advanced",
+    priceStamps: 150,
+    sourceType: "personal",
+    sourceCrewId: null,
+    landmarks: [
+      landmark("apple-park", "Apple Park", 5, "A modern opening landmark from the California set.", "/models/landmarks/san/ApplePark.png"),
+      landmark("gravitational-wave-observatory", "Gravitational Wave Observatory", 12, "A science landmark for the route midpoint.", "/models/landmarks/san/GravitationalWaveObservatory.png"),
+      landmark("yosemite-national-park", "Yosemite National Park", 20, "The completion reward for the California route.", "/models/landmarks/san/YosemiteNationalPark.png")
+    ],
+    decorations: [
+      decoration("avocado", "Avocado", "common", "A California food collectible.", "/models/decoration/san/Avocado.png"),
+      decoration("beach", "Beach", "common", "A coastal drop from easy repeats.", "/models/decoration/san/Beach.png"),
+      decoration("cowboy-hat", "Cowboy Hat", "rare", "A western-style route reward.", "/models/decoration/san/CowboyHat.png"),
+      decoration("gramophone", "Gramophone", "rare", "A classic entertainment collectible.", "/models/decoration/san/Gramophone.png"),
+      decoration("hollywood", "Hollywood", "epic", "A bright show-business reward.", "/models/decoration/san/Hollywood.png"),
+      decoration("award-statue", "Award Statue", "legendary", "A trophy-like route showpiece.", "/models/decoration/san/Award Statue.png")
+    ]
+  },
+  {
+    id: "taipei-skyline-route",
+    name: "Taipei Skyline Route",
+    city: "Taipei",
+    country: "Taiwan",
+    totalDistanceKm: 16,
+    coverImage: "/posters/Tokyo.jpg",
+    description: "A Taiwan route rebuilt around the Taipei folder landmark set.",
+    motivation: "Climb through skyline, lakeside, mountain, and southern city memories.",
+    tier: "Standard",
+    priceStamps: 100,
+    sourceType: "personal",
+    sourceCrewId: null,
+    landmarks: [
+      landmark("taipei-101", "Taipei 101", 4, "The opening skyline landmark for the Taiwan route.", "/models/landmarks/Taipei/Taipei-101.png"),
+      landmark("sun-moon-lake", "Sun Moon Lake", 8, "A calmer midpoint memory from the route set.", "/models/landmarks/Taipei/sun-moon-lake.png"),
+      landmark("yushan", "Yushan", 12, "A mountain landmark for sustained progress.", "/models/landmarks/Taipei/Yushan.png"),
+      landmark("kaohsiung-85-sky-tower", "Kaohsiung 85 Sky Tower", 16, "The completion landmark for the Taiwan route.", "/models/landmarks/Taipei/Kaohsiung-85-Sky-Tower.png")
+    ],
+    decorations: [
+      decoration("bubble-tea", "Bubble Tea", "common", "A sweet drink drop from the Taiwan set.", "/models/decoration/Taipei/bubble-tea.png"),
+      decoration("taiwan-beef-noodle", "Taiwan Beef Noodle", "rare", "A warm food reward from repeat runs.", "/models/decoration/Taipei/Taiwan-beef-noodle.png"),
+      decoration("taiwan-blue-magpie", "Taiwan Blue Magpie", "epic", "A vivid wildlife collectible.", "/models/decoration/Taipei/Taiwan-Blue-Magpie.png")
+    ]
+  },
+  {
+    id: "bangkok-floating-route",
+    name: "Bangkok Floating Route",
+    city: "Bangkok",
+    country: "Thailand",
+    totalDistanceKm: 9,
+    coverImage: "/posters/Lisbon.jpg",
+    description: "A short Bangkok route using the current floating market and Buddha landmark assets.",
+    motivation: "Collect a compact route with bright market motion and temple calm.",
+    tier: "Starter",
+    priceStamps: 55,
+    sourceType: "pacecrew",
+    crewOnly: true,
+    sourceCrewId: null,
+    landmarks: [
+      landmark("floating-market", "Floating Market", 4, "A colorful opening landmark from the Bangkok set.", "/models/landmarks/bamkok/floating-market.png"),
+      landmark("buddha", "Buddha", 9, "The completion landmark for this compact Bangkok route.", "/models/landmarks/bamkok/buddha.png")
+    ],
+    decorations: [
+      decoration("palm", "Palm", "common", "A tropical route drop for easy repeats.", "/models/decoration/bamkok/palm.png"),
+      decoration("mango-rice", "Mango Rice", "common", "A sweet food collectible from the Bangkok set.", "/models/decoration/bamkok/mango-rice.png"),
+      decoration("pad-thai", "Pad Thai", "rare", "A classic street-food reward.", "/models/decoration/bamkok/pad-thai.png"),
+      decoration("banh-lot-noodles", "Banh Lot Noodles", "rare", "A chilled dessert-style route collectible.", "/models/decoration/bamkok/Banh-Lot-Noodles.png"),
+      decoration("tourist-duck-car", "Tourist Duck Car", "epic", "A playful vehicle reward from the route pool.", "/models/decoration/bamkok/tourist-duck-car.png")
     ]
   }
 ];

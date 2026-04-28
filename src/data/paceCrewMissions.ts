@@ -5,24 +5,24 @@ export const paceCrewMissions: PaceCrewMission[] = [
     id: "mission-evening-sprint",
     crewId: "sunrise-collective",
     title: "Evening Sprint",
-    description: "Complete 2 km before tomorrow evening and keep the crew streak glowing.",
+    description: "Complete 2 km before tomorrow evening and unlock a compact Bangkok team route.",
     targetDistanceKm: 2,
     depositStamps: 15,
     rewardStamps: 40,
     deadline: "2026-12-31T18:00:00.000Z",
-    destinationRewardId: "aurora-harbor-route",
+    destinationRewardId: "bangkok-floating-route",
     status: "open"
   },
   {
     id: "mission-river-push",
     crewId: "night-owls",
     title: "Bay Push",
-    description: "Log 4 km this week and unlock a Melbourne city route for the whole team archive.",
+    description: "Log 4 km this week and unlock a Sydney harbor route for the whole team archive.",
     targetDistanceKm: 4,
     depositStamps: 25,
     rewardStamps: 60,
     deadline: "2026-12-31T23:00:00.000Z",
-    destinationRewardId: "melbourne-laneway-route",
+    destinationRewardId: "sydney-harbor-route",
     status: "open"
   },
   {

@@ -28,13 +28,15 @@ const sourceLayer = "country_boundaries";
 const mapStyle = "mapbox://styles/mapbox/standard";
 const alpha3ByAlpha2: Record<string, string> = {
   AU: "AUS",
-  CN: "CHN",
+  EG: "EGY",
   ES: "ESP",
   FR: "FRA",
   GB: "GBR",
-  IS: "ISL",
+  IT: "ITA",
   JP: "JPN",
-  PT: "PRT",
+  KR: "KOR",
+  TH: "THA",
+  TW: "TWN",
   US: "USA",
 };
 
@@ -44,13 +46,15 @@ const alpha2ByAlpha3 = Object.fromEntries(
 
 const countryCameraViews: Record<string, { center: [number, number]; zoom: number }> = {
   AU: { center: [134.5, -25.6], zoom: 2.45 },
-  CN: { center: [104.5, 36.2], zoom: 2.28 },
+  EG: { center: [30.2, 26.7], zoom: 3.2 },
   ES: { center: [-3.4, 40.2], zoom: 3.25 },
   FR: { center: [2.4, 46.4], zoom: 3.25 },
   GB: { center: [-2.5, 54.2], zoom: 3.4 },
-  IS: { center: [-18.6, 64.9], zoom: 3.7 },
+  IT: { center: [12.6, 42.7], zoom: 3.35 },
   JP: { center: [138.5, 37.1], zoom: 3.2 },
-  PT: { center: [-8.1, 39.6], zoom: 3.55 },
+  KR: { center: [127.8, 36.4], zoom: 3.65 },
+  TH: { center: [101.0, 15.8], zoom: 3.35 },
+  TW: { center: [121.0, 23.7], zoom: 4.35 },
   US: { center: [-128.5, 48.5], zoom: 1.62 },
 };
 

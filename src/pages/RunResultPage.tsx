@@ -14,16 +14,18 @@ import { cn } from "../utils/cn";
 const defaultRunPosterImage = "/posters/run-cover.jpg";
 const defaultMissionPosterImage = "/posters/mission-cover.jpg";
 const routePosterImages: Record<string, string> = {
-  "west-lake-loop": "/posters/westlake.jpg",
   "central-park-loop": "/posters/centralpark.jpg",
   "tokyo-city-route": "/posters/Tokyo.jpg",
-  "lisbon-tram-route": "/posters/Lisbon.jpg",
   "barcelona-coast-route": "/posters/Barcelona.jpg",
   "london-landmark-route": "/posters/london.jpg",
   "paris-eiffel-route": "/posters/paris.jpg",
-  "mount-fuji-route": "/posters/fuji.jpg",
-  "aurora-harbor-route": "/posters/Reykjavik.jpg",
-  "melbourne-laneway-route": "/posters/Melbourne.jpg",
+  "cairo-pyramid-route": "/posters/Reykjavik.jpg",
+  "seoul-heritage-route": "/posters/Tokyo.jpg",
+  "sydney-harbor-route": "/posters/Melbourne.jpg",
+  "rome-heritage-route": "/posters/paris.jpg",
+  "california-discovery-route": "/posters/centralpark.jpg",
+  "taipei-skyline-route": "/posters/Tokyo.jpg",
+  "bangkok-floating-route": "/posters/Lisbon.jpg",
 };
 
 const formatPace = (distanceKm: number) => {
