@@ -8,6 +8,7 @@ interface MyScapeBoardProps {
   assets: UnlockedLandmarkAsset[];
   placedLandmarks: MyScapePlacedLandmark[];
   selectedId: string | null;
+  activeAtmosphereIds?: string[];
   expanded?: boolean;
   onItemPointerDown: (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => void;
   onSelectItem: (itemId: string) => void;
@@ -18,17 +19,47 @@ export const MyScapeBoard = ({
   assets,
   placedLandmarks,
   selectedId,
+  activeAtmosphereIds = [],
   expanded = false,
   onItemPointerDown,
   onSelectItem,
 }: MyScapeBoardProps) => {
   const assetMap = new Map(assets.map((asset) => [asset.id, asset]));
+  const duskActive = activeAtmosphereIds.includes("dusk-skybox");
+  const snowActive = activeAtmosphereIds.includes("snowfall-effect");
+  const sakuraActive = activeAtmosphereIds.includes("sakura-fall-effect");
+  const mossGroundActive = activeAtmosphereIds.includes("moss-ground");
+  const stoneGroundActive = activeAtmosphereIds.includes("stone-ground");
+  const topFill = stoneGroundActive ? "#c9d0ca" : mossGroundActive ? "#c7dfbd" : "#d7e4d5";
+  const leftFill = stoneGroundActive ? "#8d978f" : mossGroundActive ? "#78956d" : "#6f8374";
+  const rightFill = stoneGroundActive ? "#747e78" : mossGroundActive ? "#667f5d" : "#607367";
 
   return (
-    <div className="relative h-full min-h-[420px] overflow-hidden bg-[linear-gradient(180deg,#f6f4ee_0%,#eef2eb_36%,#edf1ea_100%)]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.92),rgba(255,255,255,0)_46%)]" />
+    <div
+      className={`relative h-full min-h-[420px] overflow-hidden ${
+        duskActive
+          ? "bg-[linear-gradient(180deg,#f6c78d_0%,#ead6b8_34%,#e7e2d8_100%)]"
+          : "bg-[linear-gradient(180deg,#f6f4ee_0%,#eef2eb_36%,#edf1ea_100%)]"
+      }`}
+    >
+      <div className={`absolute inset-0 ${duskActive ? "bg-[radial-gradient(circle_at_top,rgba(255,232,185,0.82),rgba(255,255,255,0)_48%)]" : "bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.92),rgba(255,255,255,0)_46%)]"}`} />
       <div className="absolute inset-x-0 bottom-0 h-28 bg-[linear-gradient(180deg,rgba(238,242,235,0)_0%,rgba(238,242,235,0.88)_100%)]" />
       <div className="absolute inset-x-4 top-6 h-24 rounded-full bg-[radial-gradient(circle,rgba(190,213,195,0.3),rgba(190,213,195,0)_72%)] blur-2xl" />
+      {snowActive || sakuraActive ? (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          {Array.from({ length: snowActive ? 20 : 16 }, (_, index) => (
+            <div
+              key={index}
+              className={`absolute rounded-full ${snowActive ? "h-1.5 w-1.5 bg-white/90" : "h-2 w-3 bg-pink-200/80"}`}
+              style={{
+                left: `${(index * 17) % 100}%`,
+                top: `${(index * 29) % 90}%`,
+                opacity: 0.45 + (index % 5) * 0.1,
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
       <div
         className={`absolute left-1/2 rounded-full bg-[radial-gradient(circle,rgba(57,77,63,0.14),rgba(57,77,63,0)_72%)] blur-md ${
           expanded ? "bottom-10 h-20 w-[364px] -translate-x-1/2" : "bottom-14 h-16 w-[306px] -translate-x-1/2"
@@ -44,16 +75,16 @@ export const MyScapeBoard = ({
             <defs>
               <linearGradient id="myscape-top" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#e9f0e7" />
-                <stop offset="48%" stopColor="#d7e4d5" />
+                <stop offset="48%" stopColor={topFill} />
                 <stop offset="100%" stopColor="#bdd0c0" />
               </linearGradient>
               <linearGradient id="myscape-left" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#8ea192" />
-                <stop offset="100%" stopColor="#6f8374" />
+                <stop offset="100%" stopColor={leftFill} />
               </linearGradient>
               <linearGradient id="myscape-right" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#7b8f80" />
-                <stop offset="100%" stopColor="#607367" />
+                <stop offset="100%" stopColor={rightFill} />
               </linearGradient>
               <linearGradient id="myscape-soil-left" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#98866d" />

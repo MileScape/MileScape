@@ -55,13 +55,19 @@ export const PaceportOverviewPage = () => {
   const [toast, setToast] = useState<string | null>(null);
   const {
     accessibleRouteIds,
+    unlockedDecorIds,
+    unlockedAtmosphereIds,
+    activeAtmosphereIds,
     routeBlueprints,
     totalDraws,
     displayStamps,
     drawCostStamps,
     canAffordDraw,
     registerUnlockedRoute,
-    registerBlueprints
+    registerBlueprints,
+    registerDecor,
+    redeemAtmosphere,
+    setAtmosphereActive
   } = usePaceportGachaAdapter(state);
 
   const countryCollections = useMemo(() => {
@@ -162,6 +168,11 @@ export const PaceportOverviewPage = () => {
     setToast(`+${amount} Route Blueprints added for My Scape.`);
   };
 
+  const handleDecorUnlocked = (decorId: string, duplicateBlueprints: number) => {
+    registerDecor(decorId, duplicateBlueprints);
+    setToast(duplicateBlueprints > 0 ? `Duplicate decor converted to +${duplicateBlueprints} Blueprints.` : "My Scape decor unlocked.");
+  };
+
   return (
     <div className="relative -mx-4 -mt-[calc(5.4rem+1.95rem)] min-h-screen bg-canvas">
       <section className="relative h-[calc(100svh+3.75rem)] min-h-[41rem] max-h-[48rem] overflow-hidden">
@@ -204,7 +215,7 @@ export const PaceportOverviewPage = () => {
               </div>
               <div className="mt-2 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.2em] text-sage-500">
                 <span>{totalDraws} total draws</span>
-                <span>{exploredDestinationCount} unlocked</span>
+                <span>{unlockedDecorIds.length} decor</span>
               </div>
             </div>
           </div>
@@ -213,8 +224,15 @@ export const PaceportOverviewPage = () => {
         <div className="absolute bottom-[5.75rem] right-5 z-20">
           <GachaTriggerButton
             currentUnlockedMaps={accessibleRouteIds}
+            currentDecorIds={unlockedDecorIds}
+            blueprints={routeBlueprints}
+            unlockedAtmosphereIds={unlockedAtmosphereIds}
+            activeAtmosphereIds={activeAtmosphereIds}
             onMapUnlocked={handleGachaMapUnlocked}
+            onDecorUnlocked={handleDecorUnlocked}
             onBlueprintsGained={handleBlueprintsGained}
+            onRedeemAtmosphere={redeemAtmosphere}
+            onSetAtmosphereActive={setAtmosphereActive}
             canDraw={canAffordDraw}
             costStamps={drawCostStamps}
           />

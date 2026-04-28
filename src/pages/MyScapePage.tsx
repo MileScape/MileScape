@@ -1,7 +1,9 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ArchiveRestore, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { MyScapeAssetTray } from "../components/myscape/MyScapeAssetTray";
 import { MyScapeBoard } from "../components/myscape/MyScapeBoard";
 import { useAppState } from "../hooks/useAppState";
+import { usePaceportGachaAdapter } from "../hooks/usePaceportGachaAdapter";
 import type { MyScapePlacedLandmark } from "../types";
 import { saveMyScapeLayout } from "../utils/storage";
 import {
@@ -15,6 +17,7 @@ import {
   getPeriodStart,
   isFuturePeriod,
   normalizeBoardPosition,
+  resolveGachaDecorAssets,
   resolveUnlockedLandmarkAssets,
   restoreMyScapeLayout,
   serializeMyScapeLayout,
@@ -104,12 +107,16 @@ const MyScapeChartCard = ({
 
 export const MyScapePage = () => {
   const { routes, state } = useAppState();
+  const { unlockedDecorIds, activeAtmosphereIds } = usePaceportGachaAdapter(state);
   const [viewMode, setViewMode] = useState<MyScapeViewMode>("day");
   const [anchorDate, setAnchorDate] = useState(() => new Date());
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
+  const [returnZoneActive, setReturnZoneActive] = useState(false);
   const [placedLandmarks, setPlacedLandmarks] = useState<MyScapePlacedLandmark[]>(() => restoreMyScapeLayout());
   const [yearDemoLandmarks, setYearDemoLandmarks] = useState<MyScapePlacedLandmark[]>([]);
   const boardRef = useRef<HTMLDivElement>(null);
+  const returnZoneRef = useRef<HTMLButtonElement>(null);
   const dragStateRef = useRef<{
     itemId: string;
     offsetX: number;
@@ -119,8 +126,8 @@ export const MyScapePage = () => {
   const today = new Date();
 
   const unlockedAssets = useMemo(
-    () => resolveUnlockedLandmarkAssets(routes, state.routeProgress),
-    [routes, state.routeProgress],
+    () => [...resolveUnlockedLandmarkAssets(routes, state.routeProgress), ...resolveGachaDecorAssets(unlockedDecorIds)],
+    [routes, state.routeProgress, unlockedDecorIds],
   );
   const yearDemoAssets = useMemo(() => getMyScapeYearDemoAssets(), []);
   const assets = useMemo(() => (viewMode === "year" ? yearDemoAssets : unlockedAssets), [unlockedAssets, viewMode, yearDemoAssets]);
@@ -226,36 +233,6 @@ export const MyScapePage = () => {
       return;
     }
 
-    const board = boardRef.current;
-    if (!board) {
-      return;
-    }
-
-    setPlacedLandmarks((current) =>
-      unlockedAssets.reduce((next, asset) => {
-        if (!asset.imageSrc || !assetIds.has(asset.id) || next.some((item) => item.landmarkId === asset.id)) {
-          return next;
-        }
-
-        return [
-          ...next,
-          createPlacedLandmark(
-            asset.id,
-            next,
-            board.clientWidth,
-            board.clientHeight,
-            asset.defaultScale ?? 1,
-          ),
-        ];
-      }, current),
-    );
-  }, [assetIds, unlockedAssets]);
-
-  useEffect(() => {
-    if (viewMode === "year") {
-      return;
-    }
-
     const saveTimer = window.setTimeout(() => {
       saveMyScapeLayout(serializeMyScapeLayout(placedLandmarks));
     }, 120);
@@ -290,6 +267,7 @@ export const MyScapePage = () => {
         offsetX: event.clientX - boardRect.left - item.x,
         offsetY: event.clientY - boardRect.top - item.y,
       };
+      setDraggingItemId(itemId);
 
       const raiseZIndex = (current: MyScapePlacedLandmark[]) =>
         current.map((entry) =>
@@ -316,6 +294,17 @@ export const MyScapePage = () => {
       const dragState = dragStateRef.current;
       if (!board || !dragState) {
         return;
+      }
+
+      const returnZone = returnZoneRef.current;
+      if (returnZone && viewMode !== "year") {
+        const rect = returnZone.getBoundingClientRect();
+        setReturnZoneActive(
+          event.clientX >= rect.left &&
+            event.clientX <= rect.right &&
+            event.clientY >= rect.top &&
+            event.clientY <= rect.bottom,
+        );
       }
 
       const boardRect = board.getBoundingClientRect();
@@ -350,12 +339,31 @@ export const MyScapePage = () => {
       setPlacedLandmarks(updateLandmarks);
     };
 
-    const handlePointerUp = () => {
+    const handlePointerUp = (event: PointerEvent) => {
       if (longPressTimerRef.current) {
         window.clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
       }
+
+      const dragState = dragStateRef.current;
+      const returnZone = returnZoneRef.current;
+      if (dragState && returnZone && viewMode !== "year") {
+        const rect = returnZone.getBoundingClientRect();
+        const shouldReturn =
+          event.clientX >= rect.left &&
+          event.clientX <= rect.right &&
+          event.clientY >= rect.top &&
+          event.clientY <= rect.bottom;
+
+        if (shouldReturn) {
+          setPlacedLandmarks((current) => current.filter((item) => item.id !== dragState.itemId));
+          setSelectedId(null);
+        }
+      }
+
       dragStateRef.current = null;
+      setDraggingItemId(null);
+      setReturnZoneActive(false);
     };
 
     window.addEventListener("pointermove", handlePointerMove);
@@ -367,6 +375,34 @@ export const MyScapePage = () => {
   }, [viewMode]);
 
   const displayedLandmarks = viewMode === "year" ? yearDemoLandmarks : placedLandmarks;
+  const placedLandmarkIds = useMemo(() => placedLandmarks.map((item) => item.landmarkId), [placedLandmarks]);
+  const selectedPlacedItem = useMemo(
+    () => (viewMode === "year" ? null : placedLandmarks.find((item) => item.id === selectedId) ?? null),
+    [placedLandmarks, selectedId, viewMode],
+  );
+
+  const handlePlaceAsset = (landmarkId: string) => {
+    const board = boardRef.current;
+    const asset = assets.find((entry) => entry.id === landmarkId);
+
+    if (!board || !asset || placedLandmarks.some((item) => item.landmarkId === landmarkId)) {
+      return;
+    }
+
+    setPlacedLandmarks((current) => [
+      ...current,
+      createPlacedLandmark(landmarkId, current, board.clientWidth, board.clientHeight, asset.defaultScale ?? 1),
+    ]);
+  };
+
+  const handleReturnSelectedToBox = () => {
+    if (!selectedPlacedItem) {
+      return;
+    }
+
+    setPlacedLandmarks((current) => current.filter((item) => item.id !== selectedPlacedItem.id));
+    setSelectedId(null);
+  };
 
   return (
     <div className="-mx-4 -mt-[calc(5.4rem+1.95rem)] h-screen overflow-hidden bg-[linear-gradient(180deg,#f3f1eb_0%,#f6f4ef_100%)] text-ink">
@@ -376,10 +412,26 @@ export const MyScapePage = () => {
           assets={assets}
           placedLandmarks={displayedLandmarks}
           selectedId={selectedId}
+          activeAtmosphereIds={activeAtmosphereIds}
           expanded={viewMode === "year"}
           onItemPointerDown={handleItemPointerDown}
           onSelectItem={setSelectedId}
         />
+        {selectedPlacedItem || draggingItemId ? (
+          <button
+            ref={returnZoneRef}
+            type="button"
+            onClick={handleReturnSelectedToBox}
+            className={`absolute bottom-24 left-1/2 z-30 inline-flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold shadow-[0_16px_34px_rgba(35,52,40,0.12)] ring-1 backdrop-blur-xl transition ${
+              returnZoneActive
+                ? "bg-sage-700 text-white ring-sage-700"
+                : "bg-white/86 text-sage-700 ring-white/90"
+            }`}
+          >
+            <ArchiveRestore className="h-4 w-4" />
+            Return to Box
+          </button>
+        ) : null}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,rgba(243,241,235,0)_0%,rgba(243,241,235,0.96)_100%)]" />
       </section>
 
@@ -458,6 +510,8 @@ export const MyScapePage = () => {
             </div>
           </section>
           </div>
+
+          <MyScapeAssetTray assets={assets} placedLandmarkIds={placedLandmarkIds} onPlace={handlePlaceAsset} />
 
           <MyScapeChartCard title="Distance Distribution" points={chartData} emptyText="No run data in this period" />
 

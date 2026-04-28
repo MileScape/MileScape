@@ -1,3 +1,4 @@
+import { gachaDecorRewards } from "../data/gachaRewards";
 import type { Landmark, MyScapeLayout, MyScapePlacedLandmark, Route, RouteProgress, RunHistoryItem } from "../types";
 import { loadMyScapeLayout } from "./storage";
 
@@ -142,6 +143,23 @@ export const resolveUnlockedLandmarkAssets = (
         };
       });
   });
+
+export const resolveGachaDecorAssets = (decorIds: string[]): UnlockedLandmarkAsset[] =>
+  gachaDecorRewards
+    .filter((reward) => decorIds.includes(reward.id))
+    .map((reward) => ({
+      id: reward.id,
+      name: reward.name,
+      milestoneKm: 0,
+      description: reward.description,
+      image: "",
+      routeId: "paceport-gacha",
+      routeName: "Paceport Draw",
+      city: "My Scape",
+      country: "Decor",
+      assetType: "decor" as const,
+      defaultScale: reward.icon === "tree" ? 0.92 : 0.82,
+    }));
 
 export const getMyScapeYearDemoAssets = (): UnlockedLandmarkAsset[] => [
   {

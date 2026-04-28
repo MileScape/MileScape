@@ -5,7 +5,10 @@ import {
   getPaceportGachaEventName,
   loadPaceportGachaState,
   persistBlueprintsFromGacha,
+  persistDecorFromGacha,
   persistUnlockedRouteFromGacha,
+  redeemAtmosphereReward,
+  setAtmosphereRewardActive,
   type PaceportGachaPersistedState
 } from "../utils/paceportGachaStorage";
 
@@ -57,14 +60,33 @@ export const usePaceportGachaAdapter = (appState: AppState) => {
     setMeta(persistBlueprintsFromGacha(amount));
   };
 
+  const registerDecor = (decorId: string, duplicateBlueprints = 0) => {
+    setSpentThisSession((current) => current + getPaceportDrawCostStamps());
+    setMeta(persistDecorFromGacha(decorId, duplicateBlueprints));
+  };
+
+  const redeemAtmosphere = (atmosphereId: string, costBlueprints: number) => {
+    setMeta(redeemAtmosphereReward(atmosphereId, costBlueprints));
+  };
+
+  const setAtmosphereActive = (atmosphereId: string, active: boolean) => {
+    setMeta(setAtmosphereRewardActive(atmosphereId, active));
+  };
+
   return {
     accessibleRouteIds,
+    unlockedDecorIds: meta.unlockedDecorIds,
+    unlockedAtmosphereIds: meta.unlockedAtmosphereIds,
+    activeAtmosphereIds: meta.activeAtmosphereIds,
     routeBlueprints: meta.routeBlueprints,
     totalDraws: meta.totalDraws,
     displayStamps,
     drawCostStamps: getPaceportDrawCostStamps(),
     canAffordDraw,
     registerUnlockedRoute,
-    registerBlueprints
+    registerBlueprints,
+    registerDecor,
+    redeemAtmosphere,
+    setAtmosphereActive
   };
 };
