@@ -4,6 +4,7 @@ import { type PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import runnerIcon from "../assets/runner-slider.svg";
 import { RouteArtwork } from "../components/route/RouteArtwork";
+import { MapHeroShell } from "../components/ui/MapHeroShell";
 import { Button } from "../components/ui/Button";
 import { useAppState } from "../hooks/useAppState";
 import { getRunSimulationDurationSeconds } from "../utils/routeSimulation";
@@ -447,21 +448,25 @@ export const RunSetupPage = () => {
             animate={{ height: isSubmitting ? "calc(100vh - 104px)" : "62vh" }}
             transition={{ duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="block h-full w-full text-left">
-              <RouteArtwork
-                routeId={route.id}
-                variant="hero"
-                className="h-full w-full"
-                simulation={{
-                  active: isSubmitting,
-                  durationSeconds: runSimulationDurationSeconds,
-                  distanceKm: effectiveDistance,
-                  routeDistanceKm: route.totalDistanceKm
-                }}
-              />
-            </div>
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#0d1711]/24 via-[#0d1711]/10 to-transparent" />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#f5f3ee] via-[#f5f3ee]/82 to-transparent" />
+            <MapHeroShell
+              className="h-full"
+              topFadeClassName="h-28 bg-gradient-to-b from-[#0d1711]/24 via-[#0d1711]/10 to-transparent"
+              bottomFadeClassName="h-28 bg-gradient-to-t from-[#f5f3ee] via-[#f5f3ee]/82 to-transparent"
+            >
+              <div className="block h-full w-full text-left">
+                <RouteArtwork
+                  routeId={route.id}
+                  variant="hero"
+                  className="h-full w-full"
+                  simulation={{
+                    active: isSubmitting,
+                    durationSeconds: runSimulationDurationSeconds,
+                    distanceKm: effectiveDistance,
+                    routeDistanceKm: route.totalDistanceKm
+                  }}
+                />
+              </div>
+            </MapHeroShell>
           </motion.div>
         ) : (
           <div className="relative flex h-[62vh] items-end overflow-hidden bg-[linear-gradient(180deg,#d9e8dd_0%,#eef4ee_38%,#f5f3ee_100%)] px-6 pb-10">

@@ -57,11 +57,11 @@ export const routeMapViews: Record<string, RouteMapView> = {
     marker: [2.2945, 48.8584]
   },
   "mount-fuji-route": {
-    center: [138.7274, 35.3606],
-    zoom: 11.55,
-    pitch: 76,
-    bearing: 8,
-    marker: [138.7274, 35.3606]
+    center: [138.7318, 35.4642],
+    zoom: 10.75,
+    pitch: 82,
+    bearing: -8,
+    marker: [138.7446, 35.4921]
   },
   "aurora-harbor-route": {
     center: [-21.9382, 64.1466],

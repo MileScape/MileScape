@@ -42,6 +42,23 @@ const alpha2ByAlpha3 = Object.fromEntries(
   Object.entries(alpha3ByAlpha2).map(([alpha2, alpha3]) => [alpha3, alpha2]),
 );
 
+const countryCameraViews: Record<string, { center: [number, number]; zoom: number }> = {
+  AU: { center: [134.5, -25.6], zoom: 2.45 },
+  CN: { center: [104.5, 36.2], zoom: 2.28 },
+  ES: { center: [-3.4, 40.2], zoom: 3.25 },
+  FR: { center: [2.4, 46.4], zoom: 3.25 },
+  GB: { center: [-2.5, 54.2], zoom: 3.4 },
+  IS: { center: [-18.6, 64.9], zoom: 3.7 },
+  JP: { center: [138.5, 37.1], zoom: 3.2 },
+  PT: { center: [-8.1, 39.6], zoom: 3.55 },
+  US: { center: [-128.5, 48.5], zoom: 1.62 },
+};
+
+const defaultWorldCamera = {
+  center: [12, 18] as [number, number],
+  zoom: 0.75,
+};
+
 const toAlpha3Codes = (codes: string[]) => codes.map((code) => alpha3ByAlpha2[code]).filter(Boolean);
 
 const createCountryMatchExpression = (codes: string[]): mapboxgl.ExpressionSpecification =>
@@ -183,32 +200,29 @@ export const WorldProgressMap = ({ countries, selectedCountryCode, onSelectCount
           showPlaceLabels: true,
         },
       },
-      center: [12, 18],
-      zoom: 0.55,
+      center: defaultWorldCamera.center,
+      zoom: defaultWorldCamera.zoom,
       minZoom: 0.55,
-      maxZoom: 0.55,
+      maxZoom: 3.2,
       pitch: 0,
       bearing: 0,
       projection: "mercator",
-      maxBounds: [
-        [-180, -72],
-        [180, 82],
-      ],
-      renderWorldCopies: false,
+      renderWorldCopies: true,
       attributionControl: false,
       fadeDuration: 140,
     });
 
     mapRef.current = map;
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-left");
-    map.scrollZoom.disable();
+    map.scrollZoom.enable();
     map.boxZoom.disable();
     map.dragRotate.disable();
     map.keyboard.disable();
-    map.doubleClickZoom.disable();
-    map.touchZoomRotate.disable();
+    map.doubleClickZoom.enable();
+    map.touchZoomRotate.enable();
     map.touchZoomRotate.disableRotation();
     map.dragPan.enable();
+    map.scrollZoom.setWheelZoomRate(1 / 320);
 
     resizeObserverRef.current = new ResizeObserver(() => {
       window.requestAnimationFrame(() => {
@@ -389,6 +403,24 @@ export const WorldProgressMap = ({ countries, selectedCountryCode, onSelectCount
       map.setFilter(selectedLineLayerId, createSelectedFilter(selectedCountryCode));
     }
   }, [countryGroups, mapReady, selectedCountryCode]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) {
+      return;
+    }
+
+    const nextView = selectedCountryCode ? countryCameraViews[selectedCountryCode] : defaultWorldCamera;
+
+    map.stop();
+    map.easeTo({
+      center: nextView.center,
+      zoom: nextView.zoom,
+      duration: 900,
+      easing: (value) => 1 - Math.pow(1 - value, 3),
+      essential: true,
+    });
+  }, [mapReady, selectedCountryCode]);
 
   return (
     <div className="paceport-world-map route-map-shell relative h-full w-full overflow-hidden">

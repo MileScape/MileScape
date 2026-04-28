@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { MissionDepositDialog } from "../components/pacecrew/MissionDepositDialog";
@@ -62,6 +63,9 @@ export const PaceCrewDetailPage = () => {
     showToast(result.message);
   };
 
+  const openMissionCount = missions.filter((mission) => mission.status === "open").length;
+  const featuredMission = missions.find((mission) => mission.status === "open") ?? missions[0] ?? null;
+
   return (
     <div className="space-y-6">
       {toast ? (
@@ -81,28 +85,24 @@ export const PaceCrewDetailPage = () => {
         />
       ) : null}
 
-      <section className="rounded-[36px] bg-white p-6 shadow-card ring-1 ring-sage-100">
-        <p className="text-xs uppercase tracking-[0.22em] text-sage-500">PaceCrew</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">{crew.name}</h1>
-        <p className="mt-3 text-sm text-sage-700">{crew.description}</p>
+      <section className="rounded-[34px] bg-[linear-gradient(150deg,rgba(255,255,255,0.8),rgba(232,241,232,0.96))] p-6 shadow-[0_22px_56px_rgba(44,58,46,0.1)] ring-1 ring-white/80 backdrop-blur-xl">
+        <p className="text-[11px] uppercase tracking-[0.24em] text-sage-500">PACECREW</p>
+        <h1 className="mt-2 text-[2.2rem] font-semibold tracking-[-0.06em] text-ink">{crew.name}</h1>
+        <p className="mt-3 max-w-[32ch] text-sm leading-6 text-sage-700">{crew.description}</p>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <div className="rounded-[24px] bg-sage-50 p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-sage-500">{t("pacecrew.organizer")}</p>
-            <p className="mt-2 font-semibold text-ink">{organizer?.name ?? "Organizer"}</p>
-          </div>
-          <div className="rounded-[24px] bg-sage-50 p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-sage-500">{t("pacecrew.membersLabel")}</p>
-            <p className="mt-2 font-semibold text-ink">{crew.memberIds.length}</p>
-          </div>
-          <div className="rounded-[24px] bg-sage-50 p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-sage-500">{t("pacecrew.openMissionsLabel")}</p>
-            <p className="mt-2 font-semibold text-ink">{missions.filter((mission) => mission.status === "open").length}</p>
-          </div>
-          <div className="rounded-[24px] bg-sage-50 p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-sage-500">{t("pacecrew.rewards")}</p>
-            <p className="mt-2 font-semibold text-ink">{rewardDestinations.length}</p>
-          </div>
+        <div className="mt-5 flex flex-wrap gap-2 text-[13px] text-sage-600">
+          <span className="rounded-full bg-white/78 px-3 py-2 ring-1 ring-sage-900/8">
+            {organizer?.name ?? "Organizer"}
+          </span>
+          <span className="rounded-full bg-white/78 px-3 py-2 ring-1 ring-sage-900/8">
+            {crew.memberIds.length} members
+          </span>
+          <span className="rounded-full bg-white/78 px-3 py-2 ring-1 ring-sage-900/8">
+            {openMissionCount} open missions
+          </span>
+          <span className="rounded-full bg-white/78 px-3 py-2 ring-1 ring-sage-900/8">
+            {rewardDestinations.length} rewards
+          </span>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-3">
@@ -134,13 +134,30 @@ export const PaceCrewDetailPage = () => {
         </div>
       </section>
 
+      {featuredMission ? (
+        <section className="space-y-4">
+          <SectionHeader eyebrow="Featured" title="Current mission" />
+          <PaceCrewMissionCard
+            mission={featuredMission}
+            missionState={state.userMissionStates.find((entry) => entry.missionId === featuredMission.id)}
+            canAccept={isMember && !state.userMissionStates.some((entry) => entry.missionId === featuredMission.id) && featuredMission.status === "open"}
+            onAccept={() => handleAcceptMission(featuredMission)}
+            destinationRewardName={
+              featuredMission.destinationRewardId
+                ? routes.find((route) => route.id === featuredMission.destinationRewardId)?.name
+                : undefined
+            }
+          />
+        </section>
+      ) : null}
+
       <section className="space-y-4">
-        <SectionHeader eyebrow={t("pacecrew.memberList")} title={t("pacecrew.memberList")} />
+        <SectionHeader eyebrow="People" title={t("pacecrew.memberList")} />
         <PaceCrewMemberList members={memberProfiles} canManage={canManage} onRemove={(memberId) => showToast(removePaceCrewMember(crew.id, memberId).message)} />
       </section>
 
       <section className="space-y-4">
-        <SectionHeader eyebrow={t("pacecrew.missions")} title={t("pacecrew.missions")} />
+        <SectionHeader eyebrow="All missions" title={t("pacecrew.missions")} />
         <div className="space-y-4">
           {missions.map((mission) => {
             const missionState = state.userMissionStates.find((entry) => entry.missionId === mission.id);
@@ -170,15 +187,16 @@ export const PaceCrewDetailPage = () => {
       ) : null}
 
       <section className="space-y-4">
-        <SectionHeader eyebrow={t("pacecrew.rewards")} title={t("pacecrew.rewards")} />
+        <SectionHeader eyebrow="Paceport" title={t("pacecrew.rewards")} />
         <div className="space-y-3">
           {rewardDestinations.map((route) => (
-            <div key={route.id} className="rounded-[24px] bg-white p-4 shadow-card ring-1 ring-sage-100">
+            <div key={route.id} className="rounded-[28px] bg-white/72 p-4 shadow-[0_20px_52px_rgba(42,56,45,0.08)] ring-1 ring-white/80 backdrop-blur-xl">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-semibold text-ink">{route.name}</h3>
+                  <p className="mt-2 text-sm leading-6 text-sage-600">{route.description}</p>
                 </div>
-                <span className="rounded-full bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+                <span className="rounded-full bg-[#edf5f8]/88 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-700 ring-1 ring-[#d8e7ee]">
                   PaceCrew Only
                 </span>
               </div>
@@ -186,6 +204,15 @@ export const PaceCrewDetailPage = () => {
           ))}
         </div>
       </section>
+
+      {canManage ? (
+        <div className="flex justify-end">
+          <Link to="/pacecrew" className="inline-flex items-center gap-2 text-sm font-medium text-sage-700">
+            Back to PaceCrew
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 };

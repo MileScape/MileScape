@@ -20,13 +20,19 @@ export const PaceCrewJoinedPage = () => {
 
   return (
     <div className="space-y-6">
-      <section className="space-y-2 pt-1">
-        <p className="text-[11px] uppercase tracking-[0.28em] text-sage-500">MILESCAPE</p>
-        <h2 className="text-[2rem] font-semibold tracking-[-0.04em] text-ink">{t("pacecrew.joined")}</h2>
+      <section className="rounded-[32px] bg-[linear-gradient(145deg,rgba(255,255,255,0.76),rgba(238,244,238,0.94))] px-5 py-6 shadow-[0_20px_52px_rgba(42,56,45,0.08)] ring-1 ring-white/80 backdrop-blur-xl">
+        <p className="text-[11px] uppercase tracking-[0.28em] text-sage-500">PACECREW</p>
+        <h2 className="mt-2 text-[1.9rem] font-semibold tracking-[-0.05em] text-ink">{t("pacecrew.joined")}</h2>
+        <p className="mt-4 flex flex-wrap gap-2 text-[13px] text-sage-600">
+          <span className="rounded-full bg-white/80 px-3 py-2 ring-1 ring-sage-900/8">{joinedCrews.length} clubs</span>
+          <span className="rounded-full bg-white/80 px-3 py-2 ring-1 ring-sage-900/8">
+            {state.currentStamps} Stamps
+          </span>
+        </p>
       </section>
 
       {toast ? (
-        <div className="rounded-[22px] bg-sage-700 px-4 py-3 text-sm font-medium text-white">{toast}</div>
+        <div className="rounded-[22px] bg-sage-700 px-4 py-3 text-sm font-medium text-white shadow-[0_18px_46px_rgba(40,62,50,0.24)] ring-1 ring-white/20">{toast}</div>
       ) : null}
 
       {joinedCrews.length > 0 ? (
