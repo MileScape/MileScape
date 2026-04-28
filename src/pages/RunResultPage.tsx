@@ -19,13 +19,13 @@ const routePosterImages: Record<string, string> = {
   "barcelona-coast-route": "/posters/Barcelona.jpg",
   "london-landmark-route": "/posters/london.jpg",
   "paris-eiffel-route": "/posters/paris.jpg",
-  "cairo-pyramid-route": "/posters/Reykjavik.jpg",
-  "seoul-heritage-route": "/posters/Tokyo.jpg",
-  "sydney-harbor-route": "/posters/Melbourne.jpg",
-  "rome-heritage-route": "/posters/paris.jpg",
-  "california-discovery-route": "/posters/centralpark.jpg",
-  "taipei-skyline-route": "/posters/Tokyo.jpg",
-  "bangkok-floating-route": "/posters/Lisbon.jpg",
+  "cairo-pyramid-route": "/posters/Cairo-Pyramid.jpg",
+  "seoul-heritage-route": "/posters/Seoul.jpg",
+  "sydney-harbor-route": "/posters/sydney.jpg",
+  "rome-heritage-route": "/posters/rome.jpg",
+  "california-discovery-route": "/posters/California.jpg",
+  "taipei-skyline-route": "/posters/Taipei.jpg",
+  "bangkok-floating-route": "/posters/bangkok.jpg",
 };
 
 const formatPace = (distanceKm: number) => {
