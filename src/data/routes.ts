@@ -18,6 +18,13 @@ export const routes: Route[] = [
       { id: "broken-bridge", name: "Broken Bridge", milestoneKm: 3, description: "Your first iconic stop, where the route begins to feel real.", image: "" },
       { id: "leifeng-pagoda", name: "Leifeng Pagoda", milestoneKm: 9, description: "A milestone with elevation, history, and a sense of earned momentum.", image: "" },
       { id: "three-pools", name: "Three Pools Mirroring the Moon", milestoneKm: 16, description: "A quiet late-route unlock that marks serious commitment.", image: "" }
+    ],
+    decorations: [
+      { id: "lotus-fan", name: "Lotus Fan", rarity: "common", description: "A breezy keepsake from the lake promenade." },
+      { id: "tea-pavilion-lamp", name: "Tea Pavilion Lamp", rarity: "common", description: "A warm lantern for waterside evenings." },
+      { id: "silk-parasol", name: "Silk Parasol", rarity: "rare", description: "A polished travel memento with Hangzhou flair." },
+      { id: "jade-koi", name: "Jade Koi", rarity: "epic", description: "A carved lucky fish from the lake district." },
+      { id: "moon-bridge-arch", name: "Moon Bridge Arch", rarity: "legendary", description: "A grand collectible inspired by the route's reflected skyline." }
     ]
   },
   {
@@ -37,6 +44,13 @@ export const routes: Route[] = [
       { id: "statue-of-liberty", name: "Statue of Liberty", milestoneKm: 2, description: "Your first New York memory appears after a real run in the park.", image: "" },
       { id: "bow-bridge", name: "Bow Bridge", milestoneKm: 5, description: "The midpoint unlock where consistency starts looking beautiful.", image: "" },
       { id: "belvedere-castle", name: "Belvedere Castle", milestoneKm: 8, description: "A near-finish reward that reframes the route as an adventure.", image: "" }
+    ],
+    decorations: [
+      { id: "park-hotdog-cart", name: "Park Hot Dog Cart", rarity: "common", description: "A tiny cart from the edge of the loop." },
+      { id: "maple-bench", name: "Maple Bench", rarity: "common", description: "A quiet bench beneath autumn leaves." },
+      { id: "jazz-sax", name: "Jazz Sax", rarity: "rare", description: "A street-performance keepsake from the park paths." },
+      { id: "rowboat-cluster", name: "Rowboat Cluster", rarity: "epic", description: "A cinematic boating-lake display." },
+      { id: "twilight-skyscraper-arch", name: "Twilight Skyscraper Arch", rarity: "legendary", description: "A skyline centerpiece that turns the route into a postcard." }
     ]
   },
   {
@@ -53,8 +67,71 @@ export const routes: Route[] = [
     sourceType: "personal",
     sourceCrewId: null,
     landmarks: [
-      { id: "torii-gate", name: "Torii Gate", milestoneKm: 4, description: "The first Tokyo landmark arrives after your opening real run progress.", image: "" },
-      { id: "tokyo-tower", name: "Tokyo Tower", milestoneKm: 10, description: "A bigger Tokyo memory unlocks later as the route deepens.", image: "" }
+      {
+        id: "shibuya",
+        name: "Shibuya Crossing",
+        milestoneKm: 4,
+        description: "Your first Tokyo unlock now opens with the route's busiest, brightest street energy.",
+        image: "/models/landmarks/tokyo-route/shibuya.png"
+      },
+      {
+        id: "senso-ji",
+        name: "Senso-ji",
+        milestoneKm: 10,
+        description: "Mid-route progress shifts from neon pace to a calmer historic Tokyo landmark.",
+        image: "/models/landmarks/tokyo-route/senso-ji.png"
+      },
+      {
+        id: "tokyo-tower",
+        name: "Tokyo Tower",
+        milestoneKm: 15,
+        description: "A late-route Tokyo memory finishes the set with the refreshed landmark style.",
+        image: "/models/landmarks/tokyo-route/tokyo-tower.png"
+      }
+    ],
+    decorations: [
+      {
+        id: "sakura",
+        name: "Sakura",
+        rarity: "common",
+        description: "A soft seasonal drop pulled from the refreshed Tokyo set.",
+        image: "/models/decoration/tokyo-route/sakura.png"
+      },
+      {
+        id: "maneki-neko",
+        name: "Maneki Neko",
+        rarity: "common",
+        description: "A lucky cat decoration for repeat Tokyo runs.",
+        image: "/models/decoration/tokyo-route/maneki-neko.png"
+      },
+      {
+        id: "omamori",
+        name: "Omamori",
+        rarity: "rare",
+        description: "A shrine charm that starts appearing more often as route familiarity grows.",
+        image: "/models/decoration/tokyo-route/omamori.png"
+      },
+      {
+        id: "takoyaki",
+        name: "Takoyaki",
+        rarity: "rare",
+        description: "A classic street-food collectible from the Tokyo route pool.",
+        image: "/models/decoration/tokyo-route/Takoyaki.png"
+      },
+      {
+        id: "sukiyaki",
+        name: "Sukiyaki",
+        rarity: "epic",
+        description: "A richer food-themed reward from the updated Tokyo collection.",
+        image: "/models/decoration/tokyo-route/Sukiyaki.png"
+      },
+      {
+        id: "torii-gate-decoration",
+        name: "Torii Gate",
+        rarity: "legendary",
+        description: "A ceremonial Tokyo decoration using the new route-specific art set.",
+        image: "/models/decoration/tokyo-route/torri-gate.png"
+      }
     ]
   },
   {
@@ -74,6 +151,13 @@ export const routes: Route[] = [
       { id: "alfama-view", name: "Alfama Viewpoint", milestoneKm: 2, description: "A quick panoramic unlock above the city roofs.", image: "" },
       { id: "yellow-tram", name: "Historic Tram", milestoneKm: 4, description: "A route memory that turns progress into a recognizable city icon.", image: "" },
       { id: "commerce-square", name: "Commerce Square", milestoneKm: 6, description: "A late-route reward before full completion.", image: "" }
+    ],
+    decorations: [
+      { id: "azulejo-tile", name: "Azulejo Tile", rarity: "common", description: "A blue ceramic pattern from Lisbon walls." },
+      { id: "tram-ticket", name: "Tram Ticket", rarity: "common", description: "A bright little token from the yellow line." },
+      { id: "fado-guitar", name: "Fado Guitar", rarity: "rare", description: "A soulful souvenir from the hilltop neighborhoods." },
+      { id: "sunset-miradouro", name: "Sunset Miradouro", rarity: "epic", description: "A scenic overlook captured in warm evening light." },
+      { id: "golden-tram-car", name: "Golden Tram Car", rarity: "legendary", description: "A gleaming tram display for repeat route veterans." }
     ]
   },
   {
@@ -93,6 +177,13 @@ export const routes: Route[] = [
       { id: "sagrada-familia", name: "Sagrada Familia", milestoneKm: 3, description: "A vivid early unlock that anchors the route in Barcelona.", image: "" },
       { id: "barceloneta-beach", name: "Barceloneta Beach", milestoneKm: 7, description: "A breezy midpoint reward that opens the route toward the sea.", image: "" },
       { id: "park-guell", name: "Park Guell", milestoneKm: 11, description: "A near-finish reveal with color, height, and city views.", image: "" }
+    ],
+    decorations: [
+      { id: "mosaic-shell", name: "Mosaic Shell", rarity: "common", description: "A beachside tile motif with Mediterranean color." },
+      { id: "citrus-awning", name: "Citrus Awning", rarity: "common", description: "A bright striped market awning." },
+      { id: "gaudi-lizard", name: "Gaudi Lizard", rarity: "rare", description: "A playful art-piece collectible." },
+      { id: "beach-chiringuito", name: "Beach Chiringuito", rarity: "epic", description: "A full snack stand from the coast route." },
+      { id: "sunburst-cathedral-window", name: "Sunburst Cathedral Window", rarity: "legendary", description: "A radiant showpiece inspired by Barcelona's skyline." }
     ]
   },
   {
@@ -112,6 +203,13 @@ export const routes: Route[] = [
       { id: "tower-bridge", name: "Tower Bridge", milestoneKm: 5, description: "A recognizable early unlock that makes the route feel ambitious.", image: "" },
       { id: "big-ben", name: "Big Ben", milestoneKm: 12, description: "A classic midpoint reward for sustained consistency.", image: "" },
       { id: "hyde-park", name: "Hyde Park", milestoneKm: 19, description: "A late-route green landmark before full completion.", image: "" }
+    ],
+    decorations: [
+      { id: "tea-caddy", name: "Tea Caddy", rarity: "common", description: "A polished tin from a London pantry shelf." },
+      { id: "rainy-umbrella", name: "Rainy Umbrella", rarity: "common", description: "A dependable city-weather keepsake." },
+      { id: "red-phone-box", name: "Red Phone Box", rarity: "rare", description: "An unmistakable London street collectible." },
+      { id: "double-decker-stop", name: "Double-Decker Stop", rarity: "epic", description: "A full bus-stop scene for your collection." },
+      { id: "crown-archway", name: "Crown Archway", rarity: "legendary", description: "A regal route centerpiece earned through repeated long runs." }
     ]
   },
   {
@@ -131,6 +229,13 @@ export const routes: Route[] = [
       { id: "louvre-courtyard", name: "Louvre Courtyard", milestoneKm: 8, description: "An elegant early landmark that sets the tone for the route.", image: "" },
       { id: "eiffel-tower", name: "Eiffel Tower", milestoneKm: 16, description: "The route’s central reward and emotional midpoint.", image: "" },
       { id: "arc-de-triomphe", name: "Arc de Triomphe", milestoneKm: 27, description: "A premium late-route reveal before the final push.", image: "" }
+    ],
+    decorations: [
+      { id: "macaron-box", name: "Macaron Box", rarity: "common", description: "A pastel bakery reward for steady progress." },
+      { id: "street-cafe-chair", name: "Street Cafe Chair", rarity: "common", description: "A tiny cafe accent from a Paris sidewalk." },
+      { id: "perfume-flacon", name: "Perfume Flacon", rarity: "rare", description: "A refined collectible with boutique flair." },
+      { id: "seine-bookstall", name: "Seine Bookstall", rarity: "epic", description: "A riverfront stall stacked with old stories." },
+      { id: "midnight-eiffel-marquee", name: "Midnight Eiffel Marquee", rarity: "legendary", description: "A dramatic Paris display piece for dedicated runners." }
     ]
   },
   {
@@ -150,6 +255,13 @@ export const routes: Route[] = [
       { id: "torii-gate", name: "Torii Gate", milestoneKm: 9, description: "A quiet early unlock that signals the route’s atmosphere.", image: "" },
       { id: "fuji-base-camp", name: "Fuji Base Camp", milestoneKm: 18, description: "The midpoint checkpoint where the route starts feeling substantial.", image: "" },
       { id: "fuji-summit-view", name: "Summit View", milestoneKm: 32, description: "A premium late-route memory before completion.", image: "" }
+    ],
+    decorations: [
+      { id: "trail-bell", name: "Trail Bell", rarity: "common", description: "A mountain-path charm with a clear ring." },
+      { id: "cedar-wayfinder", name: "Cedar Wayfinder", rarity: "common", description: "A weathered marker from the ascent trail." },
+      { id: "summit-stamp", name: "Summit Stamp", rarity: "rare", description: "A climber's mark from higher elevation." },
+      { id: "cloud-shrine", name: "Cloud Shrine", rarity: "epic", description: "A misty ridge shrine framed by the route." },
+      { id: "fuji-sunrise-panorama", name: "Fuji Sunrise Panorama", rarity: "legendary", description: "A sweeping sunrise scene reserved for your longest journeys." }
     ]
   },
   {

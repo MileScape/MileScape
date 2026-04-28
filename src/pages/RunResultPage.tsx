@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
-import { CheckCircle2, Flag, Sparkles, Users } from "lucide-react";
+import { CheckCircle2, Flag, Lock, Sparkles, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
@@ -11,6 +11,8 @@ import { SectionHeader } from "../components/ui/SectionHeader";
 import { useAppState } from "../hooks/useAppState";
 import { achievementLabel } from "../pages/PaceportDetailPage";
 import { formatDistance, getProgressPercent } from "../utils/progress";
+import type { Decoration } from "../types";
+import { cn } from "../utils/cn";
 
 const defaultRunPosterImage = "/posters/run-cover.jpg";
 const defaultMissionPosterImage = "/posters/mission-cover.jpg";
@@ -52,6 +54,66 @@ const getJourneyLoopMetrics = (totalLoggedDistanceKm: number, routeDistanceKm: n
 
   return { cycleCount, progressKm };
 };
+
+const rarityLabel: Record<"common" | "rare" | "epic" | "legendary", string> = {
+  common: "Common",
+  rare: "Rare",
+  epic: "Epic",
+  legendary: "Legendary",
+};
+
+const countDroppedDecorations = (droppedDecorations: Decoration[]) =>
+  droppedDecorations.reduce<Record<string, number>>((accumulator, decoration) => {
+    accumulator[decoration.id] = (accumulator[decoration.id] ?? 0) + 1;
+    return accumulator;
+  }, {});
+
+const CollectibleImageTile = ({
+  title,
+  subtitle,
+  imageSrc,
+  unlocked,
+  highlightLabel,
+  variant = "landmark",
+}: {
+  title: string;
+  subtitle: string;
+  imageSrc?: string;
+  unlocked: boolean;
+  highlightLabel?: string;
+  variant?: "landmark" | "decoration";
+}) => (
+  <div className="group text-center">
+    <div className="relative flex aspect-square items-center justify-center overflow-hidden transition">
+      {imageSrc ? (
+        <img
+          src={imageSrc}
+          alt={title}
+          className={cn(
+            "h-full w-full object-contain transition",
+            variant === "decoration" ? "p-2.5" : "p-5",
+            unlocked
+              ? "opacity-100 saturate-110"
+              : variant === "decoration"
+                ? "opacity-70 grayscale-[0.85]"
+                : "opacity-35 grayscale",
+          )}
+        />
+      ) : (
+        <div className="text-sm text-sage-500">{title}</div>
+      )}
+      {highlightLabel ? (
+        <div className="absolute right-2 top-2 rounded-full bg-sage-700 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
+          {highlightLabel}
+        </div>
+      ) : null}
+    </div>
+    <div className="mt-3 space-y-1 px-1">
+      <p className="text-sm font-semibold text-ink">{title}</p>
+      <p className="text-[11px] uppercase tracking-[0.18em] text-sage-500">{subtitle}</p>
+    </div>
+  </div>
+);
 
 const ResultHero = ({
   imageUrl,
@@ -428,8 +490,12 @@ export const RunResultPage = () => {
   const routePosterImage = routePosterImages[route.id] ?? defaultRunPosterImage;
   const paceValue = formatPace(summary.runDistanceKm);
   const averageHeartRate = estimateAverageHeartRate(summary.runDistanceKm, summary.dataSource === "wearable");
+  const routeProgress = state.routeProgress.find((entry) => entry.routeId === route.id);
   const routeCompletedThisRun =
     previousTotalDistanceKm < route.totalDistanceKm && totalLoggedDistanceKm >= route.totalDistanceKm;
+  const droppedDecorationCounts = countDroppedDecorations(summary.droppedDecorations);
+  const unlockedLandmarkIds = new Set(routeProgress?.unlockedLandmarkIds ?? []);
+  const ownedDecorationCounts = routeProgress?.decorations ?? summary.updatedDecorations;
   const personalPoster = (
     <RunPosterCard
       imageUrl={routePosterImage}
@@ -530,33 +596,72 @@ export const RunResultPage = () => {
             <section className="space-y-4 border-t border-sage-900/8 pt-5">
               <SectionHeader
                 eyebrow={t("result.unlocks")}
-                title={summary.newlyUnlockedLandmarks.length > 0 ? t("result.newMemories") : t("result.noLandmark")}
+                title={unlockedLandmarkIds.size === route.landmarks.length ? "All landmarks unlocked" : "Landmark progress"}
               />
-              <AnimatePresence mode="popLayout">
-                {summary.newlyUnlockedLandmarks.length > 0 ? (
-                  <div className="space-y-4">
-                    {summary.newlyUnlockedLandmarks.map((landmark, index) => (
+              <div className="grid grid-cols-3 gap-4">
+                {route.landmarks.map((landmark, index) => {
+                  const unlocked = unlockedLandmarkIds.has(landmark.id);
+                  const justUnlocked = summary.newlyUnlockedLandmarks.some((entry) => entry.id === landmark.id);
+                  const distanceRemaining = Math.max(0, landmark.milestoneKm - summary.updatedDistanceKm);
+
+                  return (
+                    <motion.div
+                      key={landmark.id}
+                      initial={{ opacity: 0, y: 18, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ delay: index * 0.06, duration: 0.35 }}
+                    >
+                      <CollectibleImageTile
+                        title={landmark.name}
+                        subtitle={
+                          unlocked
+                            ? `${landmark.milestoneKm} km landmark`
+                            : `${formatDistance(distanceRemaining)} to unlock`
+                        }
+                        imageSrc={landmark.image}
+                        unlocked={unlocked}
+                        highlightLabel={justUnlocked ? "New" : undefined}
+                      />
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="space-y-4 border-t border-sage-900/8 pt-5">
+              <SectionHeader
+                eyebrow="Decorations"
+                title={route.decorations?.length ? "Decoration collection" : "No decorations on this route"}
+              />
+              {route.decorations?.length ? (
+                <div className="grid grid-cols-3 gap-4">
+                  {route.decorations.map((decoration, index) => {
+                    const ownedCount = ownedDecorationCounts[decoration.id] ?? 0;
+                    const droppedThisRun = droppedDecorationCounts[decoration.id] ?? 0;
+                    const unlocked = ownedCount > 0;
+
+                    return (
                       <motion.div
-                        key={landmark.id}
+                        key={decoration.id}
                         initial={{ opacity: 0, y: 18, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -12 }}
-                        transition={{ delay: index * 0.08, duration: 0.35 }}
-                        className="border-t border-sage-900/8 py-4 first:border-t-0 first:pt-0"
+                        transition={{ delay: index * 0.06, duration: 0.35 }}
                       >
-                        <p className="inline-flex items-center gap-1 rounded-full bg-sage-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-sage-700">
-                          <Sparkles className="h-3.5 w-3.5" />
-                          Landmark unlocked
-                        </p>
-                        <h3 className="mt-3 text-lg font-semibold text-ink">{landmark.name}</h3>
-                        <p className="mt-2 text-sm leading-6 text-sage-700">{landmark.description}</p>
+                        <CollectibleImageTile
+                          title={decoration.name}
+                          subtitle={rarityLabel[decoration.rarity]}
+                          imageSrc={decoration.image}
+                          unlocked={unlocked}
+                          highlightLabel={droppedThisRun > 0 ? `+${droppedThisRun}` : undefined}
+                          variant="decoration"
+                        />
                       </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-sage-700">{t("result.noNewLandmark")}</p>
-                )}
-              </AnimatePresence>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-sage-700">This route has no decoration drops yet.</p>
+              )}
             </section>
 
             <Link to="/paceport" className={buttonStyles({ fullWidth: true })}>

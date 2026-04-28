@@ -5,8 +5,10 @@ import { currentUserId } from "../data/users";
 import type {
   AppState,
   AchievementTier,
+  Decoration,
   Landmark,
   PaceCrewMission,
+  Rarity,
   Route,
   RouteProgress,
   RunDataSource,
@@ -26,6 +28,7 @@ const createDefaultRouteProgress = (routeId: string): RouteProgress => ({
   routeId,
   completedDistanceKm: 0,
   unlockedLandmarkIds: [],
+  decorations: {},
   runCount: 0,
   achievementTier: "none" as AchievementTier,
   completed: false
@@ -65,7 +68,19 @@ export const normalizeState = (loadedState: Partial<AppState> | null): AppState 
 
   const mergedProgress = routes.map((route) => {
     const existing = loadedState.routeProgress?.find((entry) => entry.routeId === route.id);
-    return { ...createDefaultRouteProgress(route.id), ...existing };
+    const mergedEntry = {
+      ...createDefaultRouteProgress(route.id),
+      ...existing,
+      decorations: existing?.decorations ?? {}
+    };
+    const normalizedUnlockedLandmarkIds = route.landmarks
+      .filter((landmark) => landmark.milestoneKm <= mergedEntry.completedDistanceKm)
+      .map((landmark) => landmark.id);
+
+    return {
+      ...mergedEntry,
+      unlockedLandmarkIds: normalizedUnlockedLandmarkIds
+    };
   });
 
   const purchasedRouteIds =
@@ -109,7 +124,13 @@ export const normalizeState = (loadedState: Partial<AppState> | null): AppState 
       })) ?? [],
     wearableConnection: loadedState.wearableConnection ?? null,
     wearableSyncHistory: loadedState.wearableSyncHistory ?? createDefaultWearableSyncHistory(),
-    lastRunResult: loadedState.lastRunResult ?? null
+    lastRunResult: loadedState.lastRunResult
+      ? {
+          ...loadedState.lastRunResult,
+          droppedDecorations: loadedState.lastRunResult.droppedDecorations ?? [],
+          updatedDecorations: loadedState.lastRunResult.updatedDecorations ?? {}
+        }
+      : null
   });
 };
 
@@ -123,6 +144,120 @@ export const formatDistance = (distanceKm: number) => `${Number(distanceKm.toFix
 
 export const calculateUnlockedLandmarks = (route: Route, completedDistanceKm: number): Landmark[] =>
   route.landmarks.filter((landmark) => landmark.milestoneKm <= completedDistanceKm);
+
+export function getRarityRates(runCount: number): Record<Rarity, number> {
+  if (runCount >= 10) {
+    return {
+      common: 48,
+      rare: 34,
+      epic: 14,
+      legendary: 4,
+    };
+  }
+
+  if (runCount >= 6) {
+    return {
+      common: 55,
+      rare: 30,
+      epic: 12,
+      legendary: 3,
+    };
+  }
+
+  if (runCount >= 3) {
+    return {
+      common: 62,
+      rare: 26,
+      epic: 10,
+      legendary: 2,
+    };
+  }
+
+  return {
+    common: 70,
+    rare: 22,
+    epic: 7,
+    legendary: 1,
+  };
+}
+
+export const rollRarity = (rates: Record<Rarity, number>): Rarity => {
+  const rarityOrder: Rarity[] = ["common", "rare", "epic", "legendary"];
+  const totalWeight = rarityOrder.reduce((sum, rarity) => sum + Math.max(0, rates[rarity] ?? 0), 0);
+
+  if (totalWeight <= 0) {
+    return "common";
+  }
+
+  let roll = Math.random() * totalWeight;
+
+  for (const rarity of rarityOrder) {
+    roll -= Math.max(0, rates[rarity] ?? 0);
+    if (roll < 0) {
+      return rarity;
+    }
+  }
+
+  return "common";
+};
+
+export const rollDecorations = (
+  routeDecorations: Decoration[] | undefined,
+  rarityRates: Record<Rarity, number>,
+  lootRolls: number,
+): Decoration[] => {
+  if (!routeDecorations || routeDecorations.length === 0 || lootRolls <= 0) {
+    return [];
+  }
+
+  const decorationsByRarity = routeDecorations.reduce<Record<Rarity, Decoration[]>>(
+    (accumulator, decoration) => {
+      accumulator[decoration.rarity].push(decoration);
+      return accumulator;
+    },
+    { common: [], rare: [], epic: [], legendary: [] },
+  );
+
+  const availableRarities = (["common", "rare", "epic", "legendary"] as Rarity[]).filter(
+    (rarity) => decorationsByRarity[rarity].length > 0,
+  );
+
+  if (availableRarities.length === 0) {
+    return [];
+  }
+
+  return Array.from({ length: lootRolls }, () => {
+    let selectedRarity = rollRarity(rarityRates);
+
+    if (decorationsByRarity[selectedRarity].length === 0) {
+      const fallbackRates = availableRarities.reduce<Record<Rarity, number>>(
+        (accumulator, rarity) => ({
+          ...accumulator,
+          [rarity]: rarityRates[rarity],
+        }),
+        { common: 0, rare: 0, epic: 0, legendary: 0 },
+      );
+      selectedRarity = rollRarity(fallbackRates);
+    }
+
+    const rarityPool = decorationsByRarity[selectedRarity];
+    const selectionIndex = Math.floor(Math.random() * rarityPool.length);
+    return rarityPool[selectionIndex] ?? decorationsByRarity[availableRarities[0]][0];
+  }).filter((decoration): decoration is Decoration => Boolean(decoration));
+};
+
+export const addDecorationCounts = (
+  currentDecorations: Record<string, number> | undefined,
+  droppedDecorations: Decoration[],
+): Record<string, number> => {
+  const nextDecorations = { ...(currentDecorations ?? {}) };
+
+  for (const decoration of droppedDecorations) {
+    nextDecorations[decoration.id] = (nextDecorations[decoration.id] ?? 0) + 1;
+  }
+
+  return nextDecorations;
+};
 
 const buildRunHistoryItem = (
   input:
@@ -182,11 +317,16 @@ export const applyPersonalRunToState = (
   const completed = updatedDistanceKm >= route.totalDistanceKm;
   const updatedRunCount = routeProgress.runCount + 1;
   const updatedAchievementTier = getAchievementTier(updatedRunCount);
+  const lootRolls = Math.max(1, Math.ceil(distanceKm / 2));
+  const rarityRates = getRarityRates(updatedRunCount);
+  const droppedDecorations = rollDecorations(route.decorations, rarityRates, lootRolls);
+  const updatedDecorations = addDecorationCounts(routeProgress.decorations, droppedDecorations);
 
   const nextRouteProgress: RouteProgress = {
     routeId: route.id,
     completedDistanceKm: updatedDistanceKm,
     unlockedLandmarkIds: unlockedLandmarks.map((landmark) => landmark.id),
+    decorations: updatedDecorations,
     runCount: updatedRunCount,
     achievementTier: updatedAchievementTier,
     completed
@@ -211,6 +351,8 @@ export const applyPersonalRunToState = (
     updatedRunCount,
     updatedAchievementTier,
     newlyUnlockedLandmarks,
+    droppedDecorations,
+    updatedDecorations,
     destinationCompletedAfterRun: completed,
     unlockedDestinationIds: []
   };
@@ -307,6 +449,8 @@ export const applyMissionRunToState = (
     updatedRunCount: 0,
     updatedAchievementTier: "none",
     newlyUnlockedLandmarks: [],
+    droppedDecorations: [],
+    updatedDecorations: {},
     destinationCompletedAfterRun: false,
     missionCompletedAfterRun,
     unlockedDestinationIds

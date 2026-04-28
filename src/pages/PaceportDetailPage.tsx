@@ -25,8 +25,6 @@ const paceportLandmarkImages: Record<string, string> = {
   "leifeng-pagoda": "/models/landmarks/leifeng-pagoda.png",
   "statue-of-liberty": "/models/landmarks/statue-of-liberty.png",
   "three-pools": "/models/landmarks/three-pools.png",
-  "tokyo-tower": "/models/landmarks/tokyo tower.png",
-  "torii-gate": "/models/landmarks/torii.png",
   "tower-bridge": "/models/landmarks/london-bridge.png"
 };
 

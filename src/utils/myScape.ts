@@ -49,12 +49,16 @@ const myScapeLandmarkImages: Record<string, { imageSrc: string; defaultScale: nu
     defaultScale: 1.12,
   },
   "tokyo-tower": {
-    imageSrc: "/models/landmarks/tokyo tower.png",
+    imageSrc: "/models/landmarks/tokyo-route/tokyo-tower.png",
     defaultScale: 1.18,
   },
-  "torii-gate": {
-    imageSrc: "/models/landmarks/torii.png",
+  "shibuya": {
+    imageSrc: "/models/landmarks/tokyo-route/shibuya.png",
     defaultScale: 1.16,
+  },
+  "senso-ji": {
+    imageSrc: "/models/landmarks/tokyo-route/senso-ji.png",
+    defaultScale: 1.14,
   },
   "tower-bridge": {
     imageSrc: "/models/landmarks/london-bridge.png",
@@ -138,19 +142,20 @@ export const resolveUnlockedLandmarkAssets = (
           city: route.city,
           country: route.country,
           assetType: "landmark" as const,
-          ...(landmarkImage ?? {}),
+          imageSrc: landmarkImage?.imageSrc ?? landmark.image,
+          defaultScale: landmarkImage?.defaultScale,
         };
       });
   });
 
 export const getMyScapeYearDemoAssets = (): UnlockedLandmarkAsset[] => [
   {
-    id: "torii-gate",
-    name: "Torii Gate",
+    id: "shibuya",
+    name: "Shibuya Crossing",
     milestoneKm: 4,
     description: "Tokyo route unlock.",
-    image: "/models/landmarks/torii.png",
-    imageSrc: "/models/landmarks/torii.png",
+    image: "/models/landmarks/tokyo-route/shibuya.png",
+    imageSrc: "/models/landmarks/tokyo-route/shibuya.png",
     routeId: "tokyo-city-route",
     routeName: "Tokyo City Route",
     city: "Tokyo",
@@ -159,12 +164,26 @@ export const getMyScapeYearDemoAssets = (): UnlockedLandmarkAsset[] => [
     defaultScale: 1.16,
   },
   {
-    id: "tokyo-tower",
-    name: "Tokyo Tower",
+    id: "senso-ji",
+    name: "Senso-ji",
     milestoneKm: 10,
     description: "Tokyo route unlock.",
-    image: "/models/landmarks/tokyo tower.png",
-    imageSrc: "/models/landmarks/tokyo tower.png",
+    image: "/models/landmarks/tokyo-route/senso-ji.png",
+    imageSrc: "/models/landmarks/tokyo-route/senso-ji.png",
+    routeId: "tokyo-city-route",
+    routeName: "Tokyo City Route",
+    city: "Tokyo",
+    country: "Japan",
+    assetType: "landmark",
+    defaultScale: 1.14,
+  },
+  {
+    id: "tokyo-tower",
+    name: "Tokyo Tower",
+    milestoneKm: 15,
+    description: "Tokyo route unlock.",
+    image: "/models/landmarks/tokyo-route/tokyo-tower.png",
+    imageSrc: "/models/landmarks/tokyo-route/tokyo-tower.png",
     routeId: "tokyo-city-route",
     routeName: "Tokyo City Route",
     city: "Tokyo",

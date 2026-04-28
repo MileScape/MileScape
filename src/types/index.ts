@@ -17,6 +17,16 @@ export type RunTargetType = "personal" | "pacecrew_mission";
 export type RunDataSource = "wearable" | "manual";
 export type AppLanguage = "en" | "zh";
 export type WearableAvailability = "available" | "coming_soon";
+export type Rarity = "common" | "rare" | "epic" | "legendary";
+
+export interface Decoration {
+  id: string;
+  name: string;
+  rarity: Rarity;
+  description?: string;
+  icon?: string;
+  image?: string;
+}
 
 export interface UserProfile {
   id: string;
@@ -38,12 +48,14 @@ export interface Route {
   crewOnly?: boolean;
   sourceCrewId?: string | null;
   landmarks: Landmark[];
+  decorations?: Decoration[];
 }
 
 export interface RouteProgress {
   routeId: string;
   completedDistanceKm: number;
   unlockedLandmarkIds: string[];
+  decorations: Record<string, number>;
   runCount: number;
   achievementTier: AchievementTier;
   completed: boolean;
@@ -83,6 +95,8 @@ export interface RunResultSummary {
   updatedRunCount: number;
   updatedAchievementTier: AchievementTier;
   newlyUnlockedLandmarks: Landmark[];
+  droppedDecorations: Decoration[];
+  updatedDecorations: Record<string, number>;
   destinationCompletedAfterRun: boolean;
   missionCompletedAfterRun?: boolean;
   unlockedDestinationIds?: string[];
