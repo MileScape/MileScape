@@ -6,6 +6,7 @@ import { buttonStyles } from "../components/ui/Button";
 import { ProgressBar } from "../components/ui/ProgressBar";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { useAppState } from "../hooks/useAppState";
+import { usePaceportGachaAdapter } from "../hooks/usePaceportGachaAdapter";
 import type { Landmark } from "../types";
 import { getAchievementTier } from "../utils/achievement";
 import { getPaceportSummary } from "../utils/paceport";
@@ -36,6 +37,7 @@ const getPaceportLandmarkImageSrc = (landmark: Landmark) =>
 export const PaceportDetailPage = () => {
   const { routeId } = useParams();
   const { routes, state, purchaseRoute, selectRoute, t } = useAppState();
+  const { accessibleRouteIds, displayStamps } = usePaceportGachaAdapter(state);
   const [toast, setToast] = useState<string | null>(null);
   const route = routes.find((entry) => entry.id === routeId);
 
@@ -53,9 +55,9 @@ export const PaceportDetailPage = () => {
   }
 
   const summary = getPaceportSummary(route, state);
-  const owned = summary.status !== "locked";
+  const owned = summary.status !== "locked" || accessibleRouteIds.includes(route.id);
   const achievementTier = getAchievementTier(summary.runCount);
-  const canUnlock = state.currentStamps >= route.priceStamps;
+  const canUnlock = displayStamps >= route.priceStamps;
 
   return (
     <div className="space-y-6">
@@ -149,7 +151,7 @@ export const PaceportDetailPage = () => {
         >
           <span className="inline-flex items-center gap-2">
             {canUnlock ? <Stamp className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-            {canUnlock ? `Unlock for ${route.priceStamps} stamps` : `${state.currentStamps} / ${route.priceStamps} stamps`}
+            {canUnlock ? `Unlock for ${route.priceStamps} stamps` : `${displayStamps} / ${route.priceStamps} stamps`}
           </span>
         </button>
       )}
