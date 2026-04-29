@@ -4,6 +4,7 @@ import { PaceportSummaryCard, type PaceportRouteSummary } from "../components/pa
 import { WorldProgressMap, type PaceportCountrySummary } from "../components/paceport/WorldProgressMap";
 import { useAppState } from "../hooks/useAppState";
 import type { Route } from "../types";
+import { formatCountryName } from "../utils/location";
 import { getPaceportSummary } from "../utils/paceport";
 
 const countryCodeByName: Record<string, string> = {
@@ -194,7 +195,7 @@ export const PaceportOverviewPage = () => {
                       : "bg-white/66 text-sage-700 ring-white/80 backdrop-blur-xl"
                   }`}
                 >
-                  <span>{country.name}</span>
+                  <span>{formatCountryName(country.name)}</span>
                   <span className={active ? "ml-2 text-white/72" : "ml-2 text-sage-500"}>
                     {unlockedRouteCount}/{country.routes.length}
                   </span>

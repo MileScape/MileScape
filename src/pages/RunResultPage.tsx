@@ -7,6 +7,7 @@ import { buttonStyles } from "../components/ui/Button";
 import { ProgressBar } from "../components/ui/ProgressBar";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { useAppState } from "../hooks/useAppState";
+import { formatCountryName } from "../utils/location";
 import { formatDistance } from "../utils/progress";
 import type { Decoration } from "../types";
 import { cn } from "../utils/cn";
@@ -520,7 +521,7 @@ export const RunResultPage = () => {
     <RunPosterCard
       imageUrl={routePosterImage}
       title={route.name}
-      subtitle={`${route.city} · ${route.country}`}
+      subtitle={`${route.city} · ${formatCountryName(route.country)}`}
       dateLabel={posterDateLabel}
       topLabel=""
     />

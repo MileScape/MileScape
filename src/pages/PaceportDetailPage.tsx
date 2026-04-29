@@ -8,6 +8,7 @@ import { SectionHeader } from "../components/ui/SectionHeader";
 import { useAppState } from "../hooks/useAppState";
 import type { Landmark } from "../types";
 import { getAchievementTier } from "../utils/achievement";
+import { formatCountryName } from "../utils/location";
 import { getPaceportSummary } from "../utils/paceport";
 import { formatDistance } from "../utils/progress";
 
@@ -67,7 +68,7 @@ export const PaceportDetailPage = () => {
         <div className="space-y-5">
           <div className="inline-flex items-center gap-2 rounded-full bg-sage-50 px-4 py-2 text-xs uppercase tracking-[0.2em] text-sage-700">
             <MapPin className="h-4 w-4" />
-            {route.city}, {route.country}
+            {route.city}, {formatCountryName(route.country)}
           </div>
 
           <div className="space-y-2">

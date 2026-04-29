@@ -1,6 +1,7 @@
 import { ArrowRight, MapPinned } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Route } from "../../types";
+import { formatCountryName } from "../../utils/location";
 import { formatDistance, getProgressPercent } from "../../utils/progress";
 import { ProgressBar } from "../ui/ProgressBar";
 
@@ -25,7 +26,7 @@ export const RouteCard = ({ route, completedDistanceKm }: RouteCardProps) => {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-sage-500">
-              {route.city}, {route.country}
+              {route.city}, {formatCountryName(route.country)}
             </p>
             <h3 className="mt-1 text-xl font-semibold text-ink">{route.name}</h3>
           </div>

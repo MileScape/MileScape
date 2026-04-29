@@ -6,6 +6,7 @@ import { buttonStyles } from "../components/ui/Button";
 import { ProgressBar } from "../components/ui/ProgressBar";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { useAppState } from "../hooks/useAppState";
+import { formatCountryName } from "../utils/location";
 import { formatDistance, getProgressPercent, getRouteProgress } from "../utils/progress";
 
 export const RouteDetailPage = () => {
@@ -57,7 +58,7 @@ export const RouteDetailPage = () => {
           </div>
           <div className="inline-flex items-center gap-2 rounded-full bg-sage-50 px-4 py-2 text-xs uppercase tracking-[0.2em] text-sage-700">
             <MapPin className="h-4 w-4" />
-            {route.city}, {route.country}
+            {route.city}, {formatCountryName(route.country)}
           </div>
           <div className="space-y-3 text-ink">
             <h1 className="text-3xl font-semibold tracking-tight">{route.name}</h1>

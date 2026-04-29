@@ -7,6 +7,7 @@ import { RouteArtwork } from "../components/route/RouteArtwork";
 import { MapHeroShell } from "../components/ui/MapHeroShell";
 import { Button } from "../components/ui/Button";
 import { useAppState } from "../hooks/useAppState";
+import { formatCountryName } from "../utils/location";
 import { getRunSimulationDurationSeconds } from "../utils/routeSimulation";
 import { getAcceptedMissionStatesForUser, getMissionProgress } from "../utils/paceCrew";
 import { hasSeenJourneySwipeGuide, markJourneySwipeGuideSeen, markOnboardingSeen } from "../utils/storage";
@@ -188,7 +189,7 @@ export const RunSetupPage = () => {
       cycleCount: progressCycleCount,
       hasOverflowPreview,
       targetTitle: route.name,
-      targetMeta: `${route.city}, ${route.country}`
+      targetMeta: `${route.city}, ${formatCountryName(route.country)}`
     };
   }, [activeTargetType, effectiveDistance, route, selectedMissionBundle, state.routeProgress]);
 
@@ -210,7 +211,7 @@ export const RunSetupPage = () => {
     activeTargetType === "pacecrew_mission" && selectedMissionBundle
       ? "PACECREW MISSION"
       : route
-        ? `${route.city.toUpperCase()} · ${route.country.toUpperCase()}`
+        ? `${route.city.toUpperCase()} · ${formatCountryName(route.country, { uppercase: true })}`
         : "";
   const metadataLabel =
     activeTargetType === "pacecrew_mission" && selectedMissionBundle
@@ -574,7 +575,7 @@ export const RunSetupPage = () => {
             >
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">
-                  {route.city.toUpperCase()} · {route.country.toUpperCase()}
+                  {route.city.toUpperCase()} · {formatCountryName(route.country, { uppercase: true })}
                 </p>
                 <h2
                   className={`mt-1.5 overflow-hidden text-ellipsis whitespace-nowrap font-destination-display leading-[0.94] tracking-[0.01em] text-ink ${getRouteTitleSizeClassName(route.name, "compact")}`}
@@ -658,7 +659,7 @@ export const RunSetupPage = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">
-                          {item.city.toUpperCase()} · {item.country.toUpperCase()}
+                          {item.city.toUpperCase()} · {formatCountryName(item.country, { uppercase: true })}
                         </p>
                         <h2
                           className={`mt-3 overflow-hidden text-ellipsis whitespace-nowrap font-destination-display leading-[0.94] tracking-[0.01em] text-ink ${getRouteTitleSizeClassName(item.name, "hero")}`}

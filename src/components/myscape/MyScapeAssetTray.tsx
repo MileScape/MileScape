@@ -1,6 +1,7 @@
 import { CheckCircle2, Landmark, Plus } from "lucide-react";
 import type { UnlockedLandmarkAsset } from "../../utils/myScape";
 import { cn } from "../../utils/cn";
+import { formatCountryName } from "../../utils/location";
 
 interface MyScapeAssetTrayProps {
   assets: UnlockedLandmarkAsset[];
@@ -51,7 +52,7 @@ export const MyScapeAssetTray = ({ assets, placedLandmarkIds, onPlace }: MyScape
               <p className="text-sm font-semibold text-ink">{asset.name}</p>
               <p className="text-xs leading-5 text-sage-600">{asset.routeName}</p>
               <p className="text-[10px] uppercase tracking-[0.18em] text-sage-500">
-                {isPlaced ? "Placed on board" : `${asset.city}, ${asset.country}`}
+                {isPlaced ? "Placed on board" : `${asset.city}, ${formatCountryName(asset.country)}`}
               </p>
             </div>
             {!isPlaced ? (

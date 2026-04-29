@@ -2,6 +2,7 @@ import { ArrowRight, Lock, MapPinned, Route as RouteIcon, Stamp } from "lucide-r
 import { Link } from "react-router-dom";
 import type { AchievementTier, PaceportStatus, Route } from "../../types";
 import { cn } from "../../utils/cn";
+import { formatCountryName } from "../../utils/location";
 import { formatDistance } from "../../utils/progress";
 
 export interface PaceportRouteSummary {
@@ -57,7 +58,7 @@ export const PaceportSummaryCard = ({ countryName, routes, currentStamps, onUnlo
       <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-sage-900/10" />
       <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-sage-500">PACEPORT COUNTRY / REGION</p>
       <h2 className="mt-1.5 truncate font-destination-display text-[1.95rem] leading-[0.94] tracking-[0.01em] text-ink">
-        {countryName}
+        {formatCountryName(countryName)}
       </h2>
       <p className="mt-1.5 text-[13px] leading-5 text-sage-600">
         {unlockedRoutes.length} unlocked / {routes.length} route maps · {countryProgressPercent}% explored
