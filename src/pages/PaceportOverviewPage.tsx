@@ -4,6 +4,7 @@ import { PaceportSummaryCard, type PaceportRouteSummary } from "../components/pa
 import { WorldProgressMap, type PaceportCountrySummary } from "../components/paceport/WorldProgressMap";
 import { useAppState } from "../hooks/useAppState";
 import type { Route } from "../types";
+import { formatCountryName } from "../utils/location";
 import { getPaceportSummary } from "../utils/paceport";
 
 const countryCodeByName: Record<string, string> = {
@@ -42,7 +43,7 @@ const toRouteSummary = (route: Route, state: ReturnType<typeof useAppState>["sta
 };
 
 export const PaceportOverviewPage = () => {
-  const { routes, state, purchaseRoute } = useAppState();
+  const { routes, state, purchaseRoute, t } = useAppState();
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const countryPillsRef = useRef<HTMLDivElement | null>(null);
@@ -194,7 +195,7 @@ export const PaceportOverviewPage = () => {
                       : "bg-white/66 text-sage-700 ring-white/80 backdrop-blur-xl"
                   }`}
                 >
-                  <span>{country.name}</span>
+                  <span>{formatCountryName(country.name)}</span>
                   <span className={active ? "ml-2 text-white/72" : "ml-2 text-sage-500"}>
                     {unlockedRouteCount}/{country.routes.length}
                   </span>
@@ -208,7 +209,6 @@ export const PaceportOverviewPage = () => {
           <span>{exploredDestinationCount} unlocked maps</span>
           <span>{completedDestinationCount} completed</span>
         </div>
-
       </section>
 
       {selectedCountry ? (
