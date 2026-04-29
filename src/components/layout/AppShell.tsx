@@ -30,6 +30,7 @@ export const AppShell = () => {
     "/pacecrew/missions": t("app.paceCrewMissions"),
     "/paceport": t("app.paceport"),
     "/myscape": t("app.myScape"),
+    "/achievements": t("app.achievements"),
     "/wearables": t("app.wearables"),
     "/wearables/connect": "Connect Device",
     "/run/setup": t("app.chooseJourney"),
