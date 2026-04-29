@@ -55,7 +55,7 @@ export const PaceportSummaryCard = ({ countryName, routes, currentStamps, onUnlo
   return (
     <section className="relative z-20 -mt-[9.75rem] rounded-t-[34px] border-t border-white/75 bg-[linear-gradient(180deg,rgba(250,249,245,0.97)_0%,rgba(245,243,238,0.99)_100%)] px-6 pb-8 pt-4 shadow-[0_-16px_34px_rgba(34,49,38,0.08)] backdrop-blur-2xl">
       <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-sage-900/10" />
-      <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-sage-500">Paceport Country</p>
+      <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-sage-500">PACEPORT COUNTRY / REGION</p>
       <h2 className="mt-1.5 truncate font-destination-display text-[1.95rem] leading-[0.94] tracking-[0.01em] text-ink">
         {countryName}
       </h2>
