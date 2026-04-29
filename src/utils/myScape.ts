@@ -22,10 +22,16 @@ export interface MyScapeChartPoint {
   value: number;
 }
 
-export const MY_SCAPE_GRID_SIZE = 42;
+export const MY_SCAPE_TILE_WIDTH = 64;
+export const MY_SCAPE_TILE_HEIGHT = 32;
+export const MY_SCAPE_GRID_COLUMNS = 8;
+export const MY_SCAPE_GRID_ROWS = 8;
 export const MY_SCAPE_MIN_SCALE = 0.8;
 export const MY_SCAPE_MAX_SCALE = 1.4;
-const BOARD_FOOTPRINT = 90;
+const MY_SCAPE_ORIGIN_X_RATIO = 0.5;
+const MY_SCAPE_ORIGIN_Y_RATIO = 0.12;
+const MY_SCAPE_ORIGIN_X_OFFSET = 0;
+const MY_SCAPE_ORIGIN_Y_OFFSET = 12;
 
 const myScapeLandmarkImages: Record<string, { imageSrc: string; defaultScale: number }> = {
   "big-ben": {
@@ -76,50 +82,46 @@ const myScapeLandmarkImages: Record<string, { imageSrc: string; defaultScale: nu
 
 export const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-export const snapToGrid = (value: number, gridSize = MY_SCAPE_GRID_SIZE) => Math.round(value / gridSize) * gridSize;
+export const getMyScapeOrigin = (boardWidth: number, boardHeight: number) => ({
+  originX: boardWidth * MY_SCAPE_ORIGIN_X_RATIO + MY_SCAPE_ORIGIN_X_OFFSET,
+  originY: boardHeight * MY_SCAPE_ORIGIN_Y_RATIO + MY_SCAPE_ORIGIN_Y_OFFSET,
+});
 
-export const clampToBoard = (
-  point: { x: number; y: number },
+export const gridToScreen = (
+  col: number,
+  row: number,
   boardWidth: number,
   boardHeight: number,
-  itemScale = 1,
 ) => {
-  const footprint = BOARD_FOOTPRINT * itemScale;
-  const maxX = Math.max(0, boardWidth - footprint);
-  const maxY = Math.max(0, boardHeight - footprint);
-  const clampedX = clamp(point.x, 0, maxX);
-  const clampedY = clamp(point.y, 0, maxY);
-  const centerX = clampedX + footprint / 2;
-  const centerY = clampedY + footprint / 2;
-  const halfWidth = Math.max(1, (boardWidth - footprint) / 2 + 10);
-  const halfHeight = Math.max(1, (boardHeight - footprint) / 2 + 50);
-  const distanceX = centerX - boardWidth / 2;
-  const distanceY = centerY - boardHeight / 2;
-  const normalizedDistance = Math.abs(distanceX) / halfWidth + Math.abs(distanceY) / halfHeight;
-
-  if (normalizedDistance <= 1) {
-    return {
-      x: clampedX,
-      y: clampedY,
-    };
-  }
-
-  const ratio = 1 / normalizedDistance;
-  const projectedCenterX = boardWidth / 2 + distanceX * ratio;
-  const projectedCenterY = boardHeight / 2 + distanceY * ratio;
-
+  const { originX, originY } = getMyScapeOrigin(boardWidth, boardHeight);
   return {
-    x: clamp(projectedCenterX - footprint / 2, 0, maxX),
-    y: clamp(projectedCenterY - footprint / 2, 0, maxY),
+    x: originX + ((col - row) * MY_SCAPE_TILE_WIDTH) / 2,
+    y: originY + ((col + row) * MY_SCAPE_TILE_HEIGHT) / 2,
   };
 };
 
-export const normalizeBoardPosition = (
-  point: { x: number; y: number },
+export const screenToGrid = (
+  x: number,
+  y: number,
   boardWidth: number,
   boardHeight: number,
-  itemScale = 1,
-) => clampToBoard(point, boardWidth, boardHeight, itemScale);
+): { col: number; row: number } => {
+  const { originX, originY } = getMyScapeOrigin(boardWidth, boardHeight);
+  const dx = x - originX;
+  const dy = y - originY;
+
+  return {
+    col: Math.round(dx / MY_SCAPE_TILE_WIDTH + dy / MY_SCAPE_TILE_HEIGHT),
+    row: Math.round(dy / MY_SCAPE_TILE_HEIGHT - dx / MY_SCAPE_TILE_WIDTH),
+  };
+};
+
+export const clampGridPosition = (col: number, row: number) => ({
+  col: clamp(col, 0, MY_SCAPE_GRID_COLUMNS - 1),
+  row: clamp(row, 0, MY_SCAPE_GRID_ROWS - 1),
+});
+
+export const getItemZIndex = (col: number, row: number) => col + row + 10;
 
 export const serializeMyScapeLayout = (placedLandmarks: MyScapePlacedLandmark[]): MyScapeLayout => ({
   placedLandmarks,
@@ -272,68 +274,45 @@ export const getMyScapeYearDemoAssets = (): UnlockedLandmarkAsset[] => [
 ];
 
 export const getNextZIndex = (placedLandmarks: MyScapePlacedLandmark[]) =>
-  placedLandmarks.reduce((max, item) => Math.max(max, item.zIndex), 0) + 1;
+  placedLandmarks.reduce((max, item) => Math.max(max, item.zIndex ?? getItemZIndex(item.col, item.row)), 0) + 1;
 
-const hasPlacementConflict = (
-  candidate: { x: number; y: number },
-  existing: MyScapePlacedLandmark[],
-  itemScale = 1,
-) => {
-  const candidateFootprint = BOARD_FOOTPRINT * itemScale;
-
-  return existing.some((item) => {
-    const existingFootprint = BOARD_FOOTPRINT * item.scale;
-    const minGap = (candidateFootprint + existingFootprint) / 2 - 10;
-    return Math.hypot(item.x - candidate.x, item.y - candidate.y) < minGap;
-  });
-};
+export const isGridCellOccupied = (col: number, row: number, items: MyScapePlacedLandmark[], excludeId?: string) =>
+  items.some((item) => item.id !== excludeId && item.col === col && item.row === row);
 
 export const createPlacedLandmark = (
   landmarkId: string,
   existing: MyScapePlacedLandmark[],
-  boardWidth: number,
-  boardHeight: number,
   initialScale = 1,
 ): MyScapePlacedLandmark => {
-  const centerX = Math.max(0, boardWidth / 2 - BOARD_FOOTPRINT / 2);
-  const centerY = Math.max(0, boardHeight / 2 - BOARD_FOOTPRINT / 2);
-  const stepX = 34;
-  const stepY = 24;
-  const candidateOffsets = [{ x: 0, y: 0 }];
+  const centerCol = Math.floor(MY_SCAPE_GRID_COLUMNS / 2);
+  const centerRow = Math.floor(MY_SCAPE_GRID_ROWS / 2);
+  const candidateOffsets = [{ col: centerCol, row: centerRow }];
 
-  for (let ring = 1; ring <= 7; ring += 1) {
-    for (let xStep = -ring; xStep <= ring; xStep += 1) {
-      const yStep = ring - Math.abs(xStep);
-      candidateOffsets.push({ x: xStep * stepX, y: yStep * stepY });
-      if (yStep !== 0) {
-        candidateOffsets.push({ x: xStep * stepX, y: -yStep * stepY });
+  for (let ring = 1; ring <= Math.max(MY_SCAPE_GRID_COLUMNS, MY_SCAPE_GRID_ROWS); ring += 1) {
+    for (let colOffset = -ring; colOffset <= ring; colOffset += 1) {
+      const rowOffset = ring - Math.abs(colOffset);
+      candidateOffsets.push(
+        clampGridPosition(centerCol + colOffset, centerRow + rowOffset),
+      );
+      if (rowOffset !== 0) {
+        candidateOffsets.push(
+          clampGridPosition(centerCol + colOffset, centerRow - rowOffset),
+        );
       }
     }
   }
 
   const nextPoint =
-    candidateOffsets
-      .map((offset) =>
-        normalizeBoardPosition(
-          {
-            x: centerX + offset.x,
-            y: centerY + offset.y,
-          },
-          boardWidth,
-          boardHeight,
-          initialScale,
-        ),
-      )
-      .find((point) => !hasPlacementConflict(point, existing, initialScale)) ??
-    normalizeBoardPosition({ x: centerX, y: centerY }, boardWidth, boardHeight, initialScale);
+    candidateOffsets.find((candidate) => !isGridCellOccupied(candidate.col, candidate.row, existing)) ??
+    clampGridPosition(centerCol, centerRow);
 
   return {
     id: crypto.randomUUID(),
     landmarkId,
-    x: nextPoint.x,
-    y: nextPoint.y,
+    col: nextPoint.col,
+    row: nextPoint.row,
     scale: initialScale,
-    zIndex: getNextZIndex(existing),
+    zIndex: getItemZIndex(nextPoint.col, nextPoint.row),
   };
 };
 

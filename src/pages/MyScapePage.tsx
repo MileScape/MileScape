@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Grid3X3, Minus, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { MyScapeBoard } from "../components/myscape/MyScapeBoard";
 import { useAppState } from "../hooks/useAppState";
@@ -7,16 +7,21 @@ import { saveMyScapeLayout } from "../utils/storage";
 import {
   buildMyScapeChartData,
   buildMyScapeUnlockTimeline,
+  clampGridPosition,
   createPlacedLandmark,
   formatMyScapePeriodLabel,
   getMyScapeYearDemoAssets,
-  getNextZIndex,
   getPeriodEnd,
   getPeriodStart,
+  getItemZIndex,
+  gridToScreen,
   isFuturePeriod,
-  normalizeBoardPosition,
+  isGridCellOccupied,
+  MY_SCAPE_GRID_COLUMNS,
+  MY_SCAPE_GRID_ROWS,
   resolveUnlockedLandmarkAssets,
   restoreMyScapeLayout,
+  screenToGrid,
   serializeMyScapeLayout,
   shiftAnchorDate,
   type MyScapeChartPoint,
@@ -32,7 +37,9 @@ const viewModes: Array<{ key: MyScapeViewMode; label: string }> = [
 ];
 
 const formatDistance = (value: number) => `${Number(value.toFixed(1))} km`;
-const longPressDurationMs = 220;
+const MY_SCAPE_ZOOM_MIN = 0.82;
+const MY_SCAPE_ZOOM_MAX = 1.28;
+const MY_SCAPE_ZOOM_STEP = 0.08;
 
 const getPeriodSummaryText = (mode: MyScapeViewMode) => {
   if (mode === "day") {
@@ -107,15 +114,20 @@ export const MyScapePage = () => {
   const [viewMode, setViewMode] = useState<MyScapeViewMode>("day");
   const [anchorDate, setAnchorDate] = useState(() => new Date());
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [boardZoom, setBoardZoom] = useState(1);
+  const [dragPreview, setDragPreview] = useState<{ x: number; y: number } | null>(null);
   const [placedLandmarks, setPlacedLandmarks] = useState<MyScapePlacedLandmark[]>(() => restoreMyScapeLayout());
   const [yearDemoLandmarks, setYearDemoLandmarks] = useState<MyScapePlacedLandmark[]>([]);
   const boardRef = useRef<HTMLDivElement>(null);
   const dragStateRef = useRef<{
     itemId: string;
-    offsetX: number;
-    offsetY: number;
+    pointerOffsetX: number;
+    pointerOffsetY: number;
+    previousCol: number;
+    previousRow: number;
   } | null>(null);
-  const longPressTimerRef = useRef<number | null>(null);
   const today = new Date();
 
   const unlockedAssets = useMemo(
@@ -145,35 +157,28 @@ export const MyScapePage = () => {
       return;
     }
 
-    const board = boardRef.current;
-    if (!board) {
-      return;
-    }
-
-    const width = board.clientWidth;
-    const height = board.clientHeight;
     const layout = [
-      { id: "tokyo-tower", x: 0.02, y: 0.28, scale: 1.02 },
-      { id: "eiffel-tower-demo", x: 0.16, y: 0.06, scale: 0.98 },
-      { id: "london-bridge-demo", x: 0.34, y: 0.01, scale: 1.06 },
-      { id: "statue-of-liberty", x: 0.12, y: 0.46, scale: 1.06 },
-      { id: "shibuya", x: 0.36, y: 0.18, scale: 1.26 },
-      { id: "eiffel-tower-demo", x: 0.57, y: 0.26, scale: 0.96 },
-      { id: "statue-of-liberty", x: 0.69, y: 0.02, scale: 1.12 },
-      { id: "senso-ji", x: 0.82, y: 0.28, scale: 1.02 },
-      { id: "big-ben-demo", x: 0.24, y: 0.62, scale: 1.02 },
-      { id: "sydney-opera-demo", x: 0.42, y: 0.7, scale: 1.04 },
-      { id: "big-ben-demo", x: 0.64, y: 0.56, scale: 1.04 },
+      { id: "tokyo-tower", col: 2, row: 2, scale: 1.02 },
+      { id: "eiffel-tower-demo", col: 3, row: 1, scale: 0.98 },
+      { id: "london-bridge-demo", col: 4, row: 0, scale: 1.06 },
+      { id: "statue-of-liberty", col: 1, row: 3, scale: 1.06 },
+      { id: "shibuya", col: 3, row: 2, scale: 1.26 },
+      { id: "eiffel-tower-demo", col: 5, row: 2, scale: 0.96 },
+      { id: "statue-of-liberty", col: 6, row: 1, scale: 1.12 },
+      { id: "senso-ji", col: 6, row: 3, scale: 1.02 },
+      { id: "big-ben-demo", col: 2, row: 5, scale: 1.02 },
+      { id: "sydney-opera-demo", col: 4, row: 6, scale: 1.04 },
+      { id: "big-ben-demo", col: 5, row: 5, scale: 1.04 },
     ] as const;
 
     setYearDemoLandmarks(
       layout.map((entry, index) => ({
         id: `year-demo-${entry.id}-${index}`,
         landmarkId: entry.id,
-        x: normalizeBoardPosition({ x: width * entry.x, y: height * entry.y }, width, height, entry.scale).x,
-        y: normalizeBoardPosition({ x: width * entry.x, y: height * entry.y }, width, height, entry.scale).y,
+        col: entry.col,
+        row: entry.row,
         scale: entry.scale,
-        zIndex: index + 1,
+        zIndex: getItemZIndex(entry.col, entry.row),
       })),
     );
   }, [viewMode]);
@@ -220,6 +225,10 @@ export const MyScapePage = () => {
     [anchorDate, state.runHistory, viewMode],
   );
   const nextPeriodDisabled = isFuturePeriod(shiftAnchorDate(anchorDate, viewMode, 1), viewMode);
+  const selectedItem = useMemo(
+    () => (viewMode === "year" ? yearDemoLandmarks : placedLandmarks).find((item) => item.id === selectedId) ?? null,
+    [placedLandmarks, selectedId, viewMode, yearDemoLandmarks],
+  );
 
   useEffect(() => {
     if (viewMode === "year") {
@@ -239,17 +248,41 @@ export const MyScapePage = () => {
 
         return [
           ...next,
-          createPlacedLandmark(
-            asset.id,
-            next,
-            board.clientWidth,
-            board.clientHeight,
-            asset.defaultScale ?? 1,
-          ),
+          createPlacedLandmark(asset.id, next, asset.defaultScale ?? 1),
         ];
       }, current),
     );
   }, [assetIds, unlockedAssets]);
+
+  useEffect(() => {
+    if (viewMode === "year") {
+      return;
+    }
+
+    setPlacedLandmarks((current) =>
+      current.map((item, index, items) => {
+        if (typeof item.col === "number" && typeof item.row === "number") {
+          const normalized = clampGridPosition(item.col, item.row);
+          const hasConflict = isGridCellOccupied(normalized.col, normalized.row, items, item.id);
+
+          if (!hasConflict && normalized.col === item.col && normalized.row === item.row) {
+            return {
+              ...item,
+              zIndex: getItemZIndex(item.col, item.row),
+            };
+          }
+        }
+
+        const fallback = createPlacedLandmark(item.landmarkId, current.slice(0, index), item.scale);
+        return {
+          ...item,
+          col: fallback.col,
+          row: fallback.row,
+          zIndex: getItemZIndex(fallback.col, fallback.row),
+        };
+      }),
+    );
+  }, [viewMode]);
 
   useEffect(() => {
     if (viewMode === "year") {
@@ -264,98 +297,102 @@ export const MyScapePage = () => {
   }, [placedLandmarks]);
 
   const handleItemPointerDown = (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => {
+    if (!isEditMode || viewMode === "year") {
+      return;
+    }
+
     const board = boardRef.current;
     const target = event.currentTarget;
     if (!board) {
       return;
     }
-
     event.preventDefault();
     target.setPointerCapture(event.pointerId);
     const boardRect = board.getBoundingClientRect();
-    const activeLandmarks = viewMode === "year" ? yearDemoLandmarks : placedLandmarks;
-    const item = activeLandmarks.find((entry) => entry.id === itemId);
+    const item = placedLandmarks.find((entry) => entry.id === itemId);
     if (!item) {
       return;
     }
     setSelectedId(itemId);
 
-    if (longPressTimerRef.current) {
-      window.clearTimeout(longPressTimerRef.current);
-    }
-
-    longPressTimerRef.current = window.setTimeout(() => {
-      dragStateRef.current = {
-        itemId,
-        offsetX: event.clientX - boardRect.left - item.x,
-        offsetY: event.clientY - boardRect.top - item.y,
-      };
-
-      const raiseZIndex = (current: MyScapePlacedLandmark[]) =>
-        current.map((entry) =>
-          entry.id === itemId
-            ? {
-                ...entry,
-                zIndex: getNextZIndex(current),
-              }
-            : entry,
-        );
-
-      if (viewMode === "year") {
-        setYearDemoLandmarks(raiseZIndex);
-        return;
-      }
-
-      setPlacedLandmarks(raiseZIndex);
-    }, longPressDurationMs);
+    const anchorPoint = gridToScreen(item.col, item.row, board.clientWidth, board.clientHeight);
+    const localPointerX = (event.clientX - boardRect.left) / boardZoom;
+    const localPointerY = (event.clientY - boardRect.top) / boardZoom;
+    dragStateRef.current = {
+      itemId,
+      pointerOffsetX: localPointerX - anchorPoint.x,
+      pointerOffsetY: localPointerY - anchorPoint.y,
+      previousCol: item.col,
+      previousRow: item.row,
+    };
+    setDraggingId(itemId);
+    setDragPreview(anchorPoint);
   };
 
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
       const board = boardRef.current;
       const dragState = dragStateRef.current;
-      if (!board || !dragState) {
+      if (!board || !dragState || viewMode === "year") {
+        return;
+      }
+      
+      const boardRect = board.getBoundingClientRect();
+      const localPointerX = (event.clientX - boardRect.left) / boardZoom;
+      const localPointerY = (event.clientY - boardRect.top) / boardZoom;
+      setDragPreview({
+        x: localPointerX - dragState.pointerOffsetX,
+        y: localPointerY - dragState.pointerOffsetY,
+      });
+    };
+
+    const handlePointerUp = () => {
+      const board = boardRef.current;
+      const dragState = dragStateRef.current;
+      
+      if (!board || !dragState || viewMode === "year") {
+        dragStateRef.current = null;
+        setDraggingId(null);
+        setDragPreview(null);
         return;
       }
 
-      const boardRect = board.getBoundingClientRect();
-      const updateLandmarks = (current: MyScapePlacedLandmark[]) =>
+      const finalPreview = dragPreview ?? gridToScreen(dragState.previousCol, dragState.previousRow, board.clientWidth, board.clientHeight);
+      const snappedGrid = clampGridPosition(
+        ...(() => {
+          const grid = screenToGrid(finalPreview.x, finalPreview.y, board.clientWidth, board.clientHeight);
+          return [grid.col, grid.row] as const;
+        })(),
+      );
+
+      setPlacedLandmarks((current) =>
         current.map((item) => {
           if (item.id !== dragState.itemId) {
             return item;
           }
 
-          const nextPosition = normalizeBoardPosition(
-            {
-              x: event.clientX - boardRect.left - dragState.offsetX,
-              y: event.clientY - boardRect.top - dragState.offsetY,
-            },
-            board.clientWidth,
-            board.clientHeight,
-            item.scale,
-          );
+         if (isGridCellOccupied(snappedGrid.col, snappedGrid.row, current, item.id)) {
+            // TODO: Replace this single-cell fallback when multi-cell landmarks/decorations are introduced.
+            return {
+              ...item,
+              col: dragState.previousCol,
+              row: dragState.previousRow,
+              zIndex: getItemZIndex(dragState.previousCol, dragState.previousRow),
+            };
+          }
 
           return {
             ...item,
-            x: nextPosition.x,
-            y: nextPosition.y,
+            col: snappedGrid.col,
+            row: snappedGrid.row,
+            zIndex: getItemZIndex(snappedGrid.col, snappedGrid.row),
           };
-        });
-
-      if (viewMode === "year") {
-        setYearDemoLandmarks(updateLandmarks);
-        return;
-      }
-
-      setPlacedLandmarks(updateLandmarks);
-    };
-
-    const handlePointerUp = () => {
-      if (longPressTimerRef.current) {
-        window.clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
+        }),
+      );
+      
       dragStateRef.current = null;
+      setDraggingId(null);
+      setDragPreview(null);
     };
 
     window.addEventListener("pointermove", handlePointerMove);
@@ -364,7 +401,36 @@ export const MyScapePage = () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [viewMode]);
+  }, [boardZoom, dragPreview, viewMode]);
+
+  const placementPreview = useMemo(() => {
+    if (!isEditMode || viewMode === "year") {
+      return null;
+    }
+
+    if (draggingId && dragPreview && boardRef.current) {
+      const snapped = screenToGrid(dragPreview.x, dragPreview.y, boardRef.current.clientWidth, boardRef.current.clientHeight);
+      const clamped = clampGridPosition(snapped.col, snapped.row);
+      const valid = !isGridCellOccupied(clamped.col, clamped.row, placedLandmarks, draggingId);
+      return {
+        col: clamped.col,
+        row: clamped.row,
+        valid,
+        active: true,
+      };
+    }
+
+    if (selectedItem) {
+      return {
+        col: selectedItem.col,
+        row: selectedItem.row,
+        valid: true,
+        active: false,
+      };
+    }
+
+    return null;
+  }, [dragPreview, draggingId, isEditMode, placedLandmarks, selectedItem, viewMode]);
 
   const displayedLandmarks = viewMode === "year" ? yearDemoLandmarks : placedLandmarks;
 
@@ -376,10 +442,54 @@ export const MyScapePage = () => {
           assets={assets}
           placedLandmarks={displayedLandmarks}
           selectedId={selectedId}
+          draggingId={draggingId}
+          dragPreview={dragPreview}
+          placementPreview={placementPreview}
+          isEditMode={isEditMode && viewMode !== "year"}
+          zoom={viewMode === "year" ? 1 : boardZoom}
           expanded={viewMode === "year"}
           onItemPointerDown={handleItemPointerDown}
           onSelectItem={setSelectedId}
         />
+        {viewMode !== "year" ? (
+          <div className="absolute inset-x-5 top-[calc(env(safe-area-inset-top,0px)+5.75rem)] z-20 flex items-start justify-between gap-3">
+            <div className="inline-flex items-center gap-1 rounded-full bg-white/82 px-2 py-2 text-[#34463b] shadow-[0_18px_36px_rgba(35,52,40,0.12)] ring-1 ring-white/80 backdrop-blur-xl">
+              <button
+                type="button"
+                onClick={() => setBoardZoom((current) => Math.max(MY_SCAPE_ZOOM_MIN, Number((current - MY_SCAPE_ZOOM_STEP).toFixed(2))))}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-sage-50/80 text-sage-700 transition hover:bg-sage-100"
+                aria-label="Zoom out lawn"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <div className="min-w-[4.2rem] text-center">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-sage-500">Zoom</p>
+                <p className="text-sm font-semibold text-[#34463b]">{Math.round(boardZoom * 100)}%</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBoardZoom((current) => Math.min(MY_SCAPE_ZOOM_MAX, Number((current + MY_SCAPE_ZOOM_STEP).toFixed(2))))}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-sage-50/80 text-sage-700 transition hover:bg-sage-100"
+                aria-label="Zoom in lawn"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsEditMode((current) => !current)}
+              className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium shadow-[0_18px_36px_rgba(35,52,40,0.12)] ring-1 backdrop-blur-xl transition ${
+                isEditMode
+                  ? "bg-[linear-gradient(180deg,rgba(72,95,81,0.96),rgba(49,69,58,0.96))] text-white ring-white/30"
+                  : "bg-white/82 text-[#34463b] ring-white/80"
+              }`}
+            >
+              {isEditMode ? <Check className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
+              {isEditMode ? "Done Arranging" : "Arrange"}
+            </button>
+          </div>
+        ) : null}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,rgba(243,241,235,0)_0%,rgba(243,241,235,0.96)_100%)]" />
       </section>
 
@@ -391,6 +501,13 @@ export const MyScapePage = () => {
             <h1 className="font-destination-display text-[3rem] leading-[0.92] tracking-[0.01em] text-[#2e3e35]">
               {getLawnTitle(viewMode, anchorDate)}
             </h1>
+            {viewMode !== "year" ? (
+              <p className="max-w-[24rem] text-sm leading-6 text-sage-600">
+                {isEditMode
+                  ? `Drag items across the ${MY_SCAPE_GRID_COLUMNS}×${MY_SCAPE_GRID_ROWS} isometric lawn. They snap into place when you release.`
+                  : "Unlock landmarks through runs, then enter Arrange mode to curate your lawn."}
+              </p>
+            ) : null}
           </div>
 
           <section className="rounded-[26px] bg-white/84 p-2 shadow-[0_18px_40px_rgba(35,52,40,0.08)] ring-1 ring-white/88 backdrop-blur-xl">

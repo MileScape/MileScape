@@ -7,44 +7,65 @@ import { cn } from "../../utils/cn";
 interface PlacedLandmarkProps {
   asset: UnlockedLandmarkAsset;
   item: MyScapePlacedLandmark;
+  screenX: number;
+  screenY: number;
+  isEditMode: boolean;
   selected: boolean;
+  dragging: boolean;
   onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => void;
   onSelect: (itemId: string) => void;
 }
 
-export const PlacedLandmark = ({ asset, item, selected, onPointerDown, onSelect }: PlacedLandmarkProps) => (
+export const PlacedLandmark = ({
+  asset,
+  item,
+  screenX,
+  screenY,
+  isEditMode,
+  selected,
+  dragging,
+  onPointerDown,
+  onSelect,
+}: PlacedLandmarkProps) => (
   <button
     type="button"
     onPointerDown={(event) => onPointerDown(event, item.id)}
     onClick={() => onSelect(item.id)}
     className={cn(
-      "absolute touch-none select-none rounded-[26px] text-left transition duration-200",
-      selected ? "z-30" : "z-10",
+      "absolute touch-none select-none text-left transition duration-200 ease-out",
+      isEditMode ? "cursor-grab active:cursor-grabbing" : "cursor-default",
     )}
     style={{
-      left: item.x,
-      top: item.y,
-      transform: `scale(${item.scale})`,
-      transformOrigin: "center center",
-      zIndex: item.zIndex,
+      left: screenX,
+      top: screenY,
+      transform: `translate(-50%, -100%) scale(${dragging ? item.scale * 1.05 : item.scale})`,
+      transformOrigin: "bottom center",
+      zIndex: dragging ? 999 : item.zIndex,
     }}
     aria-label={`Place ${asset.name}`}
   >
     {asset.imageSrc ? (
-      <div className="relative h-[84px] w-[84px]">
-        <div className="absolute left-1/2 top-1/2 h-8 w-14 -translate-x-1/2 translate-y-[8px] rounded-full bg-[radial-gradient(circle,rgba(68,86,73,0.22),rgba(68,86,73,0)_72%)] blur-[4px]" />
+      <div className="relative min-w-[84px]">
         <div
           className={cn(
-            "relative flex h-full w-full items-center justify-center rounded-[18px] transition",
-            selected ? "drop-shadow-[0_0_0_rgba(0,0,0,0)]" : "",
+           "absolute left-1/2 top-full h-8 w-14 -translate-x-1/2 -translate-y-[18px] rounded-full bg-[radial-gradient(circle,rgba(68,86,73,0.22),rgba(68,86,73,0)_72%)] blur-[4px] transition duration-200",
+            isEditMode && (selected || dragging) ? "scale-110 opacity-100" : "opacity-70",
+          )}
+        />
+        <div
+          className={cn(
+            "relative flex items-end justify-center rounded-[18px] transition",
+            isEditMode && (selected || dragging)
+              ? "drop-shadow-[0_18px_28px_rgba(63,88,74,0.18)]"
+              : "drop-shadow-[0_10px_16px_rgba(56,70,60,0.1)]",
           )}
         >
           <img
             src={asset.imageSrc}
             alt={asset.name}
             className={cn(
-              "h-[74px] w-[74px] object-contain drop-shadow-[0_8px_10px_rgba(56,70,60,0.08)]",
-              selected ? "brightness-[1.03]" : "",
+              "pointer-events-none max-h-[112px] w-auto max-w-[132px] object-contain",
+              isEditMode && (selected || dragging) ? "brightness-[1.04] saturate-[1.02]" : "",
             )}
             draggable={false}
           />
@@ -53,8 +74,8 @@ export const PlacedLandmark = ({ asset, item, selected, onPointerDown, onSelect 
     ) : (
       <div
         className={cn(
-          "relative w-[96px] rounded-[26px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(241,246,241,0.92))] px-3 pb-3 pt-2 shadow-[0_18px_34px_rgba(44,62,49,0.14)]",
-          selected ? "ring-2 ring-sage-300" : "ring-1 ring-sage-900/6",
+          "relative w-[96px] rounded-[26px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(241,246,241,0.92))] px-3 pb-3 pt-2 shadow-[0_18px_34px_rgba(44,62,49,0.14)] transition",
+          isEditMode && (selected || dragging) ? "ring-2 ring-sage-300" : "ring-1 ring-sage-900/6",
         )}
       >
         <div className="absolute inset-x-4 bottom-[-10px] h-4 rounded-full bg-[radial-gradient(circle,rgba(68,86,73,0.24),rgba(68,86,73,0)_72%)] blur-[3px]" />
