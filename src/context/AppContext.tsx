@@ -309,6 +309,40 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
         return { success: true, message: `${route.name} unlocked` };
       },
+      spendStampsForGacha: (amount) => {
+        if (amount <= 0) {
+          return { success: false, message: "Invalid draw cost" };
+        }
+
+        if (state.currentStamps < amount) {
+          return { success: false, message: "Insufficient Stamps" };
+        }
+
+        setState((current) => ({
+          ...current,
+          currentStamps: Math.max(0, current.currentStamps - amount)
+        }));
+
+        return { success: true, message: `${amount} Stamps spent` };
+      },
+      unlockRouteByGacha: (routeId) => {
+        const route = routes.find((entry) => entry.id === routeId);
+
+        if (!route || route.sourceType !== "personal") {
+          return { success: false, message: "This route cannot be drawn" };
+        }
+
+        if (state.purchasedRouteIds.includes(routeId)) {
+          return { success: false, message: "Already owned" };
+        }
+
+        setState((current) => ({
+          ...current,
+          purchasedRouteIds: Array.from(new Set([...current.purchasedRouteIds, routeId]))
+        }));
+
+        return { success: true, message: `${route.name} access unlocked` };
+      },
       setLanguage: (language) => {
         setState((current) => ({ ...current, language }));
       },

@@ -26,7 +26,7 @@ export const gachaDecorRewards: GachaDecorReward[] = [
     description: "A small course marker for the edges of My Scape.",
     rarity: "Common",
     blueprintValue: 1,
-    icon: "barrier"
+    icon: "barrier",
   },
   {
     id: "park-bench",
@@ -34,7 +34,7 @@ export const gachaDecorRewards: GachaDecorReward[] = [
     description: "A quiet rest spot for routes that deserve a pause.",
     rarity: "Uncommon",
     blueprintValue: 2,
-    icon: "bench"
+    icon: "bench",
   },
   {
     id: "ordinary-maple-tree",
@@ -42,7 +42,7 @@ export const gachaDecorRewards: GachaDecorReward[] = [
     description: "A simple tree that softens the running lawn.",
     rarity: "Common",
     blueprintValue: 1,
-    icon: "tree"
+    icon: "tree",
   },
   {
     id: "tall-pine-tree",
@@ -50,8 +50,8 @@ export const gachaDecorRewards: GachaDecorReward[] = [
     description: "A vertical evergreen accent for scenic corners.",
     rarity: "Rare",
     blueprintValue: 4,
-    icon: "tree"
-  }
+    icon: "tree",
+  },
 ];
 
 export const atmosphereRewards: AtmosphereReward[] = [
@@ -60,34 +60,34 @@ export const atmosphereRewards: AtmosphereReward[] = [
     name: "Dusk Skybox",
     description: "Warm evening light for the My Scape horizon.",
     effectType: "skybox",
-    costBlueprints: 8
+    costBlueprints: 8,
   },
   {
     id: "snowfall-effect",
     name: "Snowfall",
     description: "Soft snow drifting across the board.",
     effectType: "particle",
-    costBlueprints: 10
+    costBlueprints: 10,
   },
   {
     id: "sakura-fall-effect",
     name: "Sakura Drift",
     description: "Pink petals floating through the scene.",
     effectType: "particle",
-    costBlueprints: 10
+    costBlueprints: 10,
   },
   {
     id: "moss-ground",
     name: "Moss Ground",
     description: "A richer green surface material for the lawn.",
     effectType: "ground",
-    costBlueprints: 6
+    costBlueprints: 6,
   },
   {
     id: "stone-ground",
     name: "Stone Path Ground",
     description: "A cool stone-tinted base for urban collections.",
     effectType: "ground",
-    costBlueprints: 6
-  }
+    costBlueprints: 6,
+  },
 ];

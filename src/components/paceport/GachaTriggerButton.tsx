@@ -13,8 +13,8 @@ interface GachaTriggerButtonProps {
   onBlueprintsGained: (amount: number) => void;
   onRedeemAtmosphere?: (atmosphereId: string, costBlueprints: number) => void;
   onSetAtmosphereActive?: (atmosphereId: string, active: boolean) => void;
+  disabled?: boolean;
   costStamps?: number;
-  canDraw?: boolean;
 }
 
 export const GachaTriggerButton = ({
@@ -28,8 +28,8 @@ export const GachaTriggerButton = ({
   onBlueprintsGained,
   onRedeemAtmosphere,
   onSetAtmosphereActive,
+  disabled = false,
   costStamps = 50,
-  canDraw = true
 }: GachaTriggerButtonProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -37,9 +37,10 @@ export const GachaTriggerButton = ({
     <>
       <button
         type="button"
+        disabled={disabled}
         onClick={() => setIsOpen(true)}
-        className="relative isolate inline-flex min-h-[3rem] items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-950/94 px-4 py-2.5 text-left text-white shadow-[0_14px_30px_rgba(24,43,29,0.16)] backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_36px_rgba(24,43,29,0.18)] focus:outline-none"
-        aria-label={`Open Paceport draw modal${canDraw ? "" : ", more stamps needed to draw"}`}
+        className="relative isolate inline-flex min-h-[3rem] items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-950/94 px-4 py-2.5 text-left text-white shadow-[0_14px_30px_rgba(24,43,29,0.16)] backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_36px_rgba(24,43,29,0.18)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        aria-label={`Open Paceport draw modal${disabled ? ", more stamps needed to draw" : ""}`}
       >
         <span className="absolute inset-0 bg-[linear-gradient(120deg,rgba(251,191,36,0.18),rgba(56,189,248,0.12),rgba(15,23,42,0.05))]" />
         <span className="absolute -right-6 top-0 h-14 w-14 rounded-full bg-amber-300/20 blur-2xl" />
@@ -63,7 +64,7 @@ export const GachaTriggerButton = ({
         onBlueprintsGained={onBlueprintsGained}
         onRedeemAtmosphere={onRedeemAtmosphere}
         onSetAtmosphereActive={onSetAtmosphereActive}
-        canDraw={canDraw}
+        canDraw={!disabled}
         costStamps={costStamps}
       />
     </>

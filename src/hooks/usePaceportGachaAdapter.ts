@@ -9,59 +9,42 @@ import {
   persistUnlockedRouteFromGacha,
   redeemAtmosphereReward,
   setAtmosphereRewardActive,
-  type PaceportGachaPersistedState
+  type PaceportGachaPersistedState,
 } from "../utils/paceportGachaStorage";
 
-const readInitialMeta = () => loadPaceportGachaState();
-
 export const usePaceportGachaAdapter = (appState: AppState) => {
-  const [meta, setMeta] = useState<PaceportGachaPersistedState>(readInitialMeta);
-  const [sessionUnlockedRouteIds, setSessionUnlockedRouteIds] = useState<string[]>([]);
-  const [spentThisSession, setSpentThisSession] = useState(0);
+  const [meta, setMeta] = useState<PaceportGachaPersistedState>(() => loadPaceportGachaState());
 
   useEffect(() => {
-    const syncMeta = () => {
-      setMeta(loadPaceportGachaState());
-    };
+    const syncMeta = () => setMeta(loadPaceportGachaState());
+    const eventName = getPaceportGachaEventName();
 
     syncMeta();
-
-    const eventName = getPaceportGachaEventName();
-    const onUpdate = () => syncMeta();
-
-    window.addEventListener(eventName, onUpdate as EventListener);
-    window.addEventListener("storage", onUpdate);
+    window.addEventListener(eventName, syncMeta as EventListener);
+    window.addEventListener("storage", syncMeta);
 
     return () => {
-      window.removeEventListener(eventName, onUpdate as EventListener);
-      window.removeEventListener("storage", onUpdate);
+      window.removeEventListener(eventName, syncMeta as EventListener);
+      window.removeEventListener("storage", syncMeta);
     };
   }, []);
 
   const accessibleRouteIds = useMemo(
-    () =>
-      Array.from(
-        new Set([...appState.purchasedRouteIds, ...meta.unlockedRouteIds, ...sessionUnlockedRouteIds]),
-      ),
-    [appState.purchasedRouteIds, meta.unlockedRouteIds, sessionUnlockedRouteIds],
+    () => Array.from(new Set([...appState.purchasedRouteIds, ...meta.unlockedRouteIds])),
+    [appState.purchasedRouteIds, meta.unlockedRouteIds],
   );
 
-  const displayStamps = Math.max(0, appState.currentStamps - spentThisSession);
-  const canAffordDraw = displayStamps >= getPaceportDrawCostStamps();
+  const drawCostStamps = getPaceportDrawCostStamps();
 
   const registerUnlockedRoute = (routeId: string) => {
-    setSessionUnlockedRouteIds((current) => (current.includes(routeId) ? current : [...current, routeId]));
-    setSpentThisSession((current) => current + getPaceportDrawCostStamps());
     setMeta(persistUnlockedRouteFromGacha(routeId));
   };
 
   const registerBlueprints = (amount: number) => {
-    setSpentThisSession((current) => current + getPaceportDrawCostStamps());
     setMeta(persistBlueprintsFromGacha(amount));
   };
 
   const registerDecor = (decorId: string, duplicateBlueprints = 0) => {
-    setSpentThisSession((current) => current + getPaceportDrawCostStamps());
     setMeta(persistDecorFromGacha(decorId, duplicateBlueprints));
   };
 
@@ -80,13 +63,13 @@ export const usePaceportGachaAdapter = (appState: AppState) => {
     activeAtmosphereIds: meta.activeAtmosphereIds,
     routeBlueprints: meta.routeBlueprints,
     totalDraws: meta.totalDraws,
-    displayStamps,
-    drawCostStamps: getPaceportDrawCostStamps(),
-    canAffordDraw,
+    displayStamps: appState.currentStamps,
+    drawCostStamps,
+    canAffordDraw: appState.currentStamps >= drawCostStamps,
     registerUnlockedRoute,
     registerBlueprints,
     registerDecor,
     redeemAtmosphere,
-    setAtmosphereActive
+    setAtmosphereActive,
   };
 };

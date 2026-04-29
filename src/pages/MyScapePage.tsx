@@ -1,5 +1,6 @@
 import { ArchiveRestore, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { GachaTriggerButton } from "../components/paceport/GachaTriggerButton";
 import { MyScapeAssetTray } from "../components/myscape/MyScapeAssetTray";
 import { MyScapeBoard } from "../components/myscape/MyScapeBoard";
 import { useAppState } from "../hooks/useAppState";
@@ -106,13 +107,29 @@ const MyScapeChartCard = ({
 };
 
 export const MyScapePage = () => {
-  const { routes, state } = useAppState();
-  const { unlockedDecorIds, activeAtmosphereIds } = usePaceportGachaAdapter(state);
+  const { routes, state, spendStampsForGacha, unlockRouteByGacha } = useAppState();
+  const {
+    accessibleRouteIds,
+    unlockedDecorIds,
+    unlockedAtmosphereIds,
+    activeAtmosphereIds,
+    routeBlueprints,
+    totalDraws,
+    displayStamps,
+    drawCostStamps,
+    canAffordDraw,
+    registerUnlockedRoute,
+    registerBlueprints,
+    registerDecor,
+    redeemAtmosphere,
+    setAtmosphereActive,
+  } = usePaceportGachaAdapter(state);
   const [viewMode, setViewMode] = useState<MyScapeViewMode>("day");
   const [anchorDate, setAnchorDate] = useState(() => new Date());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
   const [returnZoneActive, setReturnZoneActive] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const [placedLandmarks, setPlacedLandmarks] = useState<MyScapePlacedLandmark[]>(() => restoreMyScapeLayout());
   const [yearDemoLandmarks, setYearDemoLandmarks] = useState<MyScapePlacedLandmark[]>([]);
   const boardRef = useRef<HTMLDivElement>(null);
@@ -164,10 +181,10 @@ export const MyScapePage = () => {
       { id: "eiffel-tower-demo", x: 0.16, y: 0.06, scale: 0.98 },
       { id: "london-bridge-demo", x: 0.34, y: 0.01, scale: 1.06 },
       { id: "statue-of-liberty", x: 0.12, y: 0.46, scale: 1.06 },
-      { id: "torii-gate", x: 0.36, y: 0.18, scale: 1.26 },
+      { id: "shibuya", x: 0.36, y: 0.18, scale: 1.26 },
       { id: "eiffel-tower-demo", x: 0.57, y: 0.26, scale: 0.96 },
       { id: "statue-of-liberty", x: 0.69, y: 0.02, scale: 1.12 },
-      { id: "tokyo-tower", x: 0.82, y: 0.28, scale: 1.02 },
+      { id: "senso-ji", x: 0.82, y: 0.28, scale: 1.02 },
       { id: "big-ben-demo", x: 0.24, y: 0.62, scale: 1.02 },
       { id: "sydney-opera-demo", x: 0.42, y: 0.7, scale: 1.04 },
       { id: "big-ben-demo", x: 0.64, y: 0.56, scale: 1.04 },
@@ -344,7 +361,6 @@ export const MyScapePage = () => {
         window.clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
       }
-
       const dragState = dragStateRef.current;
       const returnZone = returnZoneRef.current;
       if (dragState && returnZone && viewMode !== "year") {
@@ -360,7 +376,6 @@ export const MyScapePage = () => {
           setSelectedId(null);
         }
       }
-
       dragStateRef.current = null;
       setDraggingItemId(null);
       setReturnZoneActive(false);
@@ -381,11 +396,20 @@ export const MyScapePage = () => {
     [placedLandmarks, selectedId, viewMode],
   );
 
+  useEffect(() => {
+    if (!toast) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => setToast(null), 2200);
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
+
   const handlePlaceAsset = (landmarkId: string) => {
     const board = boardRef.current;
     const asset = assets.find((entry) => entry.id === landmarkId);
 
-    if (!board || !asset || placedLandmarks.some((item) => item.landmarkId === landmarkId)) {
+    if (!board || !asset || viewMode === "year" || placedLandmarks.some((item) => item.landmarkId === landmarkId)) {
       return;
     }
 
@@ -404,6 +428,44 @@ export const MyScapePage = () => {
     setSelectedId(null);
   };
 
+  const spendForDraw = () => {
+    const spendResult = spendStampsForGacha(drawCostStamps);
+    if (!spendResult.success) {
+      setToast(spendResult.message);
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleGachaMapUnlocked = (routeId: string) => {
+    if (!spendForDraw()) {
+      return;
+    }
+
+    const unlockResult = unlockRouteByGacha(routeId);
+    registerUnlockedRoute(routeId);
+    setToast(unlockResult.message);
+  };
+
+  const handleBlueprintsGained = (amount: number) => {
+    if (!spendForDraw()) {
+      return;
+    }
+
+    registerBlueprints(amount);
+    setToast(`+${amount} Route Blueprints`);
+  };
+
+  const handleDecorUnlocked = (decorId: string, duplicateBlueprints: number) => {
+    if (!spendForDraw()) {
+      return;
+    }
+
+    registerDecor(decorId, duplicateBlueprints);
+    setToast(duplicateBlueprints > 0 ? `Duplicate decor converted to +${duplicateBlueprints} Blueprints.` : "My Scape decor unlocked.");
+  };
+
   return (
     <div className="-mx-4 -mt-[calc(5.4rem+1.95rem)] h-screen overflow-hidden bg-[linear-gradient(180deg,#f3f1eb_0%,#f6f4ef_100%)] text-ink">
       <section className="relative h-[64vh] min-h-[520px] overflow-hidden">
@@ -417,6 +479,30 @@ export const MyScapePage = () => {
           onItemPointerDown={handleItemPointerDown}
           onSelectItem={setSelectedId}
         />
+        <div className="absolute right-5 top-24 z-30 flex flex-col items-end gap-2">
+          {toast ? (
+            <div className="max-w-[230px] rounded-full bg-sage-700 px-4 py-2 text-[11px] font-medium text-white shadow-[0_10px_28px_rgba(24,43,29,0.14)]">
+              {toast}
+            </div>
+          ) : null}
+          <div className="rounded-full bg-white/72 px-3.5 py-2 text-[11px] font-semibold text-sage-700 shadow-[0_12px_30px_rgba(24,43,29,0.12)] ring-1 ring-white/80 backdrop-blur-xl">
+            {displayStamps} Stamps / {routeBlueprints} BP
+          </div>
+          <GachaTriggerButton
+            currentUnlockedMaps={accessibleRouteIds}
+            currentDecorIds={unlockedDecorIds}
+            blueprints={routeBlueprints}
+            unlockedAtmosphereIds={unlockedAtmosphereIds}
+            activeAtmosphereIds={activeAtmosphereIds}
+            onMapUnlocked={handleGachaMapUnlocked}
+            onDecorUnlocked={handleDecorUnlocked}
+            onBlueprintsGained={handleBlueprintsGained}
+            onRedeemAtmosphere={redeemAtmosphere}
+            onSetAtmosphereActive={setAtmosphereActive}
+            disabled={!canAffordDraw}
+            costStamps={drawCostStamps}
+          />
+        </div>
         {selectedPlacedItem || draggingItemId ? (
           <button
             ref={returnZoneRef}
@@ -512,6 +598,17 @@ export const MyScapePage = () => {
           </div>
 
           <MyScapeAssetTray assets={assets} placedLandmarkIds={placedLandmarkIds} onPlace={handlePlaceAsset} />
+
+          <section className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-[22px] bg-white/82 px-4 py-4 text-sm shadow-[0_16px_38px_rgba(35,52,40,0.08)] ring-1 ring-white/85">
+              <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-sage-500">Draws</p>
+              <p className="mt-2 text-xl font-semibold text-ink">{totalDraws}</p>
+            </div>
+            <div className="rounded-[22px] bg-white/82 px-4 py-4 text-sm shadow-[0_16px_38px_rgba(35,52,40,0.08)] ring-1 ring-white/85">
+              <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-sage-500">Decor</p>
+              <p className="mt-2 text-xl font-semibold text-ink">{unlockedDecorIds.length}</p>
+            </div>
+          </section>
 
           <MyScapeChartCard title="Distance Distribution" points={chartData} emptyText="No run data in this period" />
 

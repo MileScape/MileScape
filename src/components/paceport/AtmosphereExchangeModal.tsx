@@ -16,13 +16,13 @@ interface AtmosphereExchangeModalProps {
 const iconByEffect = {
   skybox: Moon,
   particle: Flower2,
-  ground: Mountain
+  ground: Mountain,
 } as const;
 
 const effectLabel = {
   skybox: "Sky",
   particle: "Effect",
-  ground: "Ground"
+  ground: "Ground",
 } as const;
 
 export const AtmosphereExchangeModal = ({
@@ -32,14 +32,14 @@ export const AtmosphereExchangeModal = ({
   unlockedAtmosphereIds,
   activeAtmosphereIds,
   onRedeem,
-  onSetActive
+  onSetActive,
 }: AtmosphereExchangeModalProps) => {
   if (!isOpen) {
     return null;
   }
 
   const modal = (
-    <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/64 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] overflow-y-auto bg-black/64 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
         className="relative mx-auto my-8 w-full max-w-[25rem] overflow-hidden rounded-[2rem] border border-white/75 bg-[#f8f6ef] text-ink shadow-2xl"
         onClick={(event) => event.stopPropagation()}

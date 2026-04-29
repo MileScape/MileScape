@@ -197,6 +197,8 @@ export interface AppContextValue {
       | { targetType: "pacecrew_mission"; missionId: string; distanceKm: number },
   ) => RunResultSummary;
   purchaseRoute: (routeId: string) => { success: boolean; message: string };
+  spendStampsForGacha: (amount: number) => { success: boolean; message: string };
+  unlockRouteByGacha: (routeId: string) => { success: boolean; message: string };
   t: (key: string, params?: Record<string, string | number>) => string;
   setLanguage: (language: AppLanguage) => void;
   setSliderMaxDistanceKm: (distanceKm: number) => void;
