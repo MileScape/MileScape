@@ -16,10 +16,12 @@ interface MyScapeBoardProps {
   placedLandmarks: MyScapePlacedLandmark[];
   selectedId: string | null;
   draggingId: string | null;
+  entryReady?: boolean;
+  feedbackState?: { invalidId: string | null; successId: string | null };
   dragPreview: { x: number; y: number } | null;
   placementPreview: { col: number; row: number; valid: boolean; active: boolean } | null;
   isEditMode: boolean;
-  zoom: number;
+  newTodayIds: Set<string>;
   expanded?: boolean;
   onItemPointerDown: (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => void;
   onSelectItem: (itemId: string) => void;
@@ -31,14 +33,17 @@ export const MyScapeBoard = ({
   placedLandmarks,
   selectedId,
   draggingId,
+  entryReady = false,
+  feedbackState,
   dragPreview,
   placementPreview,
   isEditMode,
-  zoom,
+  newTodayIds,
   expanded = false,
   onItemPointerDown,
   onSelectItem,
 }: MyScapeBoardProps) => {
+  const boardScale = expanded ? 1 : 0.76;
   const assetMap = new Map(assets.map((asset) => [asset.id, asset]));
   const stageWidth = expanded ? 424 : 386;
   const stageHeight = expanded ? 356 : 327;
@@ -63,39 +68,6 @@ export const MyScapeBoard = ({
   const innerRightPoint = `${boardOriginX + gridHalfWidth - soilInset * 1.15},${boardOriginY + (MY_SCAPE_GRID_COLUMNS * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2 + soilInset * 0.58}`;
   const innerBottomPoint = `${boardOriginX},${boardOriginY + ((MY_SCAPE_GRID_COLUMNS + MY_SCAPE_GRID_ROWS) * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2 - soilInset}`;
   const innerLeftPoint = `${boardOriginX - gridHalfDepth + soilInset * 1.15},${boardOriginY + (MY_SCAPE_GRID_ROWS * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2 + soilInset * 0.58}`;
-  const gridLines = [];
-
-    for (let col = 0; col < MY_SCAPE_GRID_COLUMNS; col += 1) {
-    const start = gridToScreen(col, 0, boardWidth, boardHeight);
-    const end = gridToScreen(col, MY_SCAPE_GRID_ROWS - 1, boardWidth, boardHeight);
-    gridLines.push(
-      <line
-        key={`col-${col}`}
-        x1={start.x}
-        y1={start.y}
-        x2={end.x}
-        y2={end.y}
-        stroke="rgba(255,255,255,0.36)"
-        strokeWidth="1"
-      />,
-    );
-  }
-
-  for (let row = 0; row < MY_SCAPE_GRID_ROWS; row += 1) {
-    const start = gridToScreen(0, row, boardWidth, boardHeight);
-    const end = gridToScreen(MY_SCAPE_GRID_COLUMNS - 1, row, boardWidth, boardHeight);
-    gridLines.push(
-      <line
-        key={`row-${row}`}
-        x1={start.x}
-        y1={start.y}
-        x2={end.x}
-        y2={end.y}
-        stroke="rgba(188,203,193,0.5)"
-        strokeWidth="1"
-      />,
-    );
-  }
 
   const placementPreviewPolygon = placementPreview
     ? (() => {
@@ -108,24 +80,28 @@ export const MyScapeBoard = ({
         return `${top} ${right} ${bottom} ${left}`;
       })()
     : null;
+  const gridCells = Array.from({ length: MY_SCAPE_GRID_COLUMNS * MY_SCAPE_GRID_ROWS }, (_, index) => {
+    const col = index % MY_SCAPE_GRID_COLUMNS;
+    const row = Math.floor(index / MY_SCAPE_GRID_COLUMNS);
+    const center = gridToScreen(col, row, boardWidth, boardHeight);
+    const top = `${center.x},${center.y - MY_SCAPE_TILE_HEIGHT / 2}`;
+    const right = `${center.x + MY_SCAPE_TILE_WIDTH / 2},${center.y}`;
+    const bottom = `${center.x},${center.y + MY_SCAPE_TILE_HEIGHT / 2}`;
+    const left = `${center.x - MY_SCAPE_TILE_WIDTH / 2},${center.y}`;
+    return { id: `${col}-${row}`, points: `${top} ${right} ${bottom} ${left}` };
+  });
 
   return (
-    <div className="relative h-full min-h-[420px] overflow-hidden bg-[linear-gradient(180deg,#f6f4ee_0%,#eef2eb_36%,#edf1ea_100%)]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.92),rgba(255,255,255,0)_46%)]" />
-      <div className="absolute inset-x-0 bottom-0 h-28 bg-[linear-gradient(180deg,rgba(238,242,235,0)_0%,rgba(238,242,235,0.88)_100%)]" />
-      <div className="absolute inset-x-4 top-6 h-24 rounded-full bg-[radial-gradient(circle,rgba(190,213,195,0.3),rgba(190,213,195,0)_72%)] blur-2xl" />
-      <div
-        className={`absolute left-1/2 rounded-full bg-[radial-gradient(circle,rgba(57,77,63,0.14),rgba(57,77,63,0)_72%)] blur-md ${
-          expanded ? "bottom-10 h-20 w-[364px] -translate-x-1/2" : "bottom-14 h-16 w-[306px] -translate-x-1/2"
-        }`}
-      />
+    <div className="relative h-full min-h-[420px] overflow-hidden bg-transparent">
+      <div className="absolute inset-0 bg-[radial-gradient(88%_58%_at_50%_18%,rgba(255,255,255,0.34)_0%,rgba(255,255,255,0.08)_42%,rgba(255,255,255,0)_70%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(247,244,237,0.14)_0%,rgba(239,243,234,0.05)_54%,rgba(235,239,230,0)_100%)]" />
 
       <div
         className={`absolute left-1/2 -translate-x-1/2 -translate-y-1/2 ${
-          expanded ? "top-[48%] h-[356px] w-[424px]" : "top-[49%] h-[327px] w-[386px]"
+          expanded ? "top-[48%] h-[356px] w-[424px]" : "top-[45%] h-[327px] w-[386px]"
         }`}
         style={{
-          transform: `translate(-50%, -50%) scale(${zoom})`,
+          transform: `translate(-50%, -50%) scale(${boardScale})`,
           transformOrigin: "center center",
         }}
       >
@@ -185,15 +161,20 @@ export const MyScapeBoard = ({
         >
           {isEditMode ? (
             <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
-              <defs>
-                <filter id="myscape-grid-glow">
-                  <feGaussianBlur stdDeviation="1.4" result="coloredBlur" />
-                  <feMerge>
-                    <feMergeNode in="coloredBlur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              </defs>
+              {gridCells.map((cell) => (
+                <polygon
+                  key={cell.id}
+                  points={cell.points}
+                  className="myscape-grid-cell"
+                  fill="rgba(255,255,255,0.02)"
+                  stroke="rgba(98,122,108,0.18)"
+                  strokeWidth="1"
+                />
+              ))}
+            </svg>
+          ) : null}
+          {isEditMode ? (
+            <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
               {placementPreview && placementPreviewPolygon ? (
                 <g>
                   <polygon
@@ -210,9 +191,6 @@ export const MyScapeBoard = ({
                   />
                 </g>
               ) : null}
-              <g filter="url(#myscape-grid-glow)">
-                {gridLines}
-              </g>
             </svg>
           ) : null}
           {placedLandmarks.map((item) => {
@@ -230,10 +208,15 @@ export const MyScapeBoard = ({
                 key={item.id}
                 asset={asset}
                 item={item}
+                animateIn={entryReady}
+                index={placedLandmarks.findIndex((entry) => entry.id === item.id)}
+                invalid={feedbackState?.invalidId === item.id}
+                isNewToday={newTodayIds.has(item.landmarkId)}
                 screenX={renderedPosition.x}
                 screenY={renderedPosition.y}
                 isEditMode={isEditMode}
                 selected={selectedId === item.id}
+                success={feedbackState?.successId === item.id}
                 dragging={isDragging}
                 onPointerDown={onItemPointerDown}
                 onSelect={onSelectItem}
@@ -243,13 +226,6 @@ export const MyScapeBoard = ({
         </div>
       </div>
 
-      {placedLandmarks.length === 0 ? (
-        <div className="pointer-events-none absolute left-1/2 top-[43%] z-10 flex w-[220px] -translate-x-1/2 -translate-y-1/2 flex-col items-center rounded-[28px] bg-white/60 px-5 py-4 text-center shadow-[0_18px_36px_rgba(35,52,40,0.08)] ring-1 ring-white/80 backdrop-blur">
-
-          <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-sage-500">Under Construction</p>
-
-        </div>
-      ) : null}
     </div>
   );
 };

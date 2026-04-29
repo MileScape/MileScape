@@ -59,6 +59,8 @@ export const AppShell = () => {
           "sticky top-0 z-30 flex items-center justify-between px-4 pt-5",
           isOnboarding
             ? "hidden"
+            : isMyScapeHome
+            ? "hidden"
             : isRunResult
             ? "mb-[-4.35rem] pb-3 backdrop-blur-2xl bg-[linear-gradient(180deg,rgba(245,243,238,0.86)_0%,rgba(245,243,238,0.56)_42%,rgba(245,243,238,0.18)_72%,rgba(245,243,238,0)_100%)]"
             : isPaceportHome
@@ -128,7 +130,7 @@ export const AppShell = () => {
       <main
         className={cn(
           "flex-1 min-h-0",
-          isOnboarding || isPrimaryHome || isWearablesFullBleed
+          isOnboarding || isPrimaryHome || isWearablesFullBleed || isMyScapeHome
             ? "overflow-hidden px-0 pb-0 pt-0"
             : isRunResult
               ? "px-0 pb-8 pt-0"

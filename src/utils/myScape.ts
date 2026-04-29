@@ -1,14 +1,21 @@
-import type { Landmark, MyScapeLayout, MyScapePlacedLandmark, Route, RouteProgress, RunHistoryItem } from "../types";
+import type { Decoration, Landmark, MyScapeLayout, MyScapePlacedLandmark, Route, RouteProgress, RunHistoryItem } from "../types";
 import { loadMyScapeLayout } from "./storage";
 
-export interface UnlockedLandmarkAsset extends Landmark {
+export interface UnlockedLandmarkAsset {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
   routeId: string;
   routeName: string;
   city: string;
   country: string;
   imageSrc?: string;
-  assetType?: "landmark" | "decor";
+  assetType: "landmark" | "decor";
   defaultScale?: number;
+  milestoneKm?: number;
+  rarity?: Decoration["rarity"];
+  ownedCount?: number;
 }
 
 export type MyScapeViewMode = "day" | "week" | "month" | "year";
@@ -130,17 +137,33 @@ export const serializeMyScapeLayout = (placedLandmarks: MyScapePlacedLandmark[])
 
 export const restoreMyScapeLayout = () => loadMyScapeLayout()?.placedLandmarks ?? [];
 
+const getDecorationDefaultScale = (decoration: Decoration) => {
+  if (decoration.rarity === "legendary") {
+    return 1;
+  }
+
+  if (decoration.rarity === "epic") {
+    return 0.96;
+  }
+
+  if (decoration.rarity === "rare") {
+    return 0.92;
+  }
+
+  return 0.88;
+};
+
 export const resolveUnlockedLandmarkAssets = (
   routes: Route[],
   routeProgress: RouteProgress[],
 ): UnlockedLandmarkAsset[] =>
   routes.flatMap((route) => {
     const progress = routeProgress.find((entry) => entry.routeId === route.id);
-    if (!progress || progress.unlockedLandmarkIds.length === 0) {
+    if (!progress) {
       return [];
     }
 
-    return route.landmarks
+    const landmarks = route.landmarks
       .filter((landmark) => progress.unlockedLandmarkIds.includes(landmark.id))
       .map((landmark) => {
         const landmarkImage = myScapeLandmarkImages[landmark.id];
@@ -154,8 +177,29 @@ export const resolveUnlockedLandmarkAssets = (
           assetType: "landmark" as const,
           imageSrc: landmarkImage?.imageSrc ?? landmark.image,
           defaultScale: landmarkImage?.defaultScale,
+          ownedCount: 1,
         };
       });
+
+    const decorations = (route.decorations ?? [])
+      .filter((decoration) => (progress.decorations[decoration.id] ?? 0) > 0)
+      .map((decoration) => ({
+        id: decoration.id,
+        name: decoration.name,
+        description: decoration.description ?? `${route.city} decoration`,
+        image: decoration.image ?? decoration.icon ?? "",
+        imageSrc: decoration.image ?? decoration.icon,
+        routeId: route.id,
+        routeName: route.name,
+        city: route.city,
+        country: route.country,
+        assetType: "decor" as const,
+        defaultScale: getDecorationDefaultScale(decoration),
+        rarity: decoration.rarity,
+        ownedCount: progress.decorations[decoration.id] ?? 0,
+      }));
+
+    return [...landmarks, ...decorations];
   });
 
 export const getMyScapeYearDemoAssets = (): UnlockedLandmarkAsset[] => [
@@ -452,12 +496,17 @@ export const buildMyScapeUnlockTimeline = (routes: Route[], runHistory: RunHisto
     route.landmarks
       .filter((landmark) => landmark.milestoneKm > previousDistance && landmark.milestoneKm <= nextDistance)
       .forEach((landmark) => {
+        const landmarkImage = myScapeLandmarkImages[landmark.id];
         unlocks.push({
           ...landmark,
           routeId: route.id,
           routeName: route.name,
           city: route.city,
           country: route.country,
+          assetType: "landmark",
+          imageSrc: landmarkImage?.imageSrc ?? landmark.image,
+          defaultScale: landmarkImage?.defaultScale,
+          ownedCount: 1,
           unlockedAt: run.completedAt,
         });
       });
