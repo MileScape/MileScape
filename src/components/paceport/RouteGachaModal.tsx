@@ -176,6 +176,7 @@ export const RouteGachaModal = ({
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-sage-500">Paceport Draw</p>
               <h2 className="mt-1 text-2xl font-semibold leading-tight text-ink">Map + Decor</h2>
+              <p className="mt-1 text-sm text-sage-600">{costStamps} stamps</p>
             </div>
             <div className="flex items-center gap-2">
               <button

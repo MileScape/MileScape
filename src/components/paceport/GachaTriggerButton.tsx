@@ -38,7 +38,7 @@ export const GachaTriggerButton = ({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="relative isolate inline-flex min-h-[3rem] items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-950/94 px-3.5 py-2.5 text-left text-white shadow-[0_14px_30px_rgba(24,43,29,0.16)] backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_36px_rgba(24,43,29,0.18)] focus:outline-none"
+        className="relative isolate inline-flex min-h-[3rem] items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-950/94 px-4 py-2.5 text-left text-white shadow-[0_14px_30px_rgba(24,43,29,0.16)] backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_36px_rgba(24,43,29,0.18)] focus:outline-none"
         aria-label={`Open Paceport draw modal${canDraw ? "" : ", more stamps needed to draw"}`}
       >
         <span className="absolute inset-0 bg-[linear-gradient(120deg,rgba(251,191,36,0.18),rgba(56,189,248,0.12),rgba(15,23,42,0.05))]" />
@@ -47,13 +47,7 @@ export const GachaTriggerButton = ({
         <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/12">
           <Sparkles className="h-4 w-4 text-amber-200" />
         </span>
-        <span className="relative flex flex-col">
-          <span className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-sky-200/80">Draw</span>
-          <span className="text-sm font-semibold leading-tight">Map + Decor</span>
-        </span>
-        <span className="relative rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-medium text-white">
-          {costStamps}
-        </span>
+        <span className="relative text-sm font-semibold">Draw</span>
       </button>
 
       <RouteGachaModal
