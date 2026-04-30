@@ -386,13 +386,14 @@ export const myScapeAssetConfigs: Record<string, MyScapeAssetConfig> = {
     offsetY: 12,
   },
 
-  //
+  // Harbour horizon run
   "sydney-opera-house": {
-    defaultScale: 1.08,
-    footprintWidth: 2,
-    footprintHeight: 2,
-    offsetY: -4,
+    defaultScale: 1.38,
+    footprintWidth: 3,
+    footprintHeight: 3,
+    offsetY: 20,
   },
+  // TODO
   "harbour-bridge": {
     defaultScale: 1.06,
     footprintWidth: 2,
@@ -402,123 +403,227 @@ export const myScapeAssetConfigs: Record<string, MyScapeAssetConfig> = {
     defaultScale: 1.04,
     footprintWidth: 2,
   },
-  "australian-meat-pie": {},
-  boomerang: {},
-  "coral-reef": {
-    footprintWidth: 2,
+  "australian-meat-pie": {
+    defaultScale: 0.7,
+    footprintWidth: 1,
+    offsetY: 18,
   },
-  koala: {},
-  platypus: {},
-  wallaby: {},
-  colosseum: {
-    defaultScale: 1.08,
+  boomerang: {
+    defaultScale: 0.5,
+    footprintWidth: 1,
+    offsetY: 14,
+  },
+  "coral-reef": {
+    defaultScale: 1.03,
     footprintWidth: 2,
     footprintHeight: 2,
+    offsetY: 12,
+  },
+  koala: {
+    footprintHeight: 2,
+    footprintWidth: 2,
+    offsetY: 12,
+  },
+  platypus: {
+    footprintHeight: 2,
+    footprintWidth: 2,
+    offsetY: 22,
+  },
+  wallaby: {
+    footprintHeight: 2,
+    footprintWidth: 2,
+    offsetY: 12,
+  },
+
+  // eternal city path
+  colosseum: {
+    defaultScale: 1.38,
+    footprintWidth: 3,
+    footprintHeight: 3,
+    offsetY: 12,
   },
   "roman-bath": {
     defaultScale: 1.04,
     footprintWidth: 2,
+    footprintHeight: 2,
+    offsetY: 14,
   },
   "greek-amphitheater": {
-    defaultScale: 1.06,
-    footprintWidth: 2,
+    defaultScale: 1.16,
+    footprintWidth: 3,
+    footprintHeight: 3,
+    offsetY: 12,
   },
   parthenon: {
-    defaultScale: 1.08,
+    defaultScale: 1.28,
     footprintWidth: 2,
-    footprintHeight: 2,
+    footprintHeight: 3,
+    offsetY: 19,
+    offsetX: -3,
   },
-  espresso: {},
+  espresso: {
+    defaultScale: 0.7,
+    footprintWidth: 1,
+    offsetY: 20,
+  },
   "margherita-pizza": {
-    footprintWidth: 2,
+    defaultScale: 0.6,
+    footprintWidth: 1,
+    offsetY: 18,
   },
   lasagne: {
-    footprintWidth: 2,
+    defaultScale: 0.6,
+    footprintWidth: 1,
+    offsetY: 18,
   },
-  "roman-laurel-wreath": {},
+  "roman-laurel-wreath": {
+    defaultScale: 0.7,
+    offsetY: 14,
+  },
   "roman-gladiator-helmet": {
+    footprintHeight: 2,
     footprintWidth: 2,
+    offsetY: 12,
   },
   "roman-mosaic-floor": {
-    footprintWidth: 2,
-  },
-  "apple-park": {
-    defaultScale: 1.05,
+    defaultScale: 0.7,
     footprintWidth: 2,
     footprintHeight: 2,
+    offsetY: 25,
+
+  },
+
+  // pacific golden trail
+  "apple-park": {
+    defaultScale: 1.25,
+    footprintWidth: 3,
+    footprintHeight: 3,
+    offsetY: 12,
   },
   "gravitational-wave-observatory": {
     defaultScale: 1.06,
     footprintWidth: 2,
+    footprintHeight: 2,
+    offsetY: 22,
   },
   "yosemite-national-park": {
-    defaultScale: 1.08,
-    footprintWidth: 2,
-    footprintHeight: 2,
+    defaultScale: 1.58,
+    footprintWidth: 4,
+    footprintHeight: 4,
   },
-  avocado: {},
+  avocado: {
+    defaultScale: 0.6,
+    footprintWidth: 1,
+    offsetY: 18,
+  },
   beach: {
+    footprintHeight: 2,
     footprintWidth: 2,
+    offsetY: 12,
   },
-  "cowboy-hat": {},
+  "cowboy-hat": {
+    defaultScale: 0.66,
+    footprintWidth: 1,
+    offsetY: 28,
+  },
   gramophone: {
-    footprintWidth: 2,
+    defaultScale: 0.7,
+    footprintWidth: 1,
+    offsetY: 18,
   },
   hollywood: {
-    footprintWidth: 2,
+    defaultScale: 1.08,
+    footprintHeight: 2,
+    footprintWidth: 3,
+    offsetY: 12,
+    offsetX: 2,
   },
   "award-statue": {
-    footprintHeight: 2,
-    offsetY: -4,
+    defaultScale: 0.7,
+    footprintHeight: 1,
+    offsetY: 14,
   },
+
+  // elephant mountain glow
   "taipei-101": {
-    defaultScale: 1.08,
+    defaultScale: 1.38,
     footprintWidth: 2,
     footprintHeight: 2,
-    offsetY: -6,
+    offsetY: 12,
   },
   "sun-moon-lake": {
     defaultScale: 1.02,
-    footprintWidth: 2,
+    footprintWidth: 3,
+    footprintHeight: 3,
+    offsetY: 8,
+    offsetX: -2,
   },
   yushan: {
-    defaultScale: 1.06,
-    footprintWidth: 2,
-    footprintHeight: 2,
+    defaultScale: 1.26,
+    footprintWidth: 3,
+    footprintHeight: 3,
+    offsetY: 18,
   },
   "kaohsiung-85-sky-tower": {
-    defaultScale: 1.08,
+    defaultScale: 1.28,
     footprintWidth: 2,
     footprintHeight: 2,
-    offsetY: -6,
+    offsetY: 6,
   },
-  "bubble-tea": {},
+  "bubble-tea": {
+    defaultScale: 0.7,
+    footprintWidth: 1,
+    offsetY: 18,
+  },
   "taiwan-beef-noodle": {
-    footprintWidth: 2,
+    defaultScale: 0.7,
+    footprintWidth: 1,
+    offsetY: 18,
   },
   "taiwan-blue-magpie": {
-    footprintWidth: 2,
+    footprintWidth: 1,
+    defaultScale: 0.7,
+    offsetY: 26,
+    offsetX: 12,
   },
+
+  // Chao phraya drift
   "floating-market": {
     defaultScale: 1.08,
-    footprintWidth: 2,
+    footprintWidth: 3,
     footprintHeight: 2,
+    offsetY: 12,
   },
   buddha: {
     defaultScale: 1.08,
     footprintWidth: 2,
     footprintHeight: 2,
-    offsetY: -5,
+    offsetY: 5,
   },
   palm: {
-    footprintHeight: 2,
+    defaultScale: 0.9,
+    footprintHeight: 1,
+    footprintWidth: 1,
+    offsetY: 14,
   },
-  "mango-rice": {},
+  "mango-rice": {
+    defaultScale: 0.7,
+    footprintWidth: 1,
+    offsetY: 28,
+  },
   "pad-thai": {
-    footprintWidth: 2,
+    defaultScale: 0.7,
+    footprintWidth: 1,
+    offsetY: 22,
   },
-  "banh-lot-noodles": {},
+  "banh-lot-noodles": {
+    defaultScale: 0.7,
+    footprintWidth: 1,
+    offsetY: 27,
+  },
   "tourist-duck-car": {
     footprintWidth: 2,
+    footprintHeight: 2,
+    offsetY: 12,
   },
 };
