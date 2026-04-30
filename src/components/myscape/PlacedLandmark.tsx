@@ -8,15 +8,13 @@ import { cn } from "../../utils/cn";
 interface PlacedLandmarkProps {
   asset: UnlockedLandmarkAsset;
   animateIn?: boolean;
+  editable?: boolean;
   item: MyScapePlacedLandmark;
   index?: number;
-  invalid?: boolean;
-  isNewToday?: boolean;
   screenX: number;
   screenY: number;
   isEditMode: boolean;
   selected: boolean;
-  success?: boolean;
   dragging: boolean;
   onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => void;
   onSelect: (itemId: string) => void;
@@ -25,15 +23,13 @@ interface PlacedLandmarkProps {
 export const PlacedLandmark = ({
   asset,
   animateIn = false,
+  editable = false,
   item,
   index = 0,
-  invalid = false,
-  isNewToday = false,
   screenX,
   screenY,
   isEditMode,
-  selected,
-  success = false,
+  selected: _selected,
   dragging,
   onPointerDown,
   onSelect,
@@ -53,35 +49,36 @@ export const PlacedLandmark = ({
       transformOrigin: "bottom center",
       zIndex: dragging ? 999 : item.zIndex,
     }}
-    aria-label={`Place ${asset.name}`}
+    aria-label={`${asset.name} on your lawn`}
   >
     {asset.imageSrc ? (
       <motion.div
-        className={cn("relative min-w-[84px]", invalid ? "myscape-invalid-shake" : "", success ? "myscape-success-pop" : "")}
+        className="relative min-w-[84px]"
         initial={{ opacity: 0, scale: 0.82, y: 12 }}
-        animate={animateIn ? { opacity: 1, scale: 1, y: 0 } : { opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.36, delay: index * 0.045, ease: [0.22, 1, 0.36, 1] }}
+        animate={
+          editable && !dragging
+            ? { opacity: 1, scale: [1.015, 1.025, 1.015], y: [-2, -4, -2] }
+            : animateIn
+              ? { opacity: 1, scale: 1, y: 0 }
+              : { opacity: 1, scale: 1, y: 0 }
+        }
+        transition={
+          editable && !dragging
+            ? { duration: 2.8, delay: index * 0.03, ease: "easeInOut", repeat: Infinity }
+            : { duration: 0.36, delay: index * 0.045, ease: [0.22, 1, 0.36, 1] }
+        }
       >
-        {isNewToday ? <span className="myscape-sparkle-marker absolute right-3 top-1 z-10" /> : null}
         <div
           className={cn(
            "absolute left-1/2 top-full h-7 w-12 -translate-x-1/2 -translate-y-[18px] rounded-full bg-[radial-gradient(circle,rgba(68,86,73,0.08),rgba(68,86,73,0)_72%)] blur-[3px] transition duration-200",
-            isEditMode && (selected || dragging) ? "opacity-35" : "opacity-18",
+            dragging ? "opacity-32" : editable ? "opacity-26" : "opacity-18",
           )}
         />
-        <div
-          className={cn(
-            "relative flex items-end justify-center rounded-[18px] transition",
-            isEditMode && (selected || dragging) ? "brightness-[1.03] saturate-[1.01]" : "",
-          )}
-        >
+        <div className="relative flex items-end justify-center rounded-[18px] transition">
           <img
             src={asset.imageSrc}
             alt={asset.name}
-            className={cn(
-              "pointer-events-none max-h-[112px] w-auto max-w-[132px] object-contain",
-              isEditMode && (selected || dragging) ? "brightness-[1.04] saturate-[1.02]" : "",
-            )}
+            className="pointer-events-none max-h-[112px] w-auto max-w-[132px] object-contain"
             draggable={false}
           />
         </div>
@@ -90,15 +87,22 @@ export const PlacedLandmark = ({
       <motion.div
         className={cn(
           "relative w-[96px] rounded-[26px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(241,246,241,0.92))] px-3 pb-3 pt-2 transition",
-          invalid ? "myscape-invalid-shake" : "",
-          success ? "myscape-success-pop" : "",
-          isEditMode && (selected || dragging) ? "ring-2 ring-sage-300" : "ring-1 ring-sage-900/6",
+          dragging ? "ring-1 ring-sage-300/50" : "ring-1 ring-sage-900/6",
         )}
         initial={{ opacity: 0, scale: 0.82, y: 12 }}
-        animate={animateIn ? { opacity: 1, scale: 1, y: 0 } : { opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.36, delay: index * 0.045, ease: [0.22, 1, 0.36, 1] }}
+        animate={
+          editable && !dragging
+            ? { opacity: 1, scale: [1.015, 1.025, 1.015], y: [-2, -4, -2] }
+            : animateIn
+              ? { opacity: 1, scale: 1, y: 0 }
+              : { opacity: 1, scale: 1, y: 0 }
+        }
+        transition={
+          editable && !dragging
+            ? { duration: 2.8, delay: index * 0.03, ease: "easeInOut", repeat: Infinity }
+            : { duration: 0.36, delay: index * 0.045, ease: [0.22, 1, 0.36, 1] }
+        }
       >
-        {isNewToday ? <span className="myscape-sparkle-marker absolute right-3 top-2 z-10" /> : null}
         <div className="absolute inset-x-4 bottom-[-10px] h-4 rounded-full bg-[radial-gradient(circle,rgba(68,86,73,0.08),rgba(68,86,73,0)_72%)] blur-[3px]" />
         <div className="mx-auto flex h-12 w-12 items-end justify-center rounded-[18px] bg-[linear-gradient(180deg,rgba(202,219,204,0.95),rgba(150,176,156,0.95))] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
           <div className="mb-1 flex h-8 w-8 items-center justify-center rounded-[12px] bg-white/78 text-sage-700">

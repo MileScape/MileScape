@@ -16,6 +16,8 @@ export interface UnlockedLandmarkAsset {
   milestoneKm?: number;
   rarity?: Decoration["rarity"];
   ownedCount?: number;
+  routeOrder?: number;
+  itemOrder?: number;
 }
 
 export type MyScapeViewMode = "day" | "week" | "month" | "year";
@@ -198,6 +200,53 @@ export const resolveUnlockedLandmarkAssets = (
         rarity: decoration.rarity,
         ownedCount: progress.decorations[decoration.id] ?? 0,
       }));
+
+    return [...landmarks, ...decorations];
+  });
+
+export const resolveMyScapeCatalogAssets = (
+  routes: Route[],
+  routeProgress: RouteProgress[],
+): UnlockedLandmarkAsset[] =>
+  routes.flatMap((route, routeIndex) => {
+    const progress = routeProgress.find((entry) => entry.routeId === route.id);
+
+    const landmarks = route.landmarks.map((landmark, landmarkIndex) => {
+      const landmarkImage = myScapeLandmarkImages[landmark.id];
+      const isUnlocked = progress?.unlockedLandmarkIds.includes(landmark.id) ?? false;
+
+      return {
+        ...landmark,
+        routeId: route.id,
+        routeName: route.name,
+        city: route.city,
+        country: route.country,
+        assetType: "landmark" as const,
+        imageSrc: landmarkImage?.imageSrc ?? landmark.image,
+        defaultScale: landmarkImage?.defaultScale,
+        ownedCount: isUnlocked ? 1 : 0,
+        routeOrder: routeIndex,
+        itemOrder: landmarkIndex,
+      };
+    });
+
+    const decorations = (route.decorations ?? []).map((decoration, decorationIndex) => ({
+      id: decoration.id,
+      name: decoration.name,
+      description: decoration.description ?? `${route.city} decoration`,
+      image: decoration.image ?? decoration.icon ?? "",
+      imageSrc: decoration.image ?? decoration.icon,
+      routeId: route.id,
+      routeName: route.name,
+      city: route.city,
+      country: route.country,
+      assetType: "decor" as const,
+      defaultScale: getDecorationDefaultScale(decoration),
+      rarity: decoration.rarity,
+      ownedCount: progress?.decorations[decoration.id] ?? 0,
+      routeOrder: routeIndex,
+      itemOrder: decorationIndex,
+    }));
 
     return [...landmarks, ...decorations];
   });

@@ -10,7 +10,6 @@ interface ScapeBoardStageProps {
   dragPreview: { x: number; y: number } | null;
   draggingId: string | null;
   entryReady: boolean;
-  feedbackState?: { invalidId: string | null; successId: string | null };
   isEditMode: boolean;
   newTodayIds: Set<string>;
   placedLandmarks: MyScapePlacedLandmark[];
@@ -26,7 +25,6 @@ export const ScapeBoardStage = ({
   dragPreview,
   draggingId,
   entryReady,
-  feedbackState,
   isEditMode,
   newTodayIds,
   placedLandmarks,
@@ -41,9 +39,17 @@ export const ScapeBoardStage = ({
     <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(232,238,228,0.24)_0%,rgba(232,238,228,0.08)_34%,rgba(232,238,228,0)_58%)]" />
 
     <motion.div
-      className="relative z-10 h-full w-full translate-y-[-4.5vh]"
+      className="relative z-10 h-full w-full"
       initial={{ opacity: 0, scale: 0.96 }}
-      animate={entryReady ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.96 }}
+      animate={
+        entryReady
+          ? {
+              opacity: 1,
+              scale: isEditMode ? 0.96 : 1,
+              y: isEditMode ? -48 : -18,
+            }
+          : { opacity: 0, scale: 0.96, y: -8 }
+      }
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
       <MyScapeBoard
@@ -53,7 +59,6 @@ export const ScapeBoardStage = ({
         selectedId={selectedId}
         draggingId={draggingId}
         entryReady={entryReady}
-        feedbackState={feedbackState}
         dragPreview={dragPreview}
         placementPreview={placementPreview}
         isEditMode={isEditMode}

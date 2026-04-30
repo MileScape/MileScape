@@ -19,7 +19,7 @@ import {
   getItemZIndex,
   gridToScreen,
   isGridCellOccupied,
-  resolveUnlockedLandmarkAssets,
+  resolveMyScapeCatalogAssets,
   restoreMyScapeLayout,
   screenToGrid,
   serializeMyScapeLayout,
@@ -104,15 +104,9 @@ export const MyScapePage = () => {
   const [dragPreview, setDragPreview] = useState<{ x: number; y: number } | null>(null);
   const [entryReady, setEntryReady] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [feedbackState, setFeedbackState] = useState<{ invalidId: string | null; successId: string | null }>({
-    invalidId: null,
-    successId: null,
-  });
   const [placedLandmarks, setPlacedLandmarks] = useState<MyScapePlacedLandmark[]>(() => restoreMyScapeLayout());
   const boardRef = useRef<HTMLDivElement>(null);
   const toastTimerRef = useRef<number | null>(null);
-  const invalidTimerRef = useRef<number | null>(null);
-  const successTimerRef = useRef<number | null>(null);
   const newToastShownRef = useRef(false);
   const suppressSelectRef = useRef(false);
   const dragStateRef = useRef<{
@@ -126,12 +120,13 @@ export const MyScapePage = () => {
     startClientY: number;
   } | null>(null);
 
-  const unlockedAssets = useMemo(
-    () => resolveUnlockedLandmarkAssets(routes, state.routeProgress),
+  const catalogAssets = useMemo(
+    () => resolveMyScapeCatalogAssets(routes, state.routeProgress),
     [routes, state.routeProgress],
   );
-  const assetIds = useMemo(() => new Set(unlockedAssets.map((asset) => asset.id)), [unlockedAssets]);
-  const assetMap = useMemo(() => new Map(unlockedAssets.map((asset) => [asset.id, asset])), [unlockedAssets]);
+  const unlockedAssets = useMemo(() => catalogAssets.filter((asset) => (asset.ownedCount ?? 0) > 0), [catalogAssets]);
+  const assetIds = useMemo(() => new Set(catalogAssets.map((asset) => asset.id)), [catalogAssets]);
+  const assetMap = useMemo(() => new Map(catalogAssets.map((asset) => [asset.id, asset])), [catalogAssets]);
   const unlockTimeline = useMemo(
     () => buildMyScapeUnlockTimeline(routes, state.runHistory),
     [routes, state.runHistory],
@@ -145,17 +140,20 @@ export const MyScapePage = () => {
 
   useEffect(() => {
     setPlacedLandmarks((current) => {
-      const seen = new Set<string>();
       return current.filter((item) => {
-        if (!assetIds.has(item.landmarkId) || seen.has(item.landmarkId)) {
+        if (!assetIds.has(item.landmarkId)) {
           return false;
         }
 
-        seen.add(item.landmarkId);
+        const asset = assetMap.get(item.landmarkId);
+        if (asset?.assetType === "landmark") {
+          return current.findIndex((entry) => entry.landmarkId === item.landmarkId) === current.indexOf(item);
+        }
+
         return true;
       });
     });
-  }, [assetIds]);
+  }, [assetIds, assetMap]);
 
   useEffect(() => {
     setPlacedLandmarks((current) =>
@@ -206,12 +204,6 @@ export const MyScapePage = () => {
       if (toastTimerRef.current) {
         window.clearTimeout(toastTimerRef.current);
       }
-      if (invalidTimerRef.current) {
-        window.clearTimeout(invalidTimerRef.current);
-      }
-      if (successTimerRef.current) {
-        window.clearTimeout(successTimerRef.current);
-      }
     },
     [],
   );
@@ -222,28 +214,6 @@ export const MyScapePage = () => {
       window.clearTimeout(toastTimerRef.current);
     }
     toastTimerRef.current = window.setTimeout(() => setToastMessage(null), 2600);
-  };
-
-  const triggerInvalidFeedback = (itemId: string) => {
-    setFeedbackState((current) => ({ ...current, invalidId: itemId }));
-    if (invalidTimerRef.current) {
-      window.clearTimeout(invalidTimerRef.current);
-    }
-    invalidTimerRef.current = window.setTimeout(
-      () => setFeedbackState((current) => ({ ...current, invalidId: null })),
-      320,
-    );
-  };
-
-  const triggerSuccessFeedback = (itemId: string) => {
-    setFeedbackState((current) => ({ ...current, successId: itemId }));
-    if (successTimerRef.current) {
-      window.clearTimeout(successTimerRef.current);
-    }
-    successTimerRef.current = window.setTimeout(
-      () => setFeedbackState((current) => ({ ...current, successId: null })),
-      420,
-    );
   };
 
   const handleSelectItem = (itemId: string) => {
@@ -346,9 +316,6 @@ export const MyScapePage = () => {
         })(),
       );
 
-      let invalidDrop = false;
-      let successDrop = false;
-
       setPlacedLandmarks((current) =>
         current.map((item) => {
           if (item.id !== dragState.itemId) {
@@ -356,17 +323,12 @@ export const MyScapePage = () => {
           }
 
           if (isGridCellOccupied(snappedGrid.col, snappedGrid.row, current, item.id)) {
-            invalidDrop = true;
             return {
               ...item,
               col: dragState.previousCol,
               row: dragState.previousRow,
               zIndex: getItemZIndex(dragState.previousCol, dragState.previousRow),
             };
-          }
-
-          if (dragState.previousCol !== snappedGrid.col || dragState.previousRow !== snappedGrid.row) {
-            successDrop = true;
           }
 
           return {
@@ -379,11 +341,6 @@ export const MyScapePage = () => {
       );
 
       suppressSelectRef.current = dragState.moved;
-      if (invalidDrop) {
-        triggerInvalidFeedback(dragState.itemId);
-      } else if (successDrop) {
-        triggerSuccessFeedback(dragState.itemId);
-      }
 
       dragStateRef.current = null;
       setDraggingId(null);
@@ -457,17 +414,29 @@ export const MyScapePage = () => {
       overview: {
         distanceKm: state.runHistory.reduce((sum, entry) => sum + entry.distanceKm, 0),
         runCount: state.runHistory.length,
-        unlockCount: unlockedAssets.length,
+        unlockCount: catalogAssets.filter((asset) => (asset.ownedCount ?? 0) > 0).length,
       },
     }),
-    [dayRuns, dayUnlocks.length, state.runHistory, unlockedAssets.length],
+    [catalogAssets, dayRuns, dayUnlocks.length, state.runHistory],
   );
 
   const activeStats = summaryStats[summaryTab];
-  const placedAssetIds = useMemo(() => new Set(placedLandmarks.map((item) => item.landmarkId)), [placedLandmarks]);
+  const placedCountsByAssetId = useMemo(
+    () =>
+      placedLandmarks.reduce<Record<string, number>>((accumulator, item) => {
+        accumulator[item.landmarkId] = (accumulator[item.landmarkId] ?? 0) + 1;
+        return accumulator;
+      }, {}),
+    [placedLandmarks],
+  );
   const newUnplacedCount = useMemo(
-    () => unlockedAssets.filter((asset) => newTodayIds.has(asset.id) && !placedAssetIds.has(asset.id)).length,
-    [newTodayIds, placedAssetIds, unlockedAssets],
+    () =>
+      unlockedAssets.filter((asset) => {
+        const ownedCount = asset.assetType === "landmark" ? 1 : asset.ownedCount ?? 1;
+        const placedCount = placedCountsByAssetId[asset.id] ?? 0;
+        return newTodayIds.has(asset.id) && ownedCount - placedCount > 0;
+      }).length,
+    [newTodayIds, placedCountsByAssetId, unlockedAssets],
   );
 
   useEffect(() => {
@@ -481,25 +450,63 @@ export const MyScapePage = () => {
 
   const inventoryItems = useMemo(
     () =>
-      unlockedAssets
+      catalogAssets
         .map((asset) => {
           const placedItem = placedLandmarks.find((item) => item.landmarkId === asset.id);
-          const isNew = newTodayIds.has(asset.id) && !placedItem;
-          const statusLabel: "Available" | "Placed" | "New" = isNew ? "New" : placedItem ? "Placed" : "Available";
+          const ownedCount = asset.assetType === "landmark" ? Math.min(1, asset.ownedCount ?? 0) : asset.ownedCount ?? 0;
+          const isUnlocked = ownedCount > 0;
+          const placedCount = placedCountsByAssetId[asset.id] ?? 0;
+          const availableCount = Math.max(0, ownedCount - placedCount);
+          const isNew = newTodayIds.has(asset.id) && availableCount > 0;
+          const stateLabel = (() => {
+            if (!isUnlocked) {
+              return "LOCKED";
+            }
+
+            if (isNew) {
+              return "NEW";
+            }
+
+            if (asset.assetType === "decor") {
+              if (availableCount <= 0) {
+                return "ON LAWN";
+              }
+
+              if (availableCount > 1) {
+                return `×${availableCount} LEFT`;
+              }
+
+              return "AVAILABLE";
+            }
+
+            return availableCount > 0 ? "AVAILABLE" : "ON LAWN";
+          })();
+          const subtitleLabel = isUnlocked ? undefined : `From ${asset.routeName}`;
+
           return {
             asset,
+            availableCount,
             isNew,
-            placed: Boolean(placedItem),
+            isUnlocked,
+            ownedCount,
+            placedCount,
+            placed: placedCount > 0,
             selected: selectedId === placedItem?.id,
-            statusLabel,
+            subtitleLabel,
+            stateLabel,
           };
         })
         .sort((left, right) => {
-          const leftWeight = left.isNew ? 0 : left.placed ? 2 : 1;
-          const rightWeight = right.isNew ? 0 : right.placed ? 2 : 1;
-          return leftWeight - rightWeight || left.asset.name.localeCompare(right.asset.name);
+          const leftWeight = !left.isUnlocked ? 3 : left.isNew ? 0 : left.availableCount > 0 ? 1 : 2;
+          const rightWeight = !right.isUnlocked ? 3 : right.isNew ? 0 : right.availableCount > 0 ? 1 : 2;
+          return (
+            leftWeight - rightWeight ||
+            (left.asset.routeOrder ?? 0) - (right.asset.routeOrder ?? 0) ||
+            (left.asset.itemOrder ?? 0) - (right.asset.itemOrder ?? 0) ||
+            left.asset.name.localeCompare(right.asset.name)
+          );
         }),
-    [newTodayIds, placedLandmarks, selectedId, unlockedAssets],
+    [catalogAssets, newTodayIds, placedCountsByAssetId, placedLandmarks, selectedId],
   );
 
   const placeAssetOnBoard = (assetId: string) => {
@@ -508,17 +515,22 @@ export const MyScapePage = () => {
       return;
     }
 
-    const existingItem = placedLandmarks.find((item) => item.landmarkId === assetId);
-    if (existingItem) {
-      setSelectedId(existingItem.id);
+    const ownedCount = asset.assetType === "landmark" ? 1 : asset.ownedCount ?? 1;
+    const placedCount = placedCountsByAssetId[assetId] ?? 0;
+    const availableCount = Math.max(0, ownedCount - placedCount);
+    if (availableCount <= 0) {
+      const existingItem = placedLandmarks.find((item) => item.landmarkId === assetId);
+      if (existingItem) {
+        setSelectedId(existingItem.id);
+      }
       return;
     }
 
     const created = createPlacedLandmark(asset.id, placedLandmarks, asset.defaultScale ?? 1);
     setPlacedLandmarks((current) => [...current, created]);
     setSelectedId(created.id);
-    setActionMenuItemId(created.id);
-    triggerSuccessFeedback(created.id);
+    setActionMenuItemId(null);
+    setInfoItemId(null);
   };
 
   const focusPlacedAsset = (assetId: string) => {
@@ -528,8 +540,11 @@ export const MyScapePage = () => {
       return;
     }
 
+    const asset = assetMap.get(assetId);
     setSelectedId(existingItem.id);
-    setActionMenuItemId(existingItem.id);
+    setActionMenuItemId(null);
+    setInfoItemId(null);
+    showToast(asset ? `${asset.name} is already on your lawn` : "Already on your lawn");
   };
 
   const storeSelectedItem = () => {
@@ -541,6 +556,7 @@ export const MyScapePage = () => {
     setActionMenuItemId(null);
     setInfoItemId(null);
     setSelectedId(null);
+    showToast("Returned to inventory");
   };
 
   const activeInfoAsset = infoItem ? assetMap.get(infoItem.landmarkId) ?? null : null;
@@ -576,7 +592,6 @@ export const MyScapePage = () => {
         draggingId={draggingId}
         dragPreview={dragPreview}
         entryReady={entryReady}
-        feedbackState={feedbackState}
         placementPreview={placementPreview}
         isEditMode={isEditMode}
         newTodayIds={newTodayIds}
@@ -591,12 +606,16 @@ export const MyScapePage = () => {
         onToggleArrange={handleToggleArrange}
       />
 
-      <FloatingStatsText
-        tab={summaryTab}
-        distanceLabel={formatDistance(activeStats.distanceKm)}
-        runsLabel={`${activeStats.runCount}`}
-        unlocksLabel={`${activeStats.unlockCount}`}
-      />
+      <AnimatePresence>
+        {!isEditMode ? (
+          <FloatingStatsText
+            tab={summaryTab}
+            distanceLabel={formatDistance(activeStats.distanceKm)}
+            runsLabel={`${activeStats.runCount}`}
+            unlocksLabel={`${activeStats.unlockCount}`}
+          />
+        ) : null}
+      </AnimatePresence>
 
       <NewUnlockToast message={toastMessage} />
 
@@ -636,8 +655,16 @@ export const MyScapePage = () => {
             key="inventory"
             items={inventoryItems}
             onSelectItem={(assetId) => {
-              const isPlaced = placedLandmarks.some((item) => item.landmarkId === assetId);
-              if (isPlaced) {
+              const asset = catalogAssets.find((entry) => entry.id === assetId);
+              const ownedCount = asset?.assetType === "landmark" ? Math.min(1, asset?.ownedCount ?? 0) : asset?.ownedCount ?? 0;
+              if (!asset || ownedCount <= 0) {
+                showToast(asset ? `Locked: unlock from ${asset.routeName}` : "Locked");
+                return;
+              }
+              const placedCount = placedCountsByAssetId[assetId] ?? 0;
+              const availableCount = Math.max(0, ownedCount - placedCount);
+
+              if (availableCount <= 0) {
                 focusPlacedAsset(assetId);
                 return;
               }

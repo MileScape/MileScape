@@ -27,6 +27,7 @@ export const FloatingStatsText = ({
       className="pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom,0px)+186px)] right-4 z-30"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 10 }}
       transition={{ duration: 0.4, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="w-[172px] space-y-3 text-left [text-shadow:0_1px_10px_rgba(255,255,255,0.5)] sm:w-[188px]">

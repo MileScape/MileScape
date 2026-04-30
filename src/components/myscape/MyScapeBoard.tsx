@@ -17,7 +17,6 @@ interface MyScapeBoardProps {
   selectedId: string | null;
   draggingId: string | null;
   entryReady?: boolean;
-  feedbackState?: { invalidId: string | null; successId: string | null };
   dragPreview: { x: number; y: number } | null;
   placementPreview: { col: number; row: number; valid: boolean; active: boolean } | null;
   isEditMode: boolean;
@@ -34,7 +33,6 @@ export const MyScapeBoard = ({
   selectedId,
   draggingId,
   entryReady = false,
-  feedbackState,
   dragPreview,
   placementPreview,
   isEditMode,
@@ -209,14 +207,12 @@ export const MyScapeBoard = ({
                 asset={asset}
                 item={item}
                 animateIn={entryReady}
+                editable={isEditMode}
                 index={placedLandmarks.findIndex((entry) => entry.id === item.id)}
-                invalid={feedbackState?.invalidId === item.id}
-                isNewToday={newTodayIds.has(item.landmarkId)}
                 screenX={renderedPosition.x}
                 screenY={renderedPosition.y}
                 isEditMode={isEditMode}
                 selected={selectedId === item.id}
-                success={feedbackState?.successId === item.id}
                 dragging={isDragging}
                 onPointerDown={onItemPointerDown}
                 onSelect={onSelectItem}
