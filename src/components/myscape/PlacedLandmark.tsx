@@ -54,13 +54,12 @@ export const PlacedLandmark = ({
     {asset.imageSrc ? (
       <motion.div
         className="relative min-w-[84px]"
-        initial={{ opacity: 0, scale: 0.82, y: 12 }}
         animate={
           editable && !dragging
-            ? { opacity: 1, scale: [1.015, 1.025, 1.015], y: [-2, -4, -2] }
+            ? { scale: [1.015, 1.025, 1.015], y: [-2, -4, -2] }
             : animateIn
-              ? { opacity: 1, scale: 1, y: 0 }
-              : { opacity: 1, scale: 1, y: 0 }
+              ? { scale: 1, y: 0 }
+              : { scale: 1, y: 0 }
         }
         transition={
           editable && !dragging
@@ -89,13 +88,12 @@ export const PlacedLandmark = ({
           "relative w-[96px] rounded-[26px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(241,246,241,0.92))] px-3 pb-3 pt-2 transition",
           dragging ? "ring-1 ring-sage-300/50" : "ring-1 ring-sage-900/6",
         )}
-        initial={{ opacity: 0, scale: 0.82, y: 12 }}
         animate={
           editable && !dragging
-            ? { opacity: 1, scale: [1.015, 1.025, 1.015], y: [-2, -4, -2] }
+            ? { scale: [1.015, 1.025, 1.015], y: [-2, -4, -2] }
             : animateIn
-              ? { opacity: 1, scale: 1, y: 0 }
-              : { opacity: 1, scale: 1, y: 0 }
+              ? { scale: 1, y: 0 }
+              : { scale: 1, y: 0 }
         }
         transition={
           editable && !dragging
