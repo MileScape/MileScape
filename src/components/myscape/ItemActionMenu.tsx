@@ -4,10 +4,9 @@ interface ItemActionMenuProps {
   open: boolean;
   onInfo: () => void;
   onMove: () => void;
-  onStore: () => void;
 }
 
-export const ItemActionMenu = ({ open, onInfo, onMove, onStore }: ItemActionMenuProps) => (
+export const ItemActionMenu = ({ open, onInfo, onMove }: ItemActionMenuProps) => (
   <AnimatePresence>
     {open ? (
       <motion.div
@@ -24,13 +23,6 @@ export const ItemActionMenu = ({ open, onInfo, onMove, onStore }: ItemActionMenu
             className="rounded-full px-4 py-2 text-sm font-medium text-[#36463d] transition hover:bg-white/40"
           >
             Move
-          </button>
-          <button
-            type="button"
-            onClick={onStore}
-            className="rounded-full px-4 py-2 text-sm font-medium text-[#36463d] transition hover:bg-white/40"
-          >
-            Store
           </button>
           <button
             type="button"

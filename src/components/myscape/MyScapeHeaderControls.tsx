@@ -2,6 +2,7 @@ import { ArrowLeft, Grid3X3 } from "lucide-react";
 
 interface MyScapeHeaderControlsProps {
   arrangeActive: boolean;
+  arrangeDisabled?: boolean;
   hasNewItems?: boolean;
   onBack: () => void;
   onToggleArrange: () => void;
@@ -12,6 +13,7 @@ const glassButtonClassName =
 
 export const MyScapeHeaderControls = ({
   arrangeActive,
+  arrangeDisabled = false,
   hasNewItems = false,
   onBack,
   onToggleArrange,
@@ -30,8 +32,9 @@ export const MyScapeHeaderControls = ({
         <button
           type="button"
           onClick={onToggleArrange}
+          aria-disabled={arrangeDisabled}
           className={`${glassButtonClassName} min-w-[116px] gap-2 px-4 py-3 text-sm font-medium ${
-            arrangeActive ? "bg-[#3f5548]/86 text-white border-white/20" : ""
+            arrangeActive ? "bg-[#3f5548]/86 text-white border-white/20" : arrangeDisabled ? "opacity-55" : ""
           }`}
         >
           <Grid3X3 className="h-4 w-4" />

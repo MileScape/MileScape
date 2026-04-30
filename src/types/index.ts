@@ -177,6 +177,7 @@ export interface MyScapePlacedLandmark {
 
 export interface MyScapeLayout {
   placedLandmarks: MyScapePlacedLandmark[];
+  placedAssetIds?: string[];
   updatedAt: string;
 }
 

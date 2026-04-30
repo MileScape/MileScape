@@ -1,5 +1,5 @@
 import type { Decoration, Landmark, MyScapeLayout, MyScapePlacedLandmark, Route, RouteProgress, RunHistoryItem } from "../types";
-import { loadMyScapeLayout } from "./storage";
+import { loadMyScapeLayout, loadPlacedAssetIds } from "./storage";
 
 export interface UnlockedLandmarkAsset {
   id: string;
@@ -132,12 +132,23 @@ export const clampGridPosition = (col: number, row: number) => ({
 
 export const getItemZIndex = (col: number, row: number) => col + row + 10;
 
-export const serializeMyScapeLayout = (placedLandmarks: MyScapePlacedLandmark[]): MyScapeLayout => ({
+export const serializeMyScapeLayout = (
+  placedLandmarks: MyScapePlacedLandmark[],
+): MyScapeLayout => ({
   placedLandmarks,
   updatedAt: new Date().toISOString(),
 });
 
-export const restoreMyScapeLayout = () => loadMyScapeLayout()?.placedLandmarks ?? [];
+export const restoreMyScapeLayout = (scopeKey = "overview") => loadMyScapeLayout(scopeKey)?.placedLandmarks ?? [];
+
+export const restorePlacedAssetIds = () => loadPlacedAssetIds();
+
+export const getMyScapeDateKey = (value: Date) => {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, "0");
+  const day = `${value.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 const getDecorationDefaultScale = (decoration: Decoration) => {
   if (decoration.rarity === "legendary") {

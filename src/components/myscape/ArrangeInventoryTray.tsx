@@ -1,12 +1,13 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Lock, MapPin, Sparkles } from "lucide-react";
-import { useMemo, useState } from "react";
+import { forwardRef, useMemo, useState } from "react";
 import type { Rarity } from "../../types";
 import type { UnlockedLandmarkAsset } from "../../utils/myScape";
 
 interface ArrangeInventoryTrayItem {
   asset: UnlockedLandmarkAsset;
   availableCount: number;
+  isCollectedOnly?: boolean;
   isNew: boolean;
   isUnlocked: boolean;
   ownedCount: number;
@@ -19,6 +20,7 @@ interface ArrangeInventoryTrayItem {
 
 interface ArrangeInventoryTrayProps {
   items: ArrangeInventoryTrayItem[];
+  isReturnDropActive?: boolean;
   onSelectItem: (assetId: string) => void;
 }
 
@@ -44,7 +46,10 @@ const shelfContentTransition = { duration: 0.18, ease: [0.22, 1, 0.36, 1] as con
 const getInventoryCategory = (asset: UnlockedLandmarkAsset): InventoryCategory =>
   asset.assetType === "landmark" ? "landmarks" : "decorations";
 
-export const ArrangeInventoryTray = ({ items, onSelectItem }: ArrangeInventoryTrayProps) => {
+export const ArrangeInventoryTray = forwardRef<HTMLDivElement, ArrangeInventoryTrayProps>(function ArrangeInventoryTray(
+  { items, isReturnDropActive = false, onSelectItem },
+  ref,
+) {
   const [category, setCategory] = useState<InventoryCategory>("landmarks");
   const [activeRarityFilter, setActiveRarityFilter] = useState<DecorationRarityFilter>("all");
 
@@ -94,43 +99,60 @@ export const ArrangeInventoryTray = ({ items, onSelectItem }: ArrangeInventoryTr
       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
       className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+18px)]"
     >
-      <div className="pointer-events-auto mx-auto max-w-[560px] rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.58),rgba(248,244,238,0.46))] p-3 shadow-[0_22px_42px_rgba(45,62,53,0.16)] backdrop-blur-2xl">
+      <div
+        ref={ref}
+        className={`pointer-events-auto mx-auto max-w-[560px] rounded-[30px] border p-3 shadow-[0_22px_42px_rgba(45,62,53,0.16)] backdrop-blur-2xl transition ${
+          isReturnDropActive
+            ? "border-[#89a494]/70 bg-[linear-gradient(180deg,rgba(233,241,233,0.82),rgba(225,236,226,0.72))]"
+            : "border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.58),rgba(248,244,238,0.46))]"
+        }`}
+      >
         <div className="mb-2 flex items-start justify-between gap-3 px-1">
-          <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-[#708177]">Inventory</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-[#708177]">
+            {isReturnDropActive ? "Return to Inventory" : "Inventory"}
+          </p>
           <div className="text-right">
             <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#8a978e]">
-              {categoryOwnedCount} / {categoryTotalCount} unlocked
+              {isReturnDropActive ? "Release to Return" : `${categoryOwnedCount} / ${categoryTotalCount} unlocked`}
             </p>
           </div>
         </div>
 
         <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="inline-flex rounded-full border border-white/70 bg-white/46 p-1 shadow-[0_10px_20px_rgba(47,62,54,0.08)]">
-            {categoryTabs.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => handleCategoryChange(tab.key)}
-                className={`rounded-full px-4 py-2 text-[10px] font-medium uppercase tracking-[0.12em] transition ${
-                  category === tab.key ? "bg-[#4b6154] text-white" : "text-[#718278]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {showRarityFilter ? (
-            <button
-              type="button"
-              onClick={handleCycleRarityFilter}
-              className="shrink-0 rounded-full border border-white/75 bg-[rgba(243,246,239,0.82)] px-3 py-2 text-[10px] font-medium uppercase tracking-[0.12em] text-[#5f7168] shadow-[0_8px_18px_rgba(47,62,54,0.08)] transition hover:bg-[rgba(247,249,244,0.92)]"
-              aria-label={`Rarity filter: ${rarityFilterLabel[activeRarityFilter]}. Tap to cycle`}
-            >
-              {rarityFilterLabel[activeRarityFilter]}
-            </button>
+          {isReturnDropActive ? (
+            <div className="flex w-full items-center justify-center rounded-full border border-[#88a293]/55 bg-white/44 px-4 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-[#567064] shadow-[0_10px_20px_rgba(47,62,54,0.08)]">
+              Drop Here to Send Back
+            </div>
           ) : (
-            <div className="h-[34px]" aria-hidden="true" />
+            <>
+              <div className="inline-flex rounded-full border border-white/70 bg-white/46 p-1 shadow-[0_10px_20px_rgba(47,62,54,0.08)]">
+                {categoryTabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => handleCategoryChange(tab.key)}
+                    className={`rounded-full px-4 py-2 text-[10px] font-medium uppercase tracking-[0.12em] transition ${
+                      category === tab.key ? "bg-[#4b6154] text-white" : "text-[#718278]"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {showRarityFilter ? (
+                <button
+                  type="button"
+                  onClick={handleCycleRarityFilter}
+                  className="shrink-0 rounded-full border border-white/75 bg-[rgba(243,246,239,0.82)] px-3 py-2 text-[10px] font-medium uppercase tracking-[0.12em] text-[#5f7168] shadow-[0_8px_18px_rgba(47,62,54,0.08)] transition hover:bg-[rgba(247,249,244,0.92)]"
+                  aria-label={`Rarity filter: ${rarityFilterLabel[activeRarityFilter]}. Tap to cycle`}
+                >
+                  {rarityFilterLabel[activeRarityFilter]}
+                </button>
+              ) : (
+                <div className="h-[34px]" aria-hidden="true" />
+              )}
+            </>
           )}
         </div>
 
@@ -154,7 +176,7 @@ export const ArrangeInventoryTray = ({ items, onSelectItem }: ArrangeInventoryTr
                 </motion.div>
               ) : (
                 filteredItems.map(
-                  ({ asset, availableCount, isNew, isUnlocked, ownedCount, placed, placedCount, selected, stateLabel, subtitleLabel }, index) => {
+                  ({ asset, availableCount, isCollectedOnly = false, isNew, isUnlocked, ownedCount, placed, placedCount, selected, stateLabel, subtitleLabel }, index) => {
                     const Icon = asset.assetType === "landmark" ? MapPin : Sparkles;
                     return (
                       <motion.button
@@ -192,12 +214,17 @@ export const ArrangeInventoryTray = ({ items, onSelectItem }: ArrangeInventoryTr
                               <Lock className="h-2.5 w-2.5" />
                             </span>
                           ) : null}
-                          {isUnlocked && placed ? (
+                          {isUnlocked && isCollectedOnly ? (
+                            <span className="absolute bottom-0 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#7d877f] text-white shadow-[0_5px_10px_rgba(48,64,55,0.12)]">
+                              <Lock className="h-2.5 w-2.5" />
+                            </span>
+                          ) : null}
+                          {isUnlocked && !isCollectedOnly && placed ? (
                             <span className="absolute bottom-0 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#4b6154] text-white shadow-[0_5px_10px_rgba(48,64,55,0.18)]">
                               <Check className="h-2.5 w-2.5" />
                             </span>
                           ) : null}
-                          {isUnlocked && availableCount > 1 ? (
+                          {isUnlocked && !isCollectedOnly && availableCount > 1 ? (
                             <span className="absolute left-1 top-1 rounded-full bg-[#41584b] px-1.5 py-0.5 text-[9px] font-medium leading-none text-white shadow-[0_6px_12px_rgba(48,64,55,0.18)]">
                               ×{availableCount}
                             </span>
@@ -227,4 +254,4 @@ export const ArrangeInventoryTray = ({ items, onSelectItem }: ArrangeInventoryTr
       </div>
     </motion.div>
   );
-};
+});

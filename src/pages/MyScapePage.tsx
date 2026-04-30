@@ -5,22 +5,25 @@ import { ArrangeInventoryTray } from "../components/myscape/ArrangeInventoryTray
 import { FloatingStatsText } from "../components/myscape/FloatingStatsText";
 import { ItemActionMenu } from "../components/myscape/ItemActionMenu";
 import { ItemMemoryCard } from "../components/myscape/ItemMemoryCard";
+import { MyScapeDayDateSwitcher } from "../components/myscape/MyScapeDayDateSwitcher";
 import { MyScapeHeaderControls } from "../components/myscape/MyScapeHeaderControls";
 import { NewUnlockToast } from "../components/myscape/NewUnlockToast";
 import { ScapeBoardStage } from "../components/myscape/ScapeBoardStage";
 import { ScapeBottomTabs, type ScapeSummaryTab } from "../components/myscape/ScapeBottomTabs";
 import { useAppState } from "../hooks/useAppState";
 import type { MyScapePlacedLandmark } from "../types";
-import { saveMyScapeLayout } from "../utils/storage";
+import { saveMyScapeLayout, savePlacedAssetIds } from "../utils/storage";
 import {
   buildMyScapeUnlockTimeline,
   clampGridPosition,
   createPlacedLandmark,
+  getMyScapeDateKey,
   getItemZIndex,
   gridToScreen,
   isGridCellOccupied,
   resolveMyScapeCatalogAssets,
   restoreMyScapeLayout,
+  restorePlacedAssetIds,
   screenToGrid,
   serializeMyScapeLayout,
   type MyScapeUnlockEvent,
@@ -57,6 +60,32 @@ const getStartOfToday = () => {
   today.setHours(0, 0, 0, 0);
   return today;
 };
+
+const getStartOfDay = (value: Date) => {
+  const day = new Date(value);
+  day.setHours(0, 0, 0, 0);
+  return day;
+};
+
+const isSameDay = (left: Date, right: Date) => getMyScapeDateKey(left) === getMyScapeDateKey(right);
+
+const formatDaySwitcherDate = (value: Date) =>
+  value
+    .toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    })
+    .toUpperCase();
+
+const formatDaySwitcherSubtitle = (value: Date) =>
+  isSameDay(value, new Date())
+    ? "TODAY"
+    : value
+        .toLocaleDateString("en-US", {
+          weekday: "long",
+        })
+        .toUpperCase();
 
 const isWithinDay = (value: string, dayStart: Date) => {
   const current = new Date(value).getTime();
@@ -95,17 +124,25 @@ const getMemoryContent = (
 export const MyScapePage = () => {
   const navigate = useNavigate();
   const { routes, state } = useAppState();
+  const todayDate = useMemo(() => getStartOfToday(), []);
   const [summaryTab, setSummaryTab] = useState<ScapeSummaryTab>("day");
+  const [selectedDayDate, setSelectedDayDate] = useState<Date>(todayDate);
+  const [dayTransitionDirection, setDayTransitionDirection] = useState<-1 | 0 | 1>(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [infoItemId, setInfoItemId] = useState<string | null>(null);
   const [actionMenuItemId, setActionMenuItemId] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragPreview, setDragPreview] = useState<{ x: number; y: number } | null>(null);
+  const [isInventoryDropActive, setIsInventoryDropActive] = useState(false);
   const [entryReady, setEntryReady] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [placedLandmarks, setPlacedLandmarks] = useState<MyScapePlacedLandmark[]>(() => restoreMyScapeLayout());
+  const initialDayScopeKey = `day:${getMyScapeDateKey(todayDate)}`;
+  const [placedLandmarks, setPlacedLandmarks] = useState<MyScapePlacedLandmark[]>(() => restoreMyScapeLayout(initialDayScopeKey));
+  const [loadedLayoutScopeKey, setLoadedLayoutScopeKey] = useState(initialDayScopeKey);
+  const [placedAssetIds, setPlacedAssetIds] = useState<Set<string>>(() => new Set(restorePlacedAssetIds()));
   const boardRef = useRef<HTMLDivElement>(null);
+  const inventoryTrayRef = useRef<HTMLDivElement>(null);
   const toastTimerRef = useRef<number | null>(null);
   const newToastShownRef = useRef(false);
   const suppressSelectRef = useRef(false);
@@ -118,7 +155,17 @@ export const MyScapePage = () => {
     previousRow: number;
     startClientX: number;
     startClientY: number;
-  } | null>(null);
+    } | null>(null);
+
+  const isPointerOverInventoryTray = (clientX: number, clientY: number) => {
+    const tray = inventoryTrayRef.current;
+    if (!tray) {
+      return false;
+    }
+
+    const rect = tray.getBoundingClientRect();
+    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+  };
 
   const catalogAssets = useMemo(
     () => resolveMyScapeCatalogAssets(routes, state.routeProgress),
@@ -132,11 +179,49 @@ export const MyScapePage = () => {
     [routes, state.runHistory],
   );
   const unlockEventMap = useMemo(() => new Map(unlockTimeline.map((event) => [event.id, event])), [unlockTimeline]);
+  const selectedDayStart = useMemo(() => getStartOfDay(selectedDayDate), [selectedDayDate]);
+  const selectedDayKey = useMemo(() => getMyScapeDateKey(selectedDayDate), [selectedDayDate]);
+  const isSelectedDayToday = useMemo(() => isSameDay(selectedDayDate, todayDate), [selectedDayDate, todayDate]);
+  const activeLayoutScopeKey = summaryTab === "overview" ? "overview" : `day:${selectedDayKey}`;
+  const boardViewKey = `${summaryTab}-${selectedDayKey}`;
+
+  const goToPreviousDay = () => {
+    setDayTransitionDirection(-1);
+    setSelectedDayDate((current) => {
+      const next = new Date(current);
+      next.setDate(current.getDate() - 1);
+      return getStartOfDay(next);
+    });
+  };
+
+  const goToNextDay = () => {
+    if (isSelectedDayToday) {
+      return;
+    }
+
+    setDayTransitionDirection(1);
+    setSelectedDayDate((current) => {
+      const next = new Date(current);
+      next.setDate(current.getDate() + 1);
+      return getStartOfDay(next);
+    });
+  };
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setEntryReady(true));
     return () => window.cancelAnimationFrame(frame);
   }, []);
+
+  useEffect(() => {
+    setPlacedLandmarks(restoreMyScapeLayout(activeLayoutScopeKey));
+    setLoadedLayoutScopeKey(activeLayoutScopeKey);
+    setSelectedId(null);
+    setInfoItemId(null);
+    setActionMenuItemId(null);
+    setDraggingId(null);
+    setDragPreview(null);
+    setIsInventoryDropActive(false);
+  }, [activeLayoutScopeKey]);
 
   useEffect(() => {
     setPlacedLandmarks((current) => {
@@ -192,12 +277,28 @@ export const MyScapePage = () => {
   }, [placedLandmarks, selectedId]);
 
   useEffect(() => {
+    if (loadedLayoutScopeKey !== activeLayoutScopeKey) {
+      return;
+    }
+
     const saveTimer = window.setTimeout(() => {
-      saveMyScapeLayout(serializeMyScapeLayout(placedLandmarks));
+      saveMyScapeLayout(activeLayoutScopeKey, serializeMyScapeLayout(placedLandmarks));
     }, 120);
 
     return () => window.clearTimeout(saveTimer);
-  }, [placedLandmarks]);
+  }, [activeLayoutScopeKey, loadedLayoutScopeKey, placedLandmarks]);
+
+  useEffect(() => {
+    savePlacedAssetIds(Array.from(placedAssetIds));
+  }, [placedAssetIds]);
+
+  useEffect(() => {
+    if (summaryTab === "day" && !isSelectedDayToday && isEditMode) {
+      setIsEditMode(false);
+      setActionMenuItemId(null);
+      setInfoItemId(null);
+    }
+  }, [isEditMode, isSelectedDayToday, summaryTab]);
 
   useEffect(
     () => () => {
@@ -290,13 +391,14 @@ export const MyScapePage = () => {
       const boardRect = board.getBoundingClientRect();
       const localPointerX = (event.clientX - boardRect.left) / MY_SCAPE_DEFAULT_ZOOM;
       const localPointerY = (event.clientY - boardRect.top) / MY_SCAPE_DEFAULT_ZOOM;
+      setIsInventoryDropActive(isPointerOverInventoryTray(event.clientX, event.clientY));
       setDragPreview({
         x: localPointerX - dragState.pointerOffsetX,
         y: localPointerY - dragState.pointerOffsetY,
       });
     };
 
-    const handlePointerUp = () => {
+    const handlePointerUp = (event: PointerEvent) => {
       const board = boardRef.current;
       const dragState = dragStateRef.current;
 
@@ -304,6 +406,26 @@ export const MyScapePage = () => {
         dragStateRef.current = null;
         setDraggingId(null);
         setDragPreview(null);
+        setIsInventoryDropActive(false);
+        return;
+      }
+
+      const shouldReturnToInventory = isPointerOverInventoryTray(event.clientX, event.clientY);
+
+      if (shouldReturnToInventory) {
+        const returnedItem = placedLandmarks.find((item) => item.id === dragState.itemId) ?? null;
+        const returnedAsset = returnedItem ? assetMap.get(returnedItem.landmarkId) : null;
+
+        setPlacedLandmarks((current) => current.filter((item) => item.id !== dragState.itemId));
+        setSelectedId(null);
+        setInfoItemId(null);
+        setActionMenuItemId(null);
+        suppressSelectRef.current = true;
+        dragStateRef.current = null;
+        setDraggingId(null);
+        setDragPreview(null);
+        setIsInventoryDropActive(false);
+        showToast(returnedAsset ? `${returnedAsset.name} returned to inventory` : "Returned to inventory");
         return;
       }
 
@@ -345,6 +467,7 @@ export const MyScapePage = () => {
       dragStateRef.current = null;
       setDraggingId(null);
       setDragPreview(null);
+      setIsInventoryDropActive(false);
     };
 
     window.addEventListener("pointermove", handlePointerMove);
@@ -353,7 +476,7 @@ export const MyScapePage = () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [dragPreview]);
+  }, [assetMap, dragPreview, placedLandmarks]);
 
   const selectedItem = useMemo(
     () => placedLandmarks.find((item) => item.id === selectedId) ?? null,
@@ -393,16 +516,25 @@ export const MyScapePage = () => {
     return null;
   }, [dragPreview, draggingId, isEditMode, placedLandmarks, selectedItem]);
 
-  const dayStart = useMemo(() => getStartOfToday(), []);
   const dayRuns = useMemo(
-    () => state.runHistory.filter((entry) => isWithinDay(entry.completedAt, dayStart)),
-    [dayStart, state.runHistory],
+    () => state.runHistory.filter((entry) => isWithinDay(entry.completedAt, selectedDayStart)),
+    [selectedDayStart, state.runHistory],
+  );
+  const dayRouteIds = useMemo(
+    () =>
+      new Set(
+        dayRuns
+          .filter((entry) => entry.runTargetType === "personal" && entry.routeId)
+          .map((entry) => entry.routeId as string),
+      ),
+    [dayRuns],
   );
   const dayUnlocks = useMemo(
-    () => unlockTimeline.filter((entry) => isWithinDay(entry.unlockedAt, dayStart)),
-    [dayStart, unlockTimeline],
+    () => unlockTimeline.filter((entry) => isWithinDay(entry.unlockedAt, selectedDayStart)),
+    [selectedDayStart, unlockTimeline],
   );
   const newTodayIds = useMemo(() => new Set(dayUnlocks.map((entry) => entry.id)), [dayUnlocks]);
+  const scopedCatalogAssets = useMemo(() => catalogAssets, [catalogAssets]);
 
   const summaryStats = useMemo<Record<ScapeSummaryTab, SummaryStats>>(
     () => ({
@@ -434,10 +566,11 @@ export const MyScapePage = () => {
       unlockedAssets.filter((asset) => {
         const ownedCount = asset.assetType === "landmark" ? 1 : asset.ownedCount ?? 1;
         const placedCount = placedCountsByAssetId[asset.id] ?? 0;
-        return newTodayIds.has(asset.id) && ownedCount - placedCount > 0;
+        return newTodayIds.has(asset.id) && !placedAssetIds.has(asset.id) && ownedCount - placedCount > 0;
       }).length,
-    [newTodayIds, placedCountsByAssetId, unlockedAssets],
+    [newTodayIds, placedAssetIds, placedCountsByAssetId, unlockedAssets],
   );
+  const arrangeDisabled = summaryTab === "day" && !isSelectedDayToday;
 
   useEffect(() => {
     if (!entryReady || newToastShownRef.current || newUnplacedCount <= 0) {
@@ -450,17 +583,22 @@ export const MyScapePage = () => {
 
   const inventoryItems = useMemo(
     () =>
-      catalogAssets
+      scopedCatalogAssets
         .map((asset) => {
           const placedItem = placedLandmarks.find((item) => item.landmarkId === asset.id);
           const ownedCount = asset.assetType === "landmark" ? Math.min(1, asset.ownedCount ?? 0) : asset.ownedCount ?? 0;
           const isUnlocked = ownedCount > 0;
+          const isCollectedOnly = summaryTab === "day" && isUnlocked && !dayRouteIds.has(asset.routeId);
           const placedCount = placedCountsByAssetId[asset.id] ?? 0;
           const availableCount = Math.max(0, ownedCount - placedCount);
-          const isNew = newTodayIds.has(asset.id) && availableCount > 0;
+          const isNew = !isCollectedOnly && newTodayIds.has(asset.id) && availableCount > 0 && !placedAssetIds.has(asset.id);
           const stateLabel = (() => {
             if (!isUnlocked) {
               return "LOCKED";
+            }
+
+            if (isCollectedOnly) {
+              return "COLLECTED";
             }
 
             if (isNew) {
@@ -486,6 +624,7 @@ export const MyScapePage = () => {
           return {
             asset,
             availableCount,
+            isCollectedOnly,
             isNew,
             isUnlocked,
             ownedCount,
@@ -506,7 +645,7 @@ export const MyScapePage = () => {
             left.asset.name.localeCompare(right.asset.name)
           );
         }),
-    [catalogAssets, newTodayIds, placedCountsByAssetId, placedLandmarks, selectedId],
+    [dayRouteIds, newTodayIds, placedAssetIds, placedCountsByAssetId, placedLandmarks, scopedCatalogAssets, selectedId, summaryTab],
   );
 
   const placeAssetOnBoard = (assetId: string) => {
@@ -528,6 +667,7 @@ export const MyScapePage = () => {
 
     const created = createPlacedLandmark(asset.id, placedLandmarks, asset.defaultScale ?? 1);
     setPlacedLandmarks((current) => [...current, created]);
+    setPlacedAssetIds((current) => new Set(current).add(asset.id));
     setSelectedId(created.id);
     setActionMenuItemId(null);
     setInfoItemId(null);
@@ -547,24 +687,17 @@ export const MyScapePage = () => {
     showToast(asset ? `${asset.name} is already on your lawn` : "Already on your lawn");
   };
 
-  const storeSelectedItem = () => {
-    if (!selectedItem) {
-      return;
-    }
-
-    setPlacedLandmarks((current) => current.filter((item) => item.id !== selectedItem.id));
-    setActionMenuItemId(null);
-    setInfoItemId(null);
-    setSelectedId(null);
-    showToast("Returned to inventory");
-  };
-
   const activeInfoAsset = infoItem ? assetMap.get(infoItem.landmarkId) ?? null : null;
   const memoryContent = activeInfoAsset ? getMemoryContent(activeInfoAsset, unlockEventMap.get(activeInfoAsset.id) ?? null) : null;
 
   const handleToggleArrange = () => {
+    if (arrangeDisabled) {
+      showToast("Past lawns are read-only");
+      return;
+    }
+
     if (isEditMode) {
-      saveMyScapeLayout(serializeMyScapeLayout(placedLandmarks));
+      saveMyScapeLayout(activeLayoutScopeKey, serializeMyScapeLayout(placedLandmarks));
       setIsEditMode(false);
       setActionMenuItemId(null);
       setInfoItemId(null);
@@ -585,6 +718,8 @@ export const MyScapePage = () => {
       className="relative min-h-screen overflow-hidden bg-[#f6f3ec] text-ink"
     >
       <ScapeBoardStage
+        viewKey={boardViewKey}
+        transitionDirection={summaryTab === "day" ? dayTransitionDirection : 0}
         boardRef={boardRef}
         assets={unlockedAssets}
         placedLandmarks={placedLandmarks}
@@ -601,14 +736,28 @@ export const MyScapePage = () => {
 
       <MyScapeHeaderControls
         arrangeActive={isEditMode}
-        hasNewItems={newUnplacedCount > 0}
+        arrangeDisabled={arrangeDisabled}
+        hasNewItems={summaryTab === "overview" || isSelectedDayToday ? newUnplacedCount > 0 : false}
         onBack={() => navigate(-1)}
         onToggleArrange={handleToggleArrange}
       />
 
+      {summaryTab === "day" ? (
+        <MyScapeDayDateSwitcher
+          canGoNext={!isSelectedDayToday}
+          dateLabel={formatDaySwitcherDate(selectedDayDate)}
+          direction={dayTransitionDirection}
+          subtitle={formatDaySwitcherSubtitle(selectedDayDate)}
+          emptyLabel={null}
+          onPrevious={goToPreviousDay}
+          onNext={goToNextDay}
+        />
+      ) : null}
+
       <AnimatePresence>
         {!isEditMode ? (
           <FloatingStatsText
+            key={`${summaryTab}-${selectedDayKey}`}
             tab={summaryTab}
             distanceLabel={formatDistance(activeStats.distanceKm)}
             runsLabel={`${activeStats.runCount}`}
@@ -642,7 +791,6 @@ export const MyScapePage = () => {
       <ItemActionMenu
         open={isEditMode && Boolean(actionMenuItemId)}
         onMove={() => setActionMenuItemId(null)}
-        onStore={storeSelectedItem}
         onInfo={() => {
           setInfoItemId(actionMenuItemId);
           setActionMenuItemId(null);
@@ -653,12 +801,18 @@ export const MyScapePage = () => {
         {isEditMode ? (
           <ArrangeInventoryTray
             key="inventory"
+            ref={inventoryTrayRef}
             items={inventoryItems}
+            isReturnDropActive={isInventoryDropActive}
             onSelectItem={(assetId) => {
-              const asset = catalogAssets.find((entry) => entry.id === assetId);
+              const asset = scopedCatalogAssets.find((entry) => entry.id === assetId);
               const ownedCount = asset?.assetType === "landmark" ? Math.min(1, asset?.ownedCount ?? 0) : asset?.ownedCount ?? 0;
               if (!asset || ownedCount <= 0) {
                 showToast(asset ? `Locked: unlock from ${asset.routeName}` : "Locked");
+                return;
+              }
+              if (summaryTab === "day" && !dayRouteIds.has(asset.routeId)) {
+                showToast(asset ? `${asset.name} was collected earlier` : "Collected earlier");
                 return;
               }
               const placedCount = placedCountsByAssetId[assetId] ?? 0;
