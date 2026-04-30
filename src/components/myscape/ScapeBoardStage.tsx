@@ -13,7 +13,7 @@ interface ScapeBoardStageProps {
   isEditMode: boolean;
   newTodayIds: Set<string>;
   placedLandmarks: MyScapePlacedLandmark[];
-  placementPreview: { col: number; row: number; valid: boolean; active: boolean } | null;
+  placementPreview: { assetId: string; col: number; row: number; valid: boolean; active: boolean } | null;
   selectedId: string | null;
   transitionDirection?: -1 | 0 | 1;
   viewKey: string;

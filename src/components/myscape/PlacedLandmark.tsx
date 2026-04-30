@@ -43,8 +43,8 @@ export const PlacedLandmark = ({
       isEditMode ? "cursor-grab active:cursor-grabbing" : "cursor-default",
     )}
     style={{
-      left: screenX,
-      top: screenY,
+      left: screenX + (asset.offsetX ?? 0),
+      top: screenY + (asset.offsetY ?? 0),
       transform: `translate(-50%, -100%) scale(${dragging ? item.scale * 1.05 : item.scale})`,
       transformOrigin: "bottom center",
       zIndex: dragging ? 999 : item.zIndex,

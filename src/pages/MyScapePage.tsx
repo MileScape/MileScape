@@ -14,11 +14,14 @@ import { useAppState } from "../hooks/useAppState";
 import type { MyScapePlacedLandmark } from "../types";
 import { saveMyScapeLayout, savePlacedAssetIds } from "../utils/storage";
 import {
+  clampGridPositionForFootprint,
   buildMyScapeUnlockTimeline,
   clampGridPosition,
   createPlacedLandmark,
+  getAssetFootprint,
   getMyScapeDateKey,
   getItemZIndex,
+  getPlacementAnchorPoint,
   gridToScreen,
   isGridCellOccupied,
   resolveMyScapeCatalogAssets,
@@ -174,6 +177,14 @@ export const MyScapePage = () => {
   const unlockedAssets = useMemo(() => catalogAssets.filter((asset) => (asset.ownedCount ?? 0) > 0), [catalogAssets]);
   const assetIds = useMemo(() => new Set(catalogAssets.map((asset) => asset.id)), [catalogAssets]);
   const assetMap = useMemo(() => new Map(catalogAssets.map((asset) => [asset.id, asset])), [catalogAssets]);
+  const buildPlacementAssetLookup = (assetId: string) => {
+    const lookup = new Map(assetMap);
+    const asset = assetMap.get(assetId);
+    if (asset) {
+      lookup.set("__placement-preview__", asset);
+    }
+    return lookup;
+  };
   const unlockTimeline = useMemo(
     () => buildMyScapeUnlockTimeline(routes, state.runHistory),
     [routes, state.runHistory],
@@ -243,9 +254,18 @@ export const MyScapePage = () => {
   useEffect(() => {
     setPlacedLandmarks((current) =>
       current.map((item, index, items) => {
+        const asset = assetMap.get(item.landmarkId);
+        const footprint = getAssetFootprint(asset);
+
         if (typeof item.col === "number" && typeof item.row === "number") {
-          const normalized = clampGridPosition(item.col, item.row);
-          const hasConflict = isGridCellOccupied(normalized.col, normalized.row, items, item.id);
+          const normalized = clampGridPositionForFootprint(item.col, item.row, footprint.width, footprint.height);
+          const hasConflict = isGridCellOccupied(
+            normalized.col,
+            normalized.row,
+            items,
+            buildPlacementAssetLookup(item.landmarkId),
+            item.id,
+          );
 
           if (!hasConflict && normalized.col === item.col && normalized.row === item.row) {
             return {
@@ -255,7 +275,7 @@ export const MyScapePage = () => {
           }
         }
 
-        const fallback = createPlacedLandmark(item.landmarkId, current.slice(0, index), item.scale);
+        const fallback = createPlacedLandmark(item.landmarkId, current.slice(0, index), assetMap, item.scale);
         return {
           ...item,
           col: fallback.col,
@@ -264,7 +284,7 @@ export const MyScapePage = () => {
         };
       }),
     );
-  }, []);
+  }, [assetMap]);
 
   useEffect(() => {
     if (!selectedId || placedLandmarks.some((item) => item.id === selectedId)) {
@@ -351,13 +371,22 @@ export const MyScapePage = () => {
       const item = placedLandmarks.find((entry) => entry.id === itemId);
       if (!item) {
         return;
-    }
+      }
 
     setSelectedId(itemId);
     setActionMenuItemId(null);
     setInfoItemId(null);
 
-    const anchorPoint = gridToScreen(item.col, item.row, board.clientWidth, board.clientHeight);
+    const asset = assetMap.get(item.landmarkId);
+    const footprint = getAssetFootprint(asset);
+    const anchorPoint = getPlacementAnchorPoint(
+      item.col,
+      item.row,
+      footprint.width,
+      footprint.height,
+      board.clientWidth,
+      board.clientHeight,
+    );
     const localPointerX = (event.clientX - boardRect.left) / MY_SCAPE_DEFAULT_ZOOM;
     const localPointerY = (event.clientY - boardRect.top) / MY_SCAPE_DEFAULT_ZOOM;
     dragStateRef.current = {
@@ -429,12 +458,22 @@ export const MyScapePage = () => {
         return;
       }
 
-      const finalPreview =
-        dragPreview ?? gridToScreen(dragState.previousCol, dragState.previousRow, board.clientWidth, board.clientHeight);
-      const snappedGrid = clampGridPosition(
+      const draggingItem = placedLandmarks.find((item) => item.id === dragState.itemId) ?? null;
+      const draggingAsset = draggingItem ? assetMap.get(draggingItem.landmarkId) : null;
+      const draggingFootprint = getAssetFootprint(draggingAsset);
+      const previousAnchor = getPlacementAnchorPoint(
+        dragState.previousCol,
+        dragState.previousRow,
+        draggingFootprint.width,
+        draggingFootprint.height,
+        board.clientWidth,
+        board.clientHeight,
+      );
+      const finalPreview = dragPreview ?? previousAnchor;
+      const snappedGrid = clampGridPositionForFootprint(
         ...(() => {
           const grid = screenToGrid(finalPreview.x, finalPreview.y, board.clientWidth, board.clientHeight);
-          return [grid.col, grid.row] as const;
+          return [grid.col, grid.row, draggingFootprint.width, draggingFootprint.height] as const;
         })(),
       );
 
@@ -444,7 +483,15 @@ export const MyScapePage = () => {
             return item;
           }
 
-          if (isGridCellOccupied(snappedGrid.col, snappedGrid.row, current, item.id)) {
+          if (
+            isGridCellOccupied(
+              snappedGrid.col,
+              snappedGrid.row,
+              current,
+              buildPlacementAssetLookup(item.landmarkId),
+              item.id,
+            )
+          ) {
             return {
               ...item,
               col: dragState.previousCol,
@@ -493,10 +540,20 @@ export const MyScapePage = () => {
     }
 
     if (draggingId && dragPreview && boardRef.current) {
+      const draggedItem = placedLandmarks.find((item) => item.id === draggingId) ?? null;
+      const draggedAsset = draggedItem ? assetMap.get(draggedItem.landmarkId) : null;
+      const footprint = getAssetFootprint(draggedAsset);
       const snapped = screenToGrid(dragPreview.x, dragPreview.y, boardRef.current.clientWidth, boardRef.current.clientHeight);
-      const clampedGrid = clampGridPosition(snapped.col, snapped.row);
-      const valid = !isGridCellOccupied(clampedGrid.col, clampedGrid.row, placedLandmarks, draggingId);
+      const clampedGrid = clampGridPositionForFootprint(snapped.col, snapped.row, footprint.width, footprint.height);
+      const valid = !isGridCellOccupied(
+        clampedGrid.col,
+        clampedGrid.row,
+        placedLandmarks,
+        draggedItem ? buildPlacementAssetLookup(draggedItem.landmarkId) : assetMap,
+        draggingId,
+      );
       return {
+        assetId: draggedItem?.landmarkId ?? "",
         col: clampedGrid.col,
         row: clampedGrid.row,
         valid,
@@ -506,6 +563,7 @@ export const MyScapePage = () => {
 
     if (selectedItem) {
       return {
+        assetId: selectedItem.landmarkId,
         col: selectedItem.col,
         row: selectedItem.row,
         valid: true,
@@ -514,7 +572,7 @@ export const MyScapePage = () => {
     }
 
     return null;
-  }, [dragPreview, draggingId, isEditMode, placedLandmarks, selectedItem]);
+  }, [assetMap, dragPreview, draggingId, isEditMode, placedLandmarks, selectedItem]);
 
   const dayRuns = useMemo(
     () => state.runHistory.filter((entry) => isWithinDay(entry.completedAt, selectedDayStart)),
@@ -665,7 +723,7 @@ export const MyScapePage = () => {
       return;
     }
 
-    const created = createPlacedLandmark(asset.id, placedLandmarks, asset.defaultScale ?? 1);
+    const created = createPlacedLandmark(asset.id, placedLandmarks, assetMap, asset.defaultScale ?? 1);
     setPlacedLandmarks((current) => [...current, created]);
     setPlacedAssetIds((current) => new Set(current).add(asset.id));
     setSelectedId(created.id);

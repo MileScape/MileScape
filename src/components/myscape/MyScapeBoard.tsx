@@ -1,6 +1,9 @@
 import type { PointerEvent as ReactPointerEvent, RefObject } from "react";
 import type { MyScapePlacedLandmark } from "../../types";
 import {
+  getAssetFootprint,
+  getPlacementAnchorPoint,
+  getPlacementPreviewCells,
   gridToScreen,
   MY_SCAPE_GRID_COLUMNS,
   MY_SCAPE_GRID_ROWS,
@@ -18,7 +21,7 @@ interface MyScapeBoardProps {
   draggingId: string | null;
   entryReady?: boolean;
   dragPreview: { x: number; y: number } | null;
-  placementPreview: { col: number; row: number; valid: boolean; active: boolean } | null;
+  placementPreview: { assetId: string; col: number; row: number; valid: boolean; active: boolean } | null;
   isEditMode: boolean;
   newTodayIds: Set<string>;
   expanded?: boolean;
@@ -69,13 +72,23 @@ export const MyScapeBoard = ({
 
   const placementPreviewPolygon = placementPreview
     ? (() => {
-        const center = gridToScreen(placementPreview.col, placementPreview.row, boardWidth, boardHeight);
-        const top = `${center.x},${center.y - MY_SCAPE_TILE_HEIGHT / 2}`;
-        const right = `${center.x + MY_SCAPE_TILE_WIDTH / 2},${center.y}`;
-        const bottom = `${center.x},${center.y + MY_SCAPE_TILE_HEIGHT / 2}`;
-        const left = `${center.x - MY_SCAPE_TILE_WIDTH / 2},${center.y}`;
+        const previewAsset = assetMap.get(placementPreview.assetId);
+        const footprint = getAssetFootprint(previewAsset);
 
-        return `${top} ${right} ${bottom} ${left}`;
+        return getPlacementPreviewCells(
+          placementPreview.col,
+          placementPreview.row,
+          footprint.width,
+          footprint.height,
+        ).map((cell) => {
+          const center = gridToScreen(cell.col, cell.row, boardWidth, boardHeight);
+          const top = `${center.x},${center.y - MY_SCAPE_TILE_HEIGHT / 2}`;
+          const right = `${center.x + MY_SCAPE_TILE_WIDTH / 2},${center.y}`;
+          const bottom = `${center.x},${center.y + MY_SCAPE_TILE_HEIGHT / 2}`;
+          const left = `${center.x - MY_SCAPE_TILE_WIDTH / 2},${center.y}`;
+
+          return `${top} ${right} ${bottom} ${left}`;
+        });
       })()
     : null;
   const gridCells = Array.from({ length: MY_SCAPE_GRID_COLUMNS * MY_SCAPE_GRID_ROWS }, (_, index) => {
@@ -175,18 +188,22 @@ export const MyScapeBoard = ({
             <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
               {placementPreview && placementPreviewPolygon ? (
                 <g>
-                  <polygon
-                    points={placementPreviewPolygon}
-                    fill={placementPreview.valid ? "rgba(76, 175, 80, 0.28)" : "rgba(231, 76, 60, 0.28)"}
-                    stroke={placementPreview.valid ? "rgba(102, 187, 106, 0.92)" : "rgba(239, 83, 80, 0.94)"}
-                    strokeWidth="2"
-                  />
-                  <polygon
-                    points={placementPreviewPolygon}
-                    fill="none"
-                    stroke={placementPreview.valid ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.28)"}
-                    strokeWidth="0.8"
-                  />
+                  {placementPreviewPolygon.map((points, index) => (
+                    <g key={`${placementPreview.assetId}-${placementPreview.col}-${placementPreview.row}-${index}`}>
+                      <polygon
+                        points={points}
+                        fill={placementPreview.valid ? "rgba(76, 175, 80, 0.28)" : "rgba(231, 76, 60, 0.28)"}
+                        stroke={placementPreview.valid ? "rgba(102, 187, 106, 0.92)" : "rgba(239, 83, 80, 0.94)"}
+                        strokeWidth="2"
+                      />
+                      <polygon
+                        points={points}
+                        fill="none"
+                        stroke={placementPreview.valid ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.28)"}
+                        strokeWidth="0.8"
+                      />
+                    </g>
+                  ))}
                 </g>
               ) : null}
             </svg>
@@ -197,7 +214,15 @@ export const MyScapeBoard = ({
               return null;
             }
 
-            const snappedPosition = gridToScreen(item.col, item.row, boardWidth, boardHeight);
+            const footprint = getAssetFootprint(asset);
+            const snappedPosition = getPlacementAnchorPoint(
+              item.col,
+              item.row,
+              footprint.width,
+              footprint.height,
+              boardWidth,
+              boardHeight,
+            );
             const isDragging = draggingId === item.id;
             const renderedPosition = isDragging && dragPreview ? dragPreview : snappedPosition;
 

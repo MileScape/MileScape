@@ -18,6 +18,10 @@ export interface UnlockedLandmarkAsset {
   ownedCount?: number;
   routeOrder?: number;
   itemOrder?: number;
+  offsetX?: number;
+  offsetY?: number;
+  footprintWidth?: number;
+  footprintHeight?: number;
 }
 
 export type MyScapeViewMode = "day" | "week" | "month" | "year";
@@ -42,50 +46,85 @@ const MY_SCAPE_ORIGIN_Y_RATIO = 0.12;
 const MY_SCAPE_ORIGIN_X_OFFSET = 0;
 const MY_SCAPE_ORIGIN_Y_OFFSET = 12;
 
-const myScapeLandmarkImages: Record<string, { imageSrc: string; defaultScale: number }> = {
+export interface MyScapeAssetConfig {
+  defaultScale?: number;
+  footprintHeight?: number;
+  footprintWidth?: number;
+  imageSrc?: string;
+  offsetX?: number;
+  offsetY?: number;
+}
+
+const DEFAULT_FOOTPRINT_WIDTH = 1;
+const DEFAULT_FOOTPRINT_HEIGHT = 1;
+
+const myScapeAssetConfigs: Record<string, MyScapeAssetConfig> = {
   "big-ben": {
     imageSrc: "/models/landmarks/london-route/BigBen.png",
     defaultScale: 1.1,
+    offsetY: -4,
   },
   "eiffel-tower": {
     imageSrc: "/models/landmarks/paris-route/eiffel-tower.png",
     defaultScale: 1.1,
+    footprintWidth: 2,
+    footprintHeight: 2,
+    offsetY: -8,
   },
   "louvre-courtyard": {
     imageSrc: "/models/landmarks/paris-route/louvre-courtyard.png",
     defaultScale: 1.08,
+    footprintWidth: 2,
+    offsetY: -6,
   },
   "arc-de-triomphe": {
     imageSrc: "/models/landmarks/paris-route/arc-de-triomphe.png",
     defaultScale: 1.08,
+    footprintWidth: 2,
   },
   "leifeng-pagoda": {
     imageSrc: "/models/landmarks/leifeng-pagoda.png",
     defaultScale: 1.12,
+    footprintWidth: 2,
   },
   "statue-of-liberty": {
     imageSrc: "/models/landmarks/central-park-route/statue-of-liberty.png",
     defaultScale: 1.14,
+    footprintWidth: 2,
+    footprintHeight: 2,
+    offsetY: -6,
   },
   "three-pools": {
     imageSrc: "/models/landmarks/three-pools.png",
     defaultScale: 1.12,
+    footprintWidth: 2,
   },
   "tokyo-tower": {
     imageSrc: "/models/landmarks/tokyo-route/tokyo-tower.png",
     defaultScale: 1.18,
+    footprintWidth: 2,
+    footprintHeight: 2,
+    offsetY: -9,
   },
   "shibuya": {
     imageSrc: "/models/landmarks/tokyo-route/shibuya.png",
     defaultScale: 1.16,
+    footprintWidth: 2,
   },
   "senso-ji": {
     imageSrc: "/models/landmarks/tokyo-route/senso-ji.png",
     defaultScale: 1.14,
+    footprintWidth: 2,
+    footprintHeight: 2,
   },
   "tower-bridge": {
     imageSrc: "/models/landmarks/london-route/TowerBridge.png",
     defaultScale: 1.08,
+    footprintWidth: 2,
+    footprintHeight: 2,
+  },
+  "double-decker-bus": {
+    footprintWidth: 2,
   },
 };
 
@@ -166,6 +205,79 @@ const getDecorationDefaultScale = (decoration: Decoration) => {
   return 0.88;
 };
 
+export const getMyScapeAssetConfig = (assetId: string): MyScapeAssetConfig => myScapeAssetConfigs[assetId] ?? {};
+
+export const getAssetFootprint = (
+  asset: Pick<UnlockedLandmarkAsset, "footprintWidth" | "footprintHeight"> | undefined | null,
+) => ({
+  width: Math.max(1, Math.round(asset?.footprintWidth ?? DEFAULT_FOOTPRINT_WIDTH)),
+  height: Math.max(1, Math.round(asset?.footprintHeight ?? DEFAULT_FOOTPRINT_HEIGHT)),
+});
+
+export const clampGridPositionForFootprint = (
+  col: number,
+  row: number,
+  footprintWidth = DEFAULT_FOOTPRINT_WIDTH,
+  footprintHeight = DEFAULT_FOOTPRINT_HEIGHT,
+) => ({
+  col: clamp(col, 0, Math.max(0, MY_SCAPE_GRID_COLUMNS - footprintWidth)),
+  row: clamp(row, 0, Math.max(0, MY_SCAPE_GRID_ROWS - footprintHeight)),
+});
+
+const getOccupiedCells = (
+  col: number,
+  row: number,
+  footprintWidth = DEFAULT_FOOTPRINT_WIDTH,
+  footprintHeight = DEFAULT_FOOTPRINT_HEIGHT,
+) => {
+  const cells: Array<{ col: number; row: number }> = [];
+
+  for (let colOffset = 0; colOffset < footprintWidth; colOffset += 1) {
+    for (let rowOffset = 0; rowOffset < footprintHeight; rowOffset += 1) {
+      cells.push({ col: col + colOffset, row: row + rowOffset });
+    }
+  }
+
+  return cells;
+};
+
+const placementsOverlap = (
+  left: { col: number; row: number; width: number; height: number },
+  right: { col: number; row: number; width: number; height: number },
+) =>
+  left.col < right.col + right.width &&
+  left.col + left.width > right.col &&
+  left.row < right.row + right.height &&
+  left.row + left.height > right.row;
+
+export const getPlacementPreviewCells = (
+  col: number,
+  row: number,
+  footprintWidth = DEFAULT_FOOTPRINT_WIDTH,
+  footprintHeight = DEFAULT_FOOTPRINT_HEIGHT,
+) => getOccupiedCells(col, row, footprintWidth, footprintHeight);
+
+export const getPlacementAnchorPoint = (
+  col: number,
+  row: number,
+  footprintWidth: number,
+  footprintHeight: number,
+  boardWidth: number,
+  boardHeight: number,
+) => {
+  if (footprintWidth === 1 && footprintHeight === 1) {
+    return gridToScreen(col, row, boardWidth, boardHeight);
+  }
+
+  const start = gridToScreen(col, row, boardWidth, boardHeight);
+  const end = gridToScreen(col + footprintWidth - 1, row + footprintHeight - 1, boardWidth, boardHeight);
+
+  return {
+    x: (start.x + end.x) / 2,
+    y: Math.max(start.y, end.y),
+  };
+};
+
 export const resolveUnlockedLandmarkAssets = (
   routes: Route[],
   routeProgress: RouteProgress[],
@@ -179,7 +291,7 @@ export const resolveUnlockedLandmarkAssets = (
     const landmarks = route.landmarks
       .filter((landmark) => progress.unlockedLandmarkIds.includes(landmark.id))
       .map((landmark) => {
-        const landmarkImage = myScapeLandmarkImages[landmark.id];
+        const landmarkConfig = getMyScapeAssetConfig(landmark.id);
 
         return {
           ...landmark,
@@ -188,29 +300,41 @@ export const resolveUnlockedLandmarkAssets = (
           city: route.city,
           country: route.country,
           assetType: "landmark" as const,
-          imageSrc: landmarkImage?.imageSrc ?? landmark.image,
-          defaultScale: landmarkImage?.defaultScale,
+          imageSrc: landmarkConfig.imageSrc ?? landmark.image,
+          defaultScale: landmarkConfig.defaultScale,
           ownedCount: 1,
+          offsetX: landmarkConfig.offsetX,
+          offsetY: landmarkConfig.offsetY,
+          footprintWidth: landmarkConfig.footprintWidth,
+          footprintHeight: landmarkConfig.footprintHeight,
         };
       });
 
     const decorations = (route.decorations ?? [])
       .filter((decoration) => (progress.decorations[decoration.id] ?? 0) > 0)
-      .map((decoration) => ({
-        id: decoration.id,
-        name: decoration.name,
-        description: decoration.description ?? `${route.city} decoration`,
-        image: decoration.image ?? decoration.icon ?? "",
-        imageSrc: decoration.image ?? decoration.icon,
-        routeId: route.id,
-        routeName: route.name,
-        city: route.city,
-        country: route.country,
-        assetType: "decor" as const,
-        defaultScale: getDecorationDefaultScale(decoration),
-        rarity: decoration.rarity,
-        ownedCount: progress.decorations[decoration.id] ?? 0,
-      }));
+      .map((decoration) => {
+        const decorationConfig = getMyScapeAssetConfig(decoration.id);
+
+        return {
+          id: decoration.id,
+          name: decoration.name,
+          description: decoration.description ?? `${route.city} decoration`,
+          image: decoration.image ?? decoration.icon ?? "",
+          imageSrc: decorationConfig.imageSrc ?? decoration.image ?? decoration.icon,
+          routeId: route.id,
+          routeName: route.name,
+          city: route.city,
+          country: route.country,
+          assetType: "decor" as const,
+          defaultScale: decorationConfig.defaultScale ?? getDecorationDefaultScale(decoration),
+          rarity: decoration.rarity,
+          ownedCount: progress.decorations[decoration.id] ?? 0,
+          offsetX: decorationConfig.offsetX,
+          offsetY: decorationConfig.offsetY,
+          footprintWidth: decorationConfig.footprintWidth,
+          footprintHeight: decorationConfig.footprintHeight,
+        };
+      });
 
     return [...landmarks, ...decorations];
   });
@@ -223,7 +347,7 @@ export const resolveMyScapeCatalogAssets = (
     const progress = routeProgress.find((entry) => entry.routeId === route.id);
 
     const landmarks = route.landmarks.map((landmark, landmarkIndex) => {
-      const landmarkImage = myScapeLandmarkImages[landmark.id];
+      const landmarkConfig = getMyScapeAssetConfig(landmark.id);
       const isUnlocked = progress?.unlockedLandmarkIds.includes(landmark.id) ?? false;
 
       return {
@@ -233,31 +357,43 @@ export const resolveMyScapeCatalogAssets = (
         city: route.city,
         country: route.country,
         assetType: "landmark" as const,
-        imageSrc: landmarkImage?.imageSrc ?? landmark.image,
-        defaultScale: landmarkImage?.defaultScale,
+        imageSrc: landmarkConfig.imageSrc ?? landmark.image,
+        defaultScale: landmarkConfig.defaultScale,
         ownedCount: isUnlocked ? 1 : 0,
         routeOrder: routeIndex,
         itemOrder: landmarkIndex,
+        offsetX: landmarkConfig.offsetX,
+        offsetY: landmarkConfig.offsetY,
+        footprintWidth: landmarkConfig.footprintWidth,
+        footprintHeight: landmarkConfig.footprintHeight,
       };
     });
 
-    const decorations = (route.decorations ?? []).map((decoration, decorationIndex) => ({
-      id: decoration.id,
-      name: decoration.name,
-      description: decoration.description ?? `${route.city} decoration`,
-      image: decoration.image ?? decoration.icon ?? "",
-      imageSrc: decoration.image ?? decoration.icon,
-      routeId: route.id,
-      routeName: route.name,
-      city: route.city,
-      country: route.country,
-      assetType: "decor" as const,
-      defaultScale: getDecorationDefaultScale(decoration),
-      rarity: decoration.rarity,
-      ownedCount: progress?.decorations[decoration.id] ?? 0,
-      routeOrder: routeIndex,
-      itemOrder: decorationIndex,
-    }));
+    const decorations = (route.decorations ?? []).map((decoration, decorationIndex) => {
+      const decorationConfig = getMyScapeAssetConfig(decoration.id);
+
+      return {
+        id: decoration.id,
+        name: decoration.name,
+        description: decoration.description ?? `${route.city} decoration`,
+        image: decoration.image ?? decoration.icon ?? "",
+        imageSrc: decorationConfig.imageSrc ?? decoration.image ?? decoration.icon,
+        routeId: route.id,
+        routeName: route.name,
+        city: route.city,
+        country: route.country,
+        assetType: "decor" as const,
+        defaultScale: decorationConfig.defaultScale ?? getDecorationDefaultScale(decoration),
+        rarity: decoration.rarity,
+        ownedCount: progress?.decorations[decoration.id] ?? 0,
+        routeOrder: routeIndex,
+        itemOrder: decorationIndex,
+        offsetX: decorationConfig.offsetX,
+        offsetY: decorationConfig.offsetY,
+        footprintWidth: decorationConfig.footprintWidth,
+        footprintHeight: decorationConfig.footprintHeight,
+      };
+    });
 
     return [...landmarks, ...decorations];
   });
@@ -380,35 +516,94 @@ export const getMyScapeYearDemoAssets = (): UnlockedLandmarkAsset[] => [
 export const getNextZIndex = (placedLandmarks: MyScapePlacedLandmark[]) =>
   placedLandmarks.reduce((max, item) => Math.max(max, item.zIndex ?? getItemZIndex(item.col, item.row)), 0) + 1;
 
-export const isGridCellOccupied = (col: number, row: number, items: MyScapePlacedLandmark[], excludeId?: string) =>
-  items.some((item) => item.id !== excludeId && item.col === col && item.row === row);
+export const isGridCellOccupied = (
+  col: number,
+  row: number,
+  items: MyScapePlacedLandmark[],
+  assetLookup?: Map<string, UnlockedLandmarkAsset>,
+  excludeId?: string,
+) => {
+  const targetAsset = assetLookup?.get("__placement-preview__");
+  const targetFootprint = getAssetFootprint(targetAsset);
+  const normalizedTarget = clampGridPositionForFootprint(col, row, targetFootprint.width, targetFootprint.height);
+
+  return items.some((item) => {
+    if (item.id === excludeId) {
+      return false;
+    }
+
+    const itemAsset = assetLookup?.get(item.landmarkId);
+    const itemFootprint = getAssetFootprint(itemAsset);
+    const normalizedItem = clampGridPositionForFootprint(item.col, item.row, itemFootprint.width, itemFootprint.height);
+
+    return placementsOverlap(
+      {
+        col: normalizedTarget.col,
+        row: normalizedTarget.row,
+        width: targetFootprint.width,
+        height: targetFootprint.height,
+      },
+      {
+        col: normalizedItem.col,
+        row: normalizedItem.row,
+        width: itemFootprint.width,
+        height: itemFootprint.height,
+      },
+    );
+  });
+};
 
 export const createPlacedLandmark = (
   landmarkId: string,
   existing: MyScapePlacedLandmark[],
+  assetLookup?: Map<string, UnlockedLandmarkAsset>,
   initialScale = 1,
 ): MyScapePlacedLandmark => {
+  const asset = assetLookup?.get(landmarkId);
+  const footprint = getAssetFootprint(asset);
   const centerCol = Math.floor(MY_SCAPE_GRID_COLUMNS / 2);
   const centerRow = Math.floor(MY_SCAPE_GRID_ROWS / 2);
-  const candidateOffsets = [{ col: centerCol, row: centerRow }];
+  const centeredStart = clampGridPositionForFootprint(
+    centerCol - Math.floor((footprint.width - 1) / 2),
+    centerRow - Math.floor((footprint.height - 1) / 2),
+    footprint.width,
+    footprint.height,
+  );
+  const candidateOffsets = [{ col: centeredStart.col, row: centeredStart.row }];
 
   for (let ring = 1; ring <= Math.max(MY_SCAPE_GRID_COLUMNS, MY_SCAPE_GRID_ROWS); ring += 1) {
     for (let colOffset = -ring; colOffset <= ring; colOffset += 1) {
       const rowOffset = ring - Math.abs(colOffset);
       candidateOffsets.push(
-        clampGridPosition(centerCol + colOffset, centerRow + rowOffset),
+        clampGridPositionForFootprint(
+          centeredStart.col + colOffset,
+          centeredStart.row + rowOffset,
+          footprint.width,
+          footprint.height,
+        ),
       );
       if (rowOffset !== 0) {
         candidateOffsets.push(
-          clampGridPosition(centerCol + colOffset, centerRow - rowOffset),
+          clampGridPositionForFootprint(
+            centeredStart.col + colOffset,
+            centeredStart.row - rowOffset,
+            footprint.width,
+            footprint.height,
+          ),
         );
       }
     }
   }
 
   const nextPoint =
-    candidateOffsets.find((candidate) => !isGridCellOccupied(candidate.col, candidate.row, existing)) ??
-    clampGridPosition(centerCol, centerRow);
+    candidateOffsets.find((candidate) => {
+      const placementAssetLookup = new Map(assetLookup);
+      if (asset) {
+        placementAssetLookup.set("__placement-preview__", asset);
+      }
+      return !isGridCellOccupied(candidate.col, candidate.row, existing, placementAssetLookup);
+    }) ??
+    clampGridPositionForFootprint(centeredStart.col, centeredStart.row, footprint.width, footprint.height);
 
   return {
     id: crypto.randomUUID(),
@@ -556,7 +751,7 @@ export const buildMyScapeUnlockTimeline = (routes: Route[], runHistory: RunHisto
     route.landmarks
       .filter((landmark) => landmark.milestoneKm > previousDistance && landmark.milestoneKm <= nextDistance)
       .forEach((landmark) => {
-        const landmarkImage = myScapeLandmarkImages[landmark.id];
+        const landmarkConfig = getMyScapeAssetConfig(landmark.id);
         unlocks.push({
           ...landmark,
           routeId: route.id,
@@ -564,9 +759,13 @@ export const buildMyScapeUnlockTimeline = (routes: Route[], runHistory: RunHisto
           city: route.city,
           country: route.country,
           assetType: "landmark",
-          imageSrc: landmarkImage?.imageSrc ?? landmark.image,
-          defaultScale: landmarkImage?.defaultScale,
+          imageSrc: landmarkConfig.imageSrc ?? landmark.image,
+          defaultScale: landmarkConfig.defaultScale,
           ownedCount: 1,
+          offsetX: landmarkConfig.offsetX,
+          offsetY: landmarkConfig.offsetY,
+          footprintWidth: landmarkConfig.footprintWidth,
+          footprintHeight: landmarkConfig.footprintHeight,
           unlockedAt: run.completedAt,
         });
       });
