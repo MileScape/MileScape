@@ -1,4 +1,5 @@
-import type { Decoration, Landmark, MyScapeLayout, MyScapePlacedLandmark, Route, RouteProgress, RunHistoryItem } from "../types";
+import { myScapeAssetConfigs, type MyScapeAssetConfig } from "../data/myScapeAssetConfigs";
+import type { Decoration, MyScapeLayout, MyScapePlacedLandmark, Route, RouteProgress, RunHistoryItem } from "../types";
 import { loadMyScapeLayout, loadPlacedAssetIds } from "./storage";
 
 export interface UnlockedLandmarkAsset {
@@ -46,87 +47,8 @@ const MY_SCAPE_ORIGIN_Y_RATIO = 0.12;
 const MY_SCAPE_ORIGIN_X_OFFSET = 0;
 const MY_SCAPE_ORIGIN_Y_OFFSET = 12;
 
-export interface MyScapeAssetConfig {
-  defaultScale?: number;
-  footprintHeight?: number;
-  footprintWidth?: number;
-  imageSrc?: string;
-  offsetX?: number;
-  offsetY?: number;
-}
-
 const DEFAULT_FOOTPRINT_WIDTH = 1;
 const DEFAULT_FOOTPRINT_HEIGHT = 1;
-
-const myScapeAssetConfigs: Record<string, MyScapeAssetConfig> = {
-  "big-ben": {
-    imageSrc: "/models/landmarks/london-route/BigBen.png",
-    defaultScale: 1.1,
-    offsetY: -4,
-  },
-  "eiffel-tower": {
-    imageSrc: "/models/landmarks/paris-route/eiffel-tower.png",
-    defaultScale: 1.1,
-    footprintWidth: 2,
-    footprintHeight: 2,
-    offsetY: -8,
-  },
-  "louvre-courtyard": {
-    imageSrc: "/models/landmarks/paris-route/louvre-courtyard.png",
-    defaultScale: 1.08,
-    footprintWidth: 2,
-    offsetY: -6,
-  },
-  "arc-de-triomphe": {
-    imageSrc: "/models/landmarks/paris-route/arc-de-triomphe.png",
-    defaultScale: 1.08,
-    footprintWidth: 2,
-  },
-  "leifeng-pagoda": {
-    imageSrc: "/models/landmarks/leifeng-pagoda.png",
-    defaultScale: 1.12,
-    footprintWidth: 2,
-  },
-  "statue-of-liberty": {
-    imageSrc: "/models/landmarks/central-park-route/statue-of-liberty.png",
-    defaultScale: 1.14,
-    footprintWidth: 2,
-    footprintHeight: 2,
-    offsetY: -6,
-  },
-  "three-pools": {
-    imageSrc: "/models/landmarks/three-pools.png",
-    defaultScale: 1.12,
-    footprintWidth: 2,
-  },
-  "tokyo-tower": {
-    imageSrc: "/models/landmarks/tokyo-route/tokyo-tower.png",
-    defaultScale: 1.18,
-    footprintWidth: 2,
-    footprintHeight: 2,
-    offsetY: -9,
-  },
-  "shibuya": {
-    imageSrc: "/models/landmarks/tokyo-route/shibuya.png",
-    defaultScale: 1.16,
-    footprintWidth: 2,
-  },
-  "senso-ji": {
-    imageSrc: "/models/landmarks/tokyo-route/senso-ji.png",
-    defaultScale: 1.14,
-    footprintWidth: 2,
-    footprintHeight: 2,
-  },
-  "tower-bridge": {
-    imageSrc: "/models/landmarks/london-route/TowerBridge.png",
-    defaultScale: 1.08,
-    footprintWidth: 2,
-    footprintHeight: 2,
-  },
-  "double-decker-bus": {
-    footprintWidth: 2,
-  },
-};
 
 export const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
