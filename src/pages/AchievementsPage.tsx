@@ -1,31 +1,101 @@
-import {
-  Award,
-  CalendarCheck,
-  CheckCircle2,
-  Coins,
-  Flag,
-  Footprints,
-  Lock,
-  MapPin,
-  Route,
-  Sparkles,
-  Star,
-  Trophy,
-  Users,
-  Watch
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { CheckCircle2, Lock, X } from "lucide-react";
+import { useState } from "react";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { useAppState } from "../hooks/useAppState";
+import { cn } from "../utils/cn";
+
+type MedalTier = "locked" | "bronze" | "silver" | "gold" | "prism";
 
 interface AchievementItem {
   id: string;
   title: string;
   description: string;
-  unlocked: boolean;
-  progress: string;
-  icon: LucideIcon;
+  detail: string;
+  current: number;
+  baseTarget: number;
+  unit?: string;
+  image: string;
 }
+
+const achievementImages = {
+  calendar: "/models/achievement/calendar.png",
+  finalline: "/models/achievement/finalline.png",
+  food: "/models/achievement/food.png",
+  journey: "/models/achievement/journey.png",
+  zoo: "/models/achievement/zoo.png"
+};
+
+const countryAchievementImages: Record<string, string> = {
+  Australia: "/models/achievement/Australia.png",
+  China: "/models/achievement/China.png",
+  Egypt: "/models/achievement/Egypt.png",
+  France: "/models/achievement/France.png",
+  Italy: "/models/achievement/Italy.png",
+  Japan: "/models/achievement/Japen.png",
+  "South Korea": "/models/achievement/SouthKorea.png",
+  Spain: "/models/achievement/Spain.png",
+  Thailand: "/models/achievement/Thailand.png",
+  "United Kingdom": "/models/achievement/UK.png",
+  "United States": "/models/achievement/USA.png"
+};
+
+const countryDisplayNames: Record<string, { en: string; zh: string }> = {
+  Australia: { en: "Australia", zh: "澳大利亚" },
+  China: { en: "China", zh: "中国" },
+  Egypt: { en: "Egypt", zh: "埃及" },
+  France: { en: "France", zh: "法国" },
+  Italy: { en: "Italy", zh: "意大利" },
+  Japan: { en: "Japan", zh: "日本" },
+  "South Korea": { en: "South Korea", zh: "韩国" },
+  Spain: { en: "Spain", zh: "西班牙" },
+  Thailand: { en: "Thailand", zh: "泰国" },
+  "United Kingdom": { en: "United Kingdom", zh: "英国" },
+  "United States": { en: "United States", zh: "美国" }
+};
+
+const normalizeAchievementCountry = (country: string) =>
+  country === "Taiwan" ? "China" : country;
+
+const animalDecorationIds = new Set([
+  "maneki-neko",
+  "chartreux",
+  "anubis",
+  "koala",
+  "platypus",
+  "wallaby",
+  "taiwan-blue-magpie"
+]);
+
+const foodDecorationIds = new Set([
+  "takoyaki",
+  "sukiyaki",
+  "olive-oil",
+  "fuet",
+  "gambas-al-ajillo",
+  "paella",
+  "burnt-basque-cheesecake",
+  "english-breakfast",
+  "fish-and-chips",
+  "baguette",
+  "clafoutis",
+  "peach-melba",
+  "cabernet-sauvignon",
+  "kimchi",
+  "tteokbokki",
+  "soju",
+  "buldak-bokkeum-myeon",
+  "korean-fried-chicken",
+  "australian-meat-pie",
+  "espresso",
+  "margherita-pizza",
+  "lasagne",
+  "avocado",
+  "bubble-tea",
+  "taiwan-beef-noodle",
+  "mango-rice",
+  "pad-thai",
+  "banh-lot-noodles"
+]);
 
 const countRunDays = (completedAtValues: string[]) =>
   new Set(
@@ -35,444 +105,314 @@ const countRunDays = (completedAtValues: string[]) =>
       .map((date) => date.toISOString().slice(0, 10)),
   ).size;
 
+const getTierTarget = (baseTarget: number, tier: Exclude<MedalTier, "locked">) => {
+  const multipliers: Record<Exclude<MedalTier, "locked">, number> = {
+    bronze: 1,
+    silver: 3,
+    gold: 9,
+    prism: 27
+  };
+
+  return baseTarget * multipliers[tier];
+};
+
+const getMedalTier = (current: number, baseTarget: number): MedalTier => {
+  if (baseTarget <= 0 || current < baseTarget) {
+    return "locked";
+  }
+
+  if (current >= getTierTarget(baseTarget, "prism")) {
+    return "prism";
+  }
+
+  if (current >= getTierTarget(baseTarget, "gold")) {
+    return "gold";
+  }
+
+  if (current >= getTierTarget(baseTarget, "silver")) {
+    return "silver";
+  }
+
+  return "bronze";
+};
+
+const getNextTarget = (current: number, baseTarget: number) => {
+  const nextTier = (["bronze", "silver", "gold", "prism"] as const).find(
+    (tier) => current < getTierTarget(baseTarget, tier),
+  );
+
+  return nextTier ? getTierTarget(baseTarget, nextTier) : getTierTarget(baseTarget, "prism");
+};
+
+const formatProgress = (current: number, target: number, unit?: string) =>
+  `${current}/${target}${unit ? ` ${unit}` : ""}`;
+
+const medalStyles: Record<MedalTier, { shell: string; core: string; dot: string; text: string; bar: string }> = {
+  locked: {
+    shell: "bg-sage-100 text-sage-400 shadow-[inset_0_0_0_1px_rgba(93,108,82,0.08)]",
+    core: "bg-white/80 text-sage-400 ring-sage-200",
+    dot: "bg-sage-100 text-sage-400",
+    text: "text-sage-500",
+    bar: "bg-sage-300"
+  },
+  bronze: {
+    shell: "bg-gradient-to-br from-stone-400 via-yellow-700 to-stone-700 shadow-[0_14px_32px_rgba(120,96,55,0.22)]",
+    core: "bg-white/18 text-white ring-white/24",
+    dot: "bg-yellow-100 text-yellow-800",
+    text: "text-yellow-800",
+    bar: "bg-yellow-700"
+  },
+  silver: {
+    shell: "bg-gradient-to-br from-slate-100 to-slate-500 shadow-[0_14px_32px_rgba(100,116,139,0.26)]",
+    core: "bg-white/22 text-white ring-white/30",
+    dot: "bg-slate-100 text-slate-700",
+    text: "text-slate-700",
+    bar: "bg-slate-500"
+  },
+  gold: {
+    shell: "bg-gradient-to-br from-amber-200 to-yellow-600 shadow-[0_14px_32px_rgba(202,138,4,0.3)]",
+    core: "bg-white/22 text-white ring-white/32",
+    dot: "bg-amber-100 text-amber-700",
+    text: "text-amber-700",
+    bar: "bg-amber-500"
+  },
+  prism: {
+    shell: "bg-gradient-to-br from-fuchsia-400 via-sky-400 to-emerald-300 shadow-[0_14px_34px_rgba(14,165,233,0.3)]",
+    core: "bg-white/24 text-white ring-white/34",
+    dot: "bg-fuchsia-100 text-fuchsia-700",
+    text: "text-fuchsia-700",
+    bar: "bg-gradient-to-r from-fuchsia-400 via-sky-400 to-emerald-300"
+  }
+};
+
+const getMedalLabel = (tier: MedalTier, language: "en" | "zh") => {
+  const labels: Record<MedalTier, { en: string; zh: string }> = {
+    locked: { en: "Locked", zh: "未解锁" },
+    bronze: { en: "Bronze", zh: "铜牌" },
+    silver: { en: "Silver", zh: "银牌" },
+    gold: { en: "Gold", zh: "金牌" },
+    prism: { en: "Prism", zh: "棱镜" }
+  };
+
+  return labels[tier][language];
+};
+
 export const AchievementsPage = () => {
   const { language, routes, state } = useAppState();
-  const runCount = state.runHistory.length;
-  const personalRunCount = state.runHistory.filter((run) => run.runTargetType === "personal").length;
-  const missionRunCount = state.runHistory.filter((run) => run.runTargetType === "pacecrew_mission").length;
+  const [selectedAchievementId, setSelectedAchievementId] = useState<string | null>(null);
   const runDays = countRunDays(state.runHistory.map((run) => run.completedAt));
-  const totalDistanceKm = state.runHistory.reduce((sum, run) => sum + run.distanceKm, 0);
-  const longestRunKm = state.runHistory.reduce((longest, run) => Math.max(longest, run.distanceKm), 0);
+  const totalDistanceKm = Math.floor(state.runHistory.reduce((sum, run) => sum + run.distanceKm, 0));
   const completedRoutes = state.routeProgress.filter((progress) => progress.completed).length;
-  const activeRoutes = state.routeProgress.filter(
-    (progress) => progress.completedDistanceKm > 0 && !progress.completed,
-  ).length;
-  const unlockedLandmarks = state.routeProgress.reduce(
-    (sum, progress) => sum + progress.unlockedLandmarkIds.length,
-    0,
+  const unlockedDecorationIds = new Set(
+    state.routeProgress.flatMap((progress) =>
+      Object.entries(progress.decorations)
+        .filter(([, count]) => count > 0)
+        .map(([decorationId]) => decorationId),
+    ),
   );
-  const totalLandmarks = routes.reduce((sum, route) => sum + route.landmarks.length, 0);
-  const decorationCounts = state.routeProgress.flatMap((progress) => Object.values(progress.decorations));
-  const totalDecorations = decorationCounts.reduce((sum, count) => sum + count, 0);
-  const uniqueDecorations = state.routeProgress.reduce(
-    (sum, progress) => sum + Object.values(progress.decorations).filter((count) => count > 0).length,
-    0,
+  const routeDecorationIds = new Set(
+    routes.flatMap((route) => route.decorations?.map((decoration) => decoration.id) ?? []),
   );
-  const ownedRouteCount = new Set([...state.purchasedRouteIds, ...state.unlockedCrewDestinationIds]).size;
-  const joinedCrewCount = state.userPaceCrewState.memberships.length;
-  const acceptedMissionCount = state.userMissionStates.length;
-  const completedMissionCount = state.userMissionStates.filter((mission) => mission.status === "completed").length;
-  const maxRouteRunCount = state.routeProgress.reduce((max, progress) => Math.max(max, progress.runCount), 0);
+  const totalAnimalWidgets = [...animalDecorationIds].filter((id) => routeDecorationIds.has(id)).length;
+  const totalFoodWidgets = [...foodDecorationIds].filter((id) => routeDecorationIds.has(id)).length;
+  const unlockedAnimalWidgets = [...animalDecorationIds].filter((id) => unlockedDecorationIds.has(id)).length;
+  const unlockedFoodWidgets = [...foodDecorationIds].filter((id) => unlockedDecorationIds.has(id)).length;
+  const countryAchievementItems: AchievementItem[] = Object.entries(countryAchievementImages).map(([country, image]) => {
+    const countryRoutes = routes.filter((route) => normalizeAchievementCountry(route.country) === country);
+    const totals = countryRoutes.reduce(
+      (summary, route) => ({
+        target: summary.target + 1 + route.landmarks.length + (route.decorations?.length ?? 0),
+        current:
+          summary.current +
+          (() => {
+      const progress = state.routeProgress.find((entry) => entry.routeId === route.id);
+      const routeDecorationIds = route.decorations?.map((decoration) => decoration.id) ?? [];
+            const unlockedLandmarkCount = route.landmarks.filter((landmark) =>
+        progress?.unlockedLandmarkIds.includes(landmark.id),
+            ).length;
+            const unlockedDecorationCount = routeDecorationIds.filter((decorationId) =>
+        unlockedDecorationIds.has(decorationId),
+            ).length;
+
+            return (progress?.completed ? 1 : 0) + unlockedLandmarkCount + unlockedDecorationCount;
+          })()
+      }),
+      { current: 0, target: 0 },
+    );
+    const displayName = countryDisplayNames[country]?.[language] ?? country;
+
+    return language === "zh"
+      ? {
+          id: `country-${country}`,
+          title: `${displayName}全解锁`,
+          description: `解锁${displayName}的全部内容`,
+          detail: `完成${displayName}下的所有路线，解锁全部地标，并收集该国家路线里的全部装饰物。`,
+          current: totals.current,
+          baseTarget: Math.max(1, totals.target),
+          unit: "项",
+          image
+        }
+      : {
+          id: `country-${country}`,
+          title: `${displayName} Complete`,
+          description: `Unlock everything in ${displayName}`,
+          detail: `Complete every ${displayName} route, unlock every landmark, and collect every decoration from that country's routes.`,
+          current: totals.current,
+          baseTarget: Math.max(1, totals.target),
+          unit: "items",
+          image
+        };
+  });
 
   const items: AchievementItem[] = language === "zh"
     ? [
         {
-          id: "run-1-day",
-          title: "坚持跑步 1 天",
-          description: "完成任意一天的跑步记录",
-          unlocked: runDays >= 1,
-          progress: `${runDays}/1 天`,
-          icon: CalendarCheck
+          id: "calendar",
+          title: "时间记录者",
+          description: "在不同日期完成跑步",
+          detail: "日历奖牌记录你的跑步习惯。每个自然日只计算一次，持续在不同日期完成跑步会提升品质。",
+          current: runDays,
+          baseTarget: 1,
+          unit: "天",
+          image: achievementImages.calendar
         },
         {
-          id: "run-3-days",
-          title: "坚持跑步 3 天",
-          description: "在 3 个不同日期完成跑步",
-          unlocked: runDays >= 3,
-          progress: `${runDays}/3 天`,
-          icon: CalendarCheck
+          id: "journey",
+          title: "旅程开拓者",
+          description: "累计更多跑步公里",
+          detail: "旅程奖牌记录你在所有路线和任务中的累计距离，是最稳定的长期成长目标。",
+          current: totalDistanceKm,
+          baseTarget: 20,
+          unit: "km",
+          image: achievementImages.journey
         },
         {
-          id: "run-7-days",
-          title: "一周跑者",
-          description: "在 7 个不同日期留下跑步记录",
-          unlocked: runDays >= 7,
-          progress: `${runDays}/7 天`,
-          icon: CalendarCheck
+          id: "finalline",
+          title: "冲线完成者",
+          description: "完整解锁路线目的地",
+          detail: "终点线奖牌记录已完成的路线。每条路线进度达到 100% 后，都会计入这里。",
+          current: completedRoutes,
+          baseTarget: 1,
+          unit: "条",
+          image: achievementImages.finalline
+        },
+        ...countryAchievementItems,
+        {
+          id: "food",
+          title: "美食收藏家",
+          description: "解锁所有美食小组件",
+          detail: "美食奖牌统计已经获得的食物类装饰物。完成不同路线跑步，有机会收集更多地区美食。",
+          current: unlockedFoodWidgets,
+          baseTarget: Math.max(1, totalFoodWidgets),
+          unit: "个",
+          image: achievementImages.food
         },
         {
-          id: "first-run",
-          title: "第一次出发",
-          description: "完成任意一次跑步",
-          unlocked: runCount >= 1,
-          progress: `${runCount}/1 次`,
-          icon: Footprints
-        },
-        {
-          id: "ten-runs",
-          title: "稳定节奏",
-          description: "累计完成 10 次跑步",
-          unlocked: runCount >= 10,
-          progress: `${runCount}/10 次`,
-          icon: Trophy
-        },
-        {
-          id: "personal-5-runs",
-          title: "个人旅程",
-          description: "完成 5 次个人路线跑步",
-          unlocked: personalRunCount >= 5,
-          progress: `${personalRunCount}/5 次`,
-          icon: Route
-        },
-        {
-          id: "distance-20",
-          title: "累计 20 公里",
-          description: "跑步总距离达到 20 公里",
-          unlocked: totalDistanceKm >= 20,
-          progress: `${Math.floor(totalDistanceKm)}/20 km`,
-          icon: Route
-        },
-        {
-          id: "distance-100",
-          title: "百公里旅人",
-          description: "累计跑步距离达到 100 公里",
-          unlocked: totalDistanceKm >= 100,
-          progress: `${Math.floor(totalDistanceKm)}/100 km`,
-          icon: Award
-        },
-        {
-          id: "long-run-10",
-          title: "长距离尝试",
-          description: "单次跑步达到 10 公里",
-          unlocked: longestRunKm >= 10,
-          progress: `${Math.floor(longestRunKm)}/10 km`,
-          icon: Footprints
-        },
-        {
-          id: "first-route",
-          title: "完成第一条路线",
-          description: "完整解锁任意一条路线",
-          unlocked: completedRoutes >= 1,
-          progress: `${completedRoutes}/1 条`,
-          icon: Flag
-        },
-        {
-          id: "three-routes",
-          title: "城市收藏家",
-          description: "完整解锁 3 条路线",
-          unlocked: completedRoutes >= 3,
-          progress: `${completedRoutes}/3 条`,
-          icon: Flag
-        },
-        {
-          id: "active-3-routes",
-          title: "多线探索",
-          description: "同时推进 3 条未完成路线",
-          unlocked: activeRoutes >= 3,
-          progress: `${activeRoutes}/3 条`,
-          icon: MapPin
-        },
-        {
-          id: "landmark-10",
-          title: "发现 10 个地标",
-          description: "累计解锁 10 个路线地标",
-          unlocked: unlockedLandmarks >= 10,
-          progress: `${unlockedLandmarks}/10 个`,
-          icon: MapPin
-        },
-        {
-          id: "all-landmarks",
-          title: "完整图鉴",
-          description: "解锁所有路线地标",
-          unlocked: totalLandmarks > 0 && unlockedLandmarks >= totalLandmarks,
-          progress: `${unlockedLandmarks}/${totalLandmarks} 个`,
-          icon: Sparkles
-        },
-        {
-          id: "decorations-10",
-          title: "装饰收藏",
-          description: "累计获得 10 个装饰物",
-          unlocked: totalDecorations >= 10,
-          progress: `${totalDecorations}/10 个`,
-          icon: Star
-        },
-        {
-          id: "unique-decorations-10",
-          title: "风格收集者",
-          description: "收集 10 种不同装饰物",
-          unlocked: uniqueDecorations >= 10,
-          progress: `${uniqueDecorations}/10 种`,
-          icon: Sparkles
-        },
-        {
-          id: "route-repeat-3",
-          title: "熟悉的道路",
-          description: "同一条路线累计跑步 3 次",
-          unlocked: maxRouteRunCount >= 3,
-          progress: `${maxRouteRunCount}/3 次`,
-          icon: Trophy
-        },
-        {
-          id: "route-unlock-5",
-          title: "目的地解锁",
-          description: "拥有 5 条可探索路线",
-          unlocked: ownedRouteCount >= 5,
-          progress: `${ownedRouteCount}/5 条`,
-          icon: Flag
-        },
-        {
-          id: "stamps-100",
-          title: "邮票储备",
-          description: "累计获得 100 枚邮票",
-          unlocked: state.totalStampsEarned >= 100,
-          progress: `${state.totalStampsEarned}/100`,
-          icon: Coins
-        },
-        {
-          id: "balance-50",
-          title: "小金库",
-          description: "当前持有 50 枚邮票",
-          unlocked: state.currentStamps >= 50,
-          progress: `${state.currentStamps}/50`,
-          icon: Coins
-        },
-        {
-          id: "join-crew",
-          title: "加入 PaceCrew",
-          description: "加入任意一个 PaceCrew",
-          unlocked: joinedCrewCount >= 1,
-          progress: `${joinedCrewCount}/1 个`,
-          icon: Users
-        },
-        {
-          id: "mission-accepted",
-          title: "接取任务",
-          description: "接取任意 PaceCrew 任务",
-          unlocked: acceptedMissionCount >= 1,
-          progress: `${acceptedMissionCount}/1 个`,
-          icon: Users
-        },
-        {
-          id: "mission-complete",
-          title: "任务完成",
-          description: "完成任意 PaceCrew 任务",
-          unlocked: completedMissionCount >= 1,
-          progress: `${completedMissionCount}/1 个`,
-          icon: Award
-        },
-        {
-          id: "wearable-connected",
-          title: "连接设备",
-          description: "连接任意运动设备",
-          unlocked: Boolean(state.wearableConnection),
-          progress: state.wearableConnection ? "1/1" : "0/1",
-          icon: Watch
+          id: "zoo",
+          title: "动物园馆长",
+          description: "解锁所有动物小组件",
+          detail: "动物园奖牌统计已经获得的动物类装饰物，例如猫、考拉、鸭嘴兽、沙袋鼠和蓝鹊等。",
+          current: unlockedAnimalWidgets,
+          baseTarget: Math.max(1, totalAnimalWidgets),
+          unit: "个",
+          image: achievementImages.zoo
         }
       ]
     : [
         {
-          id: "run-1-day",
-          title: "Run for 1 day",
-          description: "Complete a run on any day",
-          unlocked: runDays >= 1,
-          progress: `${runDays}/1 day`,
-          icon: CalendarCheck
+          id: "calendar",
+          title: "Time Keeper",
+          description: "Run on different dates",
+          detail: "The calendar medal tracks your running habit. Each calendar date counts once, and more active dates upgrade the medal.",
+          current: runDays,
+          baseTarget: 1,
+          unit: "days",
+          image: achievementImages.calendar
         },
         {
-          id: "run-3-days",
-          title: "Run for 3 days",
-          description: "Complete runs on 3 different dates",
-          unlocked: runDays >= 3,
-          progress: `${runDays}/3 days`,
-          icon: CalendarCheck
+          id: "journey",
+          title: "Journey Maker",
+          description: "Build your total running distance",
+          detail: "The journey medal tracks total distance across routes and missions. It is the steady long-term progress medal.",
+          current: totalDistanceKm,
+          baseTarget: 20,
+          unit: "km",
+          image: achievementImages.journey
         },
         {
-          id: "run-7-days",
-          title: "One-week runner",
-          description: "Run on 7 different dates",
-          unlocked: runDays >= 7,
-          progress: `${runDays}/7 days`,
-          icon: CalendarCheck
+          id: "finalline",
+          title: "Finish Line Finisher",
+          description: "Fully unlock route destinations",
+          detail: "The finish line medal tracks completed routes. A route counts once its progress reaches 100%.",
+          current: completedRoutes,
+          baseTarget: 1,
+          unit: "routes",
+          image: achievementImages.finalline
+        },
+        ...countryAchievementItems,
+        {
+          id: "food",
+          title: "Food Collector",
+          description: "Unlock every food widget",
+          detail: "The food medal tracks food-themed decorations collected from route rewards across different cities.",
+          current: unlockedFoodWidgets,
+          baseTarget: Math.max(1, totalFoodWidgets),
+          unit: "widgets",
+          image: achievementImages.food
         },
         {
-          id: "first-run",
-          title: "First step out",
-          description: "Complete any run",
-          unlocked: runCount >= 1,
-          progress: `${runCount}/1 run`,
-          icon: Footprints
-        },
-        {
-          id: "ten-runs",
-          title: "Steady rhythm",
-          description: "Complete 10 runs in total",
-          unlocked: runCount >= 10,
-          progress: `${runCount}/10 runs`,
-          icon: Trophy
-        },
-        {
-          id: "personal-5-runs",
-          title: "Personal journey",
-          description: "Complete 5 personal route runs",
-          unlocked: personalRunCount >= 5,
-          progress: `${personalRunCount}/5 runs`,
-          icon: Route
-        },
-        {
-          id: "distance-20",
-          title: "20 km total",
-          description: "Reach 20 km of total running distance",
-          unlocked: totalDistanceKm >= 20,
-          progress: `${Math.floor(totalDistanceKm)}/20 km`,
-          icon: Route
-        },
-        {
-          id: "distance-100",
-          title: "100 km traveler",
-          description: "Reach 100 km of total running distance",
-          unlocked: totalDistanceKm >= 100,
-          progress: `${Math.floor(totalDistanceKm)}/100 km`,
-          icon: Award
-        },
-        {
-          id: "long-run-10",
-          title: "Long run attempt",
-          description: "Reach 10 km in a single run",
-          unlocked: longestRunKm >= 10,
-          progress: `${Math.floor(longestRunKm)}/10 km`,
-          icon: Footprints
-        },
-        {
-          id: "first-route",
-          title: "First route complete",
-          description: "Fully unlock any route",
-          unlocked: completedRoutes >= 1,
-          progress: `${completedRoutes}/1 route`,
-          icon: Flag
-        },
-        {
-          id: "three-routes",
-          title: "City collector",
-          description: "Fully unlock 3 routes",
-          unlocked: completedRoutes >= 3,
-          progress: `${completedRoutes}/3 routes`,
-          icon: Flag
-        },
-        {
-          id: "active-3-routes",
-          title: "Multi-route explorer",
-          description: "Make progress on 3 unfinished routes",
-          unlocked: activeRoutes >= 3,
-          progress: `${activeRoutes}/3 routes`,
-          icon: MapPin
-        },
-        {
-          id: "landmark-10",
-          title: "Discover 10 landmarks",
-          description: "Unlock 10 route landmarks in total",
-          unlocked: unlockedLandmarks >= 10,
-          progress: `${unlockedLandmarks}/10`,
-          icon: MapPin
-        },
-        {
-          id: "all-landmarks",
-          title: "Complete atlas",
-          description: "Unlock every route landmark",
-          unlocked: totalLandmarks > 0 && unlockedLandmarks >= totalLandmarks,
-          progress: `${unlockedLandmarks}/${totalLandmarks}`,
-          icon: Sparkles
-        },
-        {
-          id: "decorations-10",
-          title: "Decoration collection",
-          description: "Collect 10 decorations in total",
-          unlocked: totalDecorations >= 10,
-          progress: `${totalDecorations}/10`,
-          icon: Star
-        },
-        {
-          id: "unique-decorations-10",
-          title: "Style collector",
-          description: "Collect 10 different decorations",
-          unlocked: uniqueDecorations >= 10,
-          progress: `${uniqueDecorations}/10`,
-          icon: Sparkles
-        },
-        {
-          id: "route-repeat-3",
-          title: "Familiar road",
-          description: "Run the same route 3 times",
-          unlocked: maxRouteRunCount >= 3,
-          progress: `${maxRouteRunCount}/3 runs`,
-          icon: Trophy
-        },
-        {
-          id: "route-unlock-5",
-          title: "Destination unlocks",
-          description: "Own 5 explorable routes",
-          unlocked: ownedRouteCount >= 5,
-          progress: `${ownedRouteCount}/5 routes`,
-          icon: Flag
-        },
-        {
-          id: "stamps-100",
-          title: "Stamp reserve",
-          description: "Earn 100 stamps in total",
-          unlocked: state.totalStampsEarned >= 100,
-          progress: `${state.totalStampsEarned}/100`,
-          icon: Coins
-        },
-        {
-          id: "balance-50",
-          title: "Small treasury",
-          description: "Hold 50 stamps at once",
-          unlocked: state.currentStamps >= 50,
-          progress: `${state.currentStamps}/50`,
-          icon: Coins
-        },
-        {
-          id: "join-crew",
-          title: "Join PaceCrew",
-          description: "Join any PaceCrew",
-          unlocked: joinedCrewCount >= 1,
-          progress: `${joinedCrewCount}/1 crew`,
-          icon: Users
-        },
-        {
-          id: "mission-accepted",
-          title: "Accept a mission",
-          description: "Accept any PaceCrew mission",
-          unlocked: acceptedMissionCount >= 1,
-          progress: `${acceptedMissionCount}/1 mission`,
-          icon: Users
-        },
-        {
-          id: "mission-complete",
-          title: "Mission complete",
-          description: "Complete any PaceCrew mission",
-          unlocked: completedMissionCount >= 1,
-          progress: `${completedMissionCount}/1 mission`,
-          icon: Award
-        },
-        {
-          id: "wearable-connected",
-          title: "Connect device",
-          description: "Connect any fitness device",
-          unlocked: Boolean(state.wearableConnection),
-          progress: state.wearableConnection ? "1/1" : "0/1",
-          icon: Watch
+          id: "zoo",
+          title: "Zoo Curator",
+          description: "Unlock every animal widget",
+          detail: "The zoo medal tracks animal-themed decorations such as cats, koalas, platypus, wallaby, and blue magpie.",
+          current: unlockedAnimalWidgets,
+          baseTarget: Math.max(1, totalAnimalWidgets),
+          unit: "widgets",
+          image: achievementImages.zoo
         }
       ];
   const copy = language === "zh"
     ? {
         eyebrow: "Achievements",
         title: "成就",
-        description: "记录你的跑步坚持、路线完成、收集进度和 PaceCrew 探索。",
+        description: "成就内容已按现有奖牌图片重做。点击奖牌查看详情。",
         completed: "已达成",
         locked: "未达成",
-        summary: "已达成成就",
-        total: "全部成就"
+        summary: "已解锁奖牌",
+        total: "全部奖牌",
+        detailTitle: "成就详情",
+        baseTarget: "基础目标",
+        nextTarget: "下一目标",
+        current: "当前进度",
+        close: "关闭"
       }
     : {
         eyebrow: "Achievements",
         title: "Achievements",
-        description: "A simple record of your consistency, routes, collections, and PaceCrew progress.",
+        description: "Achievements now match the available medal artwork. Tap a medal to view details.",
         completed: "Completed",
         locked: "Locked",
-        summary: "Completed",
-        total: "Total achievements"
+        summary: "Unlocked medals",
+        total: "Total medals",
+        detailTitle: "Achievement detail",
+        baseTarget: "Base target",
+        nextTarget: "Next target",
+        current: "Current",
+        close: "Close"
       };
-  const unlockedCount = items.filter((item) => item.unlocked).length;
+  const unlockedCount = items.filter((item) => getMedalTier(item.current, item.baseTarget) !== "locked").length;
+  const selectedAchievement = items.find((item) => item.id === selectedAchievementId) ?? null;
+
+  const renderBadgeIcon = (item: AchievementItem) => (
+    <img
+      src={item.image}
+      alt=""
+      className="h-24 w-24 object-contain drop-shadow-[0_10px_14px_rgba(17,31,22,0.2)]"
+      onError={(event) => {
+        event.currentTarget.src = achievementImages.journey;
+      }}
+    />
+  );
 
   return (
     <div className="space-y-6">
@@ -493,37 +433,134 @@ export const AchievementsPage = () => {
         </div>
       </section>
 
-      <section className="space-y-3">
-        {items.map(({ id, title, description, unlocked, progress, icon: Icon }) => (
-          <article
-            key={id}
-            className="flex items-center gap-4 rounded-[26px] bg-white p-4 shadow-card ring-1 ring-sage-100"
-          >
-            <div className={unlocked ? "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sage-700 text-white" : "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sage-50 text-sage-400"}>
-              <Icon className="h-5 w-5" />
-            </div>
+      <section className="-mx-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex snap-x snap-mandatory gap-4">
+          {items.map((item) => {
+            const { id, title, description, current, baseTarget, unit } = item;
+            const medalTier = getMedalTier(current, baseTarget);
+            const medalStyle = medalStyles[medalTier];
+            const unlocked = medalTier !== "locked";
+            const nextTarget = getNextTarget(current, baseTarget);
 
-            <div className="min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-ink">{title}</h3>
-                  <p className="mt-1 text-xs leading-5 text-sage-600">{description}</p>
-                </div>
-                {unlocked ? (
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-sage-700" />
-                ) : (
-                  <Lock className="mt-0.5 h-5 w-5 shrink-0 text-sage-300" />
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setSelectedAchievementId(id)}
+                className={cn(
+                  "flex min-h-[330px] w-[76%] max-w-[280px] shrink-0 snap-center flex-col rounded-[28px] bg-white p-4 text-left shadow-card ring-1 transition active:scale-[0.99]",
+                  unlocked ? "ring-sage-100" : "ring-sage-100/80",
                 )}
-              </div>
+              >
+                <div className="flex w-full justify-center">
+                  <div className="relative flex aspect-square w-full max-w-[190px] items-center justify-center rounded-[26px] bg-sage-50/70 ring-1 ring-sage-100">
+                    <div className={cn("flex h-[132px] w-[132px] items-center justify-center rounded-full p-1.5", medalStyle.shell)}>
+                      <div className={cn("flex h-full w-full items-center justify-center rounded-full ring-1", medalStyle.core)}>
+                        {renderBadgeIcon(item)}
+                      </div>
+                    </div>
+                    <div
+                      className={cn(
+                        "absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-full ring-[3px] ring-white",
+                        medalStyle.dot,
+                      )}
+                    >
+                      {unlocked ? <CheckCircle2 className="h-[18px] w-[18px]" /> : <Lock className="h-[18px] w-[18px]" />}
+                    </div>
+                  </div>
+                </div>
 
-              <div className="mt-3 flex items-center justify-between text-[11px] font-semibold text-sage-500">
-                <span>{unlocked ? copy.completed : copy.locked}</span>
-                <span>{progress}</span>
-              </div>
-            </div>
-          </article>
-        ))}
+                <div className="mt-4 flex min-w-0 flex-1 flex-col self-stretch">
+                  <div className="flex flex-wrap items-center justify-center gap-2 text-center">
+                    <h3 className="text-sm font-semibold text-ink">{title}</h3>
+                    <span
+                      className={cn(
+                        "rounded-full bg-sage-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]",
+                        medalStyle.text,
+                      )}
+                    >
+                      {getMedalLabel(medalTier, language)}
+                    </span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-center text-xs leading-5 text-sage-600">{description}</p>
+
+                  <div className="mt-auto pt-4">
+                    <div className="flex items-center justify-between text-[11px] font-semibold text-sage-500">
+                      <span>{unlocked ? copy.completed : copy.locked}</span>
+                      <span>{formatProgress(current, nextTarget, unit)}</span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-sage-100">
+                      <div
+                        className={cn("h-full rounded-full", medalStyle.bar)}
+                        style={{ width: `${Math.min(100, Math.round((current / nextTarget) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </section>
+
+      {selectedAchievement ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/36 px-5 backdrop-blur-sm">
+          <div className="w-full max-w-[360px] rounded-[30px] bg-[#f7f5f0] p-5 shadow-[0_24px_70px_rgba(17,31,22,0.24)] ring-1 ring-white/80">
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sage-500">{copy.detailTitle}</p>
+              <button
+                type="button"
+                onClick={() => setSelectedAchievementId(null)}
+                className="rounded-full bg-white/80 p-2 text-sage-700 ring-1 ring-sage-100"
+                aria-label={copy.close}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {(() => {
+              const medalTier = getMedalTier(selectedAchievement.current, selectedAchievement.baseTarget);
+              const medalStyle = medalStyles[medalTier];
+              const nextTarget = getNextTarget(selectedAchievement.current, selectedAchievement.baseTarget);
+
+              return (
+                <div className="mt-4">
+                  <div className="flex items-center gap-4">
+                    <div className={cn("flex h-24 w-24 shrink-0 items-center justify-center rounded-full p-1", medalStyle.shell)}>
+                      <div className={cn("flex h-full w-full items-center justify-center rounded-full ring-1", medalStyle.core)}>
+                        {renderBadgeIcon(selectedAchievement)}
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-xl font-semibold text-ink">{selectedAchievement.title}</h3>
+                      <p className={cn("mt-1 text-xs font-semibold uppercase tracking-[0.14em]", medalStyle.text)}>
+                        {getMedalLabel(medalTier, language)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 text-sm leading-6 text-sage-700">{selectedAchievement.detail}</p>
+
+                  <div className="mt-5 grid grid-cols-3 gap-2">
+                    <div className="rounded-[18px] bg-white p-3 ring-1 ring-sage-100">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sage-500">{copy.current}</p>
+                      <p className="mt-1 text-sm font-semibold text-ink">{selectedAchievement.current}</p>
+                    </div>
+                    <div className="rounded-[18px] bg-white p-3 ring-1 ring-sage-100">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sage-500">{copy.baseTarget}</p>
+                      <p className="mt-1 text-sm font-semibold text-ink">{selectedAchievement.baseTarget}</p>
+                    </div>
+                    <div className="rounded-[18px] bg-white p-3 ring-1 ring-sage-100">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sage-500">{copy.nextTarget}</p>
+                      <p className="mt-1 text-sm font-semibold text-ink">{nextTarget}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
