@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { Landmark } from "lucide-react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { MyScapePlacedLandmark } from "../../types";
@@ -6,60 +7,103 @@ import { cn } from "../../utils/cn";
 
 interface PlacedLandmarkProps {
   asset: UnlockedLandmarkAsset;
+  animateIn?: boolean;
+  editable?: boolean;
   item: MyScapePlacedLandmark;
+  index?: number;
+  screenX: number;
+  screenY: number;
+  isEditMode: boolean;
   selected: boolean;
+  dragging: boolean;
   onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => void;
   onSelect: (itemId: string) => void;
 }
 
-export const PlacedLandmark = ({ asset, item, selected, onPointerDown, onSelect }: PlacedLandmarkProps) => (
+export const PlacedLandmark = ({
+  asset,
+  animateIn = false,
+  editable = false,
+  item,
+  index = 0,
+  screenX,
+  screenY,
+  isEditMode,
+  selected: _selected,
+  dragging,
+  onPointerDown,
+  onSelect,
+}: PlacedLandmarkProps) => (
   <button
     type="button"
     onPointerDown={(event) => onPointerDown(event, item.id)}
     onClick={() => onSelect(item.id)}
     className={cn(
-      "absolute touch-none select-none rounded-[26px] text-left transition duration-200",
-      selected ? "z-30" : "z-10",
+      "absolute touch-none select-none text-left transition duration-200 ease-out",
+      isEditMode ? "cursor-grab active:cursor-grabbing" : "cursor-default",
     )}
     style={{
-      left: item.x,
-      top: item.y,
-      transform: `scale(${item.scale})`,
-      transformOrigin: "center center",
-      zIndex: item.zIndex,
+      left: screenX + (asset.offsetX ?? 0),
+      top: screenY + (asset.offsetY ?? 0),
+      transform: `translate(-50%, -100%) scale(${dragging ? item.scale * 1.05 : item.scale})`,
+      transformOrigin: "bottom center",
+      zIndex: dragging ? 999 : item.zIndex,
     }}
-    aria-label={`Place ${asset.name}`}
+    aria-label={`${asset.name} on your lawn`}
   >
     {asset.imageSrc ? (
-      <div className="relative h-[84px] w-[84px]">
-        <div className="absolute left-1/2 top-1/2 h-8 w-14 -translate-x-1/2 translate-y-[8px] rounded-full bg-[radial-gradient(circle,rgba(68,86,73,0.22),rgba(68,86,73,0)_72%)] blur-[4px]" />
+      <motion.div
+        className="relative min-w-[84px]"
+        animate={
+          editable && !dragging
+            ? { scale: [1.015, 1.025, 1.015], y: [-2, -4, -2] }
+            : animateIn
+              ? { scale: 1, y: 0 }
+              : { scale: 1, y: 0 }
+        }
+        transition={
+          editable && !dragging
+            ? { duration: 2.8, delay: index * 0.03, ease: "easeInOut", repeat: Infinity }
+            : { duration: 0.36, delay: index * 0.045, ease: [0.22, 1, 0.36, 1] }
+        }
+      >
         <div
           className={cn(
-            "relative flex h-full w-full items-center justify-center rounded-[18px] transition",
-            selected ? "drop-shadow-[0_0_0_rgba(0,0,0,0)]" : "",
+           "absolute left-1/2 top-full h-7 w-12 -translate-x-1/2 -translate-y-[18px] rounded-full bg-[radial-gradient(circle,rgba(68,86,73,0.08),rgba(68,86,73,0)_72%)] blur-[3px] transition duration-200",
+            dragging ? "opacity-32" : editable ? "opacity-26" : "opacity-18",
           )}
-        >
+        />
+        <div className="relative flex items-end justify-center rounded-[18px] transition">
           <img
             src={asset.imageSrc}
             alt={asset.name}
-            className={cn(
-              "h-[74px] w-[74px] object-contain drop-shadow-[0_8px_10px_rgba(56,70,60,0.08)]",
-              selected ? "brightness-[1.03]" : "",
-            )}
+            className="pointer-events-none max-h-[112px] w-auto max-w-[132px] object-contain"
             draggable={false}
           />
         </div>
-      </div>
+      </motion.div>
     ) : (
-      <div
+      <motion.div
         className={cn(
-          "relative w-[96px] rounded-[26px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(241,246,241,0.92))] px-3 pb-3 pt-2 shadow-[0_18px_34px_rgba(44,62,49,0.14)]",
-          selected ? "ring-2 ring-sage-300" : "ring-1 ring-sage-900/6",
+          "relative w-[96px] rounded-[26px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(241,246,241,0.92))] px-3 pb-3 pt-2 transition",
+          dragging ? "ring-1 ring-sage-300/50" : "ring-1 ring-sage-900/6",
         )}
+        animate={
+          editable && !dragging
+            ? { scale: [1.015, 1.025, 1.015], y: [-2, -4, -2] }
+            : animateIn
+              ? { scale: 1, y: 0 }
+              : { scale: 1, y: 0 }
+        }
+        transition={
+          editable && !dragging
+            ? { duration: 2.8, delay: index * 0.03, ease: "easeInOut", repeat: Infinity }
+            : { duration: 0.36, delay: index * 0.045, ease: [0.22, 1, 0.36, 1] }
+        }
       >
-        <div className="absolute inset-x-4 bottom-[-10px] h-4 rounded-full bg-[radial-gradient(circle,rgba(68,86,73,0.24),rgba(68,86,73,0)_72%)] blur-[3px]" />
+        <div className="absolute inset-x-4 bottom-[-10px] h-4 rounded-full bg-[radial-gradient(circle,rgba(68,86,73,0.08),rgba(68,86,73,0)_72%)] blur-[3px]" />
         <div className="mx-auto flex h-12 w-12 items-end justify-center rounded-[18px] bg-[linear-gradient(180deg,rgba(202,219,204,0.95),rgba(150,176,156,0.95))] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-          <div className="mb-1 flex h-8 w-8 items-center justify-center rounded-[12px] bg-white/78 text-sage-700 shadow-[0_6px_16px_rgba(50,68,55,0.1)]">
+          <div className="mb-1 flex h-8 w-8 items-center justify-center rounded-[12px] bg-white/78 text-sage-700">
             <Landmark className="h-4 w-4" />
           </div>
         </div>
@@ -67,7 +111,7 @@ export const PlacedLandmark = ({ asset, item, selected, onPointerDown, onSelect 
           <p className="line-clamp-2 text-[11px] font-semibold leading-4 text-ink">{asset.name}</p>
           <p className="text-[9px] uppercase tracking-[0.2em] text-sage-500">{asset.city}</p>
         </div>
-      </div>
+      </motion.div>
     )}
   </button>
 );

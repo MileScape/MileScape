@@ -167,18 +167,22 @@ export interface WearableSyncRecord {
 export interface MyScapePlacedLandmark {
   id: string;
   landmarkId: string;
-  x: number;
-  y: number;
+  col: number;
+  row: number;
   scale: number;
-  zIndex: number;
+  x?: number;
+  y?: number;
+  zIndex?: number;
 }
 
 export interface MyScapeLayout {
   placedLandmarks: MyScapePlacedLandmark[];
+  placedAssetIds?: string[];
   updatedAt: string;
 }
 
 export interface AppState {
+  debugModeEnabled?: boolean;
   language: AppLanguage;
   selectedRouteId: string | null;
   routeProgress: RouteProgress[];
@@ -212,6 +216,7 @@ export interface AppContextValue {
   ) => RunResultSummary;
   purchaseRoute: (routeId: string) => { success: boolean; message: string };
   t: (key: string, params?: Record<string, string | number>) => string;
+  setDebugModeEnabled: (enabled: boolean) => void;
   setLanguage: (language: AppLanguage) => void;
   setSliderMaxDistanceKm: (distanceKm: number) => void;
   createPaceCrew: (input: { name: string; description: string }) => { success: boolean; message: string };

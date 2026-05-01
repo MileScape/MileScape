@@ -38,6 +38,7 @@ const createDefaultWearableSyncHistory = (): WearableSyncRecord[] => [];
 
 export const createInitialState = (): AppState =>
   syncExpiredMissionStates({
+    debugModeEnabled: false,
     language: "en",
     selectedRouteId: defaultPurchasedRouteIds[0] ?? routes[0]?.id ?? null,
     routeProgress: routes.map((route) => createDefaultRouteProgress(route.id)),
@@ -96,6 +97,7 @@ export const normalizeState = (loadedState: Partial<AppState> | null): AppState 
   const memberships = loadedState.userPaceCrewState?.memberships ?? initialState.userPaceCrewState.memberships;
 
   return syncExpiredMissionStates({
+    debugModeEnabled: loadedState.debugModeEnabled ?? false,
     language: loadedState.language ?? "en",
     selectedRouteId,
     routeProgress: mergedProgress,

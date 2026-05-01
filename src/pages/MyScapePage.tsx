@@ -1,269 +1,364 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { MyScapeBoard } from "../components/myscape/MyScapeBoard";
+import { useNavigate } from "react-router-dom";
+import { ArrangeInventoryTray } from "../components/myscape/ArrangeInventoryTray";
+import { FloatingStatsText } from "../components/myscape/FloatingStatsText";
+import { ItemActionMenu } from "../components/myscape/ItemActionMenu";
+import { ItemMemoryCard } from "../components/myscape/ItemMemoryCard";
+import { MyScapeDayDateSwitcher } from "../components/myscape/MyScapeDayDateSwitcher";
+import { MyScapeHeaderControls } from "../components/myscape/MyScapeHeaderControls";
+import { NewUnlockToast } from "../components/myscape/NewUnlockToast";
+import { ScapeBoardStage } from "../components/myscape/ScapeBoardStage";
+import { ScapeBottomTabs, type ScapeSummaryTab } from "../components/myscape/ScapeBottomTabs";
 import { useAppState } from "../hooks/useAppState";
 import type { MyScapePlacedLandmark } from "../types";
-import { saveMyScapeLayout } from "../utils/storage";
+import { saveMyScapeLayout, savePlacedAssetIds } from "../utils/storage";
 import {
-  buildMyScapeChartData,
+  clampGridPositionForFootprint,
   buildMyScapeUnlockTimeline,
+  clampGridPosition,
   createPlacedLandmark,
-  formatMyScapePeriodLabel,
-  getMyScapeYearDemoAssets,
-  getNextZIndex,
-  getPeriodEnd,
-  getPeriodStart,
-  isFuturePeriod,
-  normalizeBoardPosition,
-  resolveUnlockedLandmarkAssets,
+  getAssetFootprint,
+  getMyScapeDateKey,
+  getItemZIndex,
+  getPlacementAnchorPoint,
+  gridToScreen,
+  isGridCellOccupied,
+  resolveMyScapeCatalogAssets,
   restoreMyScapeLayout,
+  restorePlacedAssetIds,
+  screenToGrid,
   serializeMyScapeLayout,
-  shiftAnchorDate,
-  type MyScapeChartPoint,
   type MyScapeUnlockEvent,
-  type MyScapeViewMode,
+  type UnlockedLandmarkAsset,
 } from "../utils/myScape";
 
-const viewModes: Array<{ key: MyScapeViewMode; label: string }> = [
-  { key: "day", label: "Day" },
-  { key: "week", label: "Week" },
-  { key: "month", label: "Month" },
-  { key: "year", label: "Year" },
-];
-
 const formatDistance = (value: number) => `${Number(value.toFixed(1))} km`;
-const longPressDurationMs = 220;
+const formatDate = (value: string) =>
+  new Date(value).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
-const getPeriodSummaryText = (mode: MyScapeViewMode) => {
-  if (mode === "day") {
-    return "Today's running memory";
-  }
-  if (mode === "week") {
-    return "This week's running memory";
-  }
-  if (mode === "month") {
-    return "This month's running memory";
-  }
-  return "This year's running memory";
-};
+const MY_SCAPE_DEFAULT_ZOOM = 0.76;
 
-const getLawnTitle = (mode: MyScapeViewMode, anchorDate: Date) => {
-  if (mode === "day") {
-    return "Today's Lawn";
-  }
-  if (mode === "week") {
-    return "Week's Lawn";
-  }
-  if (mode === "month") {
-    return `${anchorDate.toLocaleDateString("en-US", { month: "long" })}'s Lawn`;
-  }
-  return `${anchorDate.getFullYear()}'s Lawn`;
-};
+interface SummaryStats {
+  distanceKm: number;
+  runCount: number;
+  unlockCount: number;
+}
 
-const MyScapeChartCard = ({
-  title,
-  points,
-  emptyText,
-}: {
+interface ItemMemoryContent {
+  detail?: string | null;
+  itemType: string;
+  sourceLabel: string;
+  subtitle?: string | null;
   title: string;
-  points: MyScapeChartPoint[];
-  emptyText: string;
-}) => {
-  const maxValue = Math.max(...points.map((point) => point.value), 0);
-  const visiblePoints =
-    points.length > 12 ? points.filter((_, index) => index % Math.ceil(points.length / 12) === 0).slice(0, 12) : points;
+  unlockDateLabel?: string | null;
+}
 
-  return (
-    <section className="rounded-[24px] bg-white/82 px-4 py-4 shadow-[0_16px_38px_rgba(35,52,40,0.08)] ring-1 ring-white/85 backdrop-blur-xl">
-      <h3 className="text-sm font-semibold text-ink">{title}</h3>
-      {maxValue <= 0 ? (
-        <div className="mt-4 flex h-[180px] items-center justify-center rounded-[18px] bg-sage-50/70 text-sm text-sage-500">
-          {emptyText}
-        </div>
-      ) : (
-        <div className="mt-4">
-          <div
-            className="grid h-[180px] items-end gap-1 rounded-[18px] bg-sage-50/70 px-3 pb-3 pt-6"
-            style={{ gridTemplateColumns: `repeat(${Math.max(visiblePoints.length, 1)}, minmax(0, 1fr))` }}
-          >
-            {visiblePoints.map((point) => (
-              <div key={point.label} className="flex min-w-0 flex-col items-center justify-end gap-2">
-                <div
-                  className="w-full rounded-full bg-[linear-gradient(180deg,rgba(189,208,192,0.95)_0%,rgba(78,98,88,1)_100%)]"
-                  style={{ height: `${Math.max(8, (point.value / maxValue) * 120)}px` }}
-                />
-                <span className="w-full text-center text-[9px] leading-3 text-sage-500">{point.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </section>
-  );
+const getStartOfToday = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+};
+
+const getStartOfDay = (value: Date) => {
+  const day = new Date(value);
+  day.setHours(0, 0, 0, 0);
+  return day;
+};
+
+const isSameDay = (left: Date, right: Date) => getMyScapeDateKey(left) === getMyScapeDateKey(right);
+
+const formatDaySwitcherDate = (value: Date) =>
+  value
+    .toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    })
+    .toUpperCase();
+
+const formatDaySwitcherSubtitle = (value: Date) =>
+  isSameDay(value, new Date())
+    ? "TODAY"
+    : value
+        .toLocaleDateString("en-US", {
+          weekday: "long",
+        })
+        .toUpperCase();
+
+const isWithinDay = (value: string, dayStart: Date) => {
+  const current = new Date(value).getTime();
+  const start = dayStart.getTime();
+  const end = start + 24 * 60 * 60 * 1000;
+  return current >= start && current < end;
+};
+
+const getMemoryContent = (
+  asset: UnlockedLandmarkAsset,
+  unlockEvent: MyScapeUnlockEvent | null,
+): ItemMemoryContent => {
+  const unlockDateLabel = unlockEvent?.unlockedAt ? formatDate(unlockEvent.unlockedAt) : null;
+
+  if (asset.assetType === "landmark") {
+    return {
+      title: asset.name,
+      itemType: "Landmark",
+      sourceLabel: `Unlocked from ${asset.routeName}`,
+      unlockDateLabel,
+      detail: typeof unlockEvent?.milestoneKm === "number" ? `Unlocked at ${formatDistance(unlockEvent.milestoneKm)}` : null,
+      subtitle: `${asset.city}, ${asset.country}`,
+    };
+  }
+
+  return {
+    title: asset.name,
+    itemType: "Decoration",
+    sourceLabel: `Collected from ${asset.routeName}`,
+    unlockDateLabel: unlockDateLabel ? `Collected on ${unlockDateLabel}` : null,
+    detail: typeof asset.ownedCount === "number" ? `${asset.ownedCount} collected` : null,
+    subtitle: `${asset.city}, ${asset.country}`,
+  };
 };
 
 export const MyScapePage = () => {
+  const navigate = useNavigate();
   const { routes, state } = useAppState();
-  const [viewMode, setViewMode] = useState<MyScapeViewMode>("day");
-  const [anchorDate, setAnchorDate] = useState(() => new Date());
+  const todayDate = useMemo(() => getStartOfToday(), []);
+  const [summaryTab, setSummaryTab] = useState<ScapeSummaryTab>("day");
+  const [selectedDayDate, setSelectedDayDate] = useState<Date>(todayDate);
+  const [dayTransitionDirection, setDayTransitionDirection] = useState<-1 | 0 | 1>(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [placedLandmarks, setPlacedLandmarks] = useState<MyScapePlacedLandmark[]>(() => restoreMyScapeLayout());
-  const [yearDemoLandmarks, setYearDemoLandmarks] = useState<MyScapePlacedLandmark[]>([]);
+  const [infoItemId, setInfoItemId] = useState<string | null>(null);
+  const [actionMenuItemId, setActionMenuItemId] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragPreview, setDragPreview] = useState<{ x: number; y: number } | null>(null);
+  const [isInventoryDropActive, setIsInventoryDropActive] = useState(false);
+  const [entryReady, setEntryReady] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const initialDayScopeKey = `day:${getMyScapeDateKey(todayDate)}`;
+  const [placedLandmarks, setPlacedLandmarks] = useState<MyScapePlacedLandmark[]>(() => restoreMyScapeLayout(initialDayScopeKey));
+  const [loadedLayoutScopeKey, setLoadedLayoutScopeKey] = useState(initialDayScopeKey);
+  const [placedAssetIds, setPlacedAssetIds] = useState<Set<string>>(() => new Set(restorePlacedAssetIds()));
   const boardRef = useRef<HTMLDivElement>(null);
+  const inventoryTrayRef = useRef<HTMLDivElement>(null);
+  const toastTimerRef = useRef<number | null>(null);
+  const newToastShownRef = useRef(false);
+  const suppressSelectRef = useRef(false);
   const dragStateRef = useRef<{
     itemId: string;
-    offsetX: number;
-    offsetY: number;
-  } | null>(null);
-  const longPressTimerRef = useRef<number | null>(null);
-  const today = new Date();
+    moved: boolean;
+    pointerOffsetX: number;
+    pointerOffsetY: number;
+    previousCol: number;
+    previousRow: number;
+    startClientX: number;
+    startClientY: number;
+    } | null>(null);
 
-  const unlockedAssets = useMemo(
-    () => resolveUnlockedLandmarkAssets(routes, state.routeProgress),
+  const isPointerOverInventoryTray = (clientX: number, clientY: number) => {
+    const tray = inventoryTrayRef.current;
+    if (!tray) {
+      return false;
+    }
+
+    const rect = tray.getBoundingClientRect();
+    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+  };
+
+  const catalogAssets = useMemo(
+    () => resolveMyScapeCatalogAssets(routes, state.routeProgress),
     [routes, state.routeProgress],
   );
-  const yearDemoAssets = useMemo(() => getMyScapeYearDemoAssets(), []);
-  const assets = useMemo(() => (viewMode === "year" ? yearDemoAssets : unlockedAssets), [unlockedAssets, viewMode, yearDemoAssets]);
-  const assetIds = useMemo(() => new Set(unlockedAssets.map((asset) => asset.id)), [unlockedAssets]);
-
-  useEffect(() => {
-    setPlacedLandmarks((current) => {
-      const seen = new Set<string>();
-      return current.filter((item) => {
-        if (!assetIds.has(item.landmarkId) || seen.has(item.landmarkId)) {
-          return false;
-        }
-
-        seen.add(item.landmarkId);
-        return true;
-      });
-    });
-  }, [assetIds]);
-
-  useEffect(() => {
-    if (viewMode !== "year") {
-      return;
+  const unlockedAssets = useMemo(() => catalogAssets.filter((asset) => (asset.ownedCount ?? 0) > 0), [catalogAssets]);
+  const assetIds = useMemo(() => new Set(catalogAssets.map((asset) => asset.id)), [catalogAssets]);
+  const assetMap = useMemo(() => new Map(catalogAssets.map((asset) => [asset.id, asset])), [catalogAssets]);
+  const buildPlacementAssetLookup = (assetId: string) => {
+    const lookup = new Map(assetMap);
+    const asset = assetMap.get(assetId);
+    if (asset) {
+      lookup.set("__placement-preview__", asset);
     }
-
-    const board = boardRef.current;
-    if (!board) {
-      return;
-    }
-
-    const width = board.clientWidth;
-    const height = board.clientHeight;
-    const layout = [
-      { id: "tokyo-tower", x: 0.02, y: 0.28, scale: 1.02 },
-      { id: "eiffel-tower-demo", x: 0.16, y: 0.06, scale: 0.98 },
-      { id: "london-bridge-demo", x: 0.34, y: 0.01, scale: 1.06 },
-      { id: "statue-of-liberty", x: 0.12, y: 0.46, scale: 1.06 },
-      { id: "shibuya", x: 0.36, y: 0.18, scale: 1.26 },
-      { id: "eiffel-tower-demo", x: 0.57, y: 0.26, scale: 0.96 },
-      { id: "statue-of-liberty", x: 0.69, y: 0.02, scale: 1.12 },
-      { id: "senso-ji", x: 0.82, y: 0.28, scale: 1.02 },
-      { id: "big-ben-demo", x: 0.24, y: 0.62, scale: 1.02 },
-      { id: "sydney-opera-demo", x: 0.42, y: 0.7, scale: 1.04 },
-      { id: "big-ben-demo", x: 0.64, y: 0.56, scale: 1.04 },
-    ] as const;
-
-    setYearDemoLandmarks(
-      layout.map((entry, index) => ({
-        id: `year-demo-${entry.id}-${index}`,
-        landmarkId: entry.id,
-        x: normalizeBoardPosition({ x: width * entry.x, y: height * entry.y }, width, height, entry.scale).x,
-        y: normalizeBoardPosition({ x: width * entry.x, y: height * entry.y }, width, height, entry.scale).y,
-        scale: entry.scale,
-        zIndex: index + 1,
-      })),
-    );
-  }, [viewMode]);
-
-  useEffect(() => {
-    const activeLandmarks = viewMode === "year" ? yearDemoLandmarks : placedLandmarks;
-    if (!selectedId || activeLandmarks.some((item) => item.id === selectedId)) {
-      return;
-    }
-
-    setSelectedId(null);
-  }, [placedLandmarks, selectedId, viewMode, yearDemoLandmarks]);
-
+    return lookup;
+  };
   const unlockTimeline = useMemo(
     () => buildMyScapeUnlockTimeline(routes, state.runHistory),
     [routes, state.runHistory],
   );
+  const unlockEventMap = useMemo(() => new Map(unlockTimeline.map((event) => [event.id, event])), [unlockTimeline]);
+  const selectedDayStart = useMemo(() => getStartOfDay(selectedDayDate), [selectedDayDate]);
+  const selectedDayKey = useMemo(() => getMyScapeDateKey(selectedDayDate), [selectedDayDate]);
+  const isSelectedDayToday = useMemo(() => isSameDay(selectedDayDate, todayDate), [selectedDayDate, todayDate]);
+  const activeLayoutScopeKey = summaryTab === "overview" ? "overview" : `day:${selectedDayKey}`;
+  const boardViewKey = `${summaryTab}-${selectedDayKey}`;
 
-  const periodStart = useMemo(() => getPeriodStart(anchorDate, viewMode), [anchorDate, viewMode]);
-  const periodEnd = useMemo(() => getPeriodEnd(anchorDate, viewMode), [anchorDate, viewMode]);
+  const goToPreviousDay = () => {
+    setDayTransitionDirection(-1);
+    setSelectedDayDate((current) => {
+      const next = new Date(current);
+      next.setDate(current.getDate() - 1);
+      return getStartOfDay(next);
+    });
+  };
 
-  const runsInPeriod = useMemo(
-    () =>
-      state.runHistory.filter((entry) => {
-        const completedAt = new Date(entry.completedAt).getTime();
-        return completedAt >= periodStart.getTime() && completedAt < periodEnd.getTime();
-      }),
-    [periodEnd, periodStart, state.runHistory],
-  );
+  const goToNextDay = () => {
+    if (isSelectedDayToday) {
+      return;
+    }
 
-  const unlocksInPeriod = useMemo(
-    () =>
-      unlockTimeline.filter((entry) => {
-        const unlockedAt = new Date(entry.unlockedAt).getTime();
-        return unlockedAt >= periodStart.getTime() && unlockedAt < periodEnd.getTime();
-      }),
-    [periodEnd, periodStart, unlockTimeline],
-  );
-
-  const totalDistanceKm = runsInPeriod.reduce((sum, entry) => sum + entry.distanceKm, 0);
-  const runCount = runsInPeriod.length;
-  const chartData = useMemo(
-    () => buildMyScapeChartData(state.runHistory, anchorDate, viewMode),
-    [anchorDate, state.runHistory, viewMode],
-  );
-  const nextPeriodDisabled = isFuturePeriod(shiftAnchorDate(anchorDate, viewMode, 1), viewMode);
+    setDayTransitionDirection(1);
+    setSelectedDayDate((current) => {
+      const next = new Date(current);
+      next.setDate(current.getDate() + 1);
+      return getStartOfDay(next);
+    });
+  };
 
   useEffect(() => {
-    if (viewMode === "year") {
-      return;
-    }
+    const frame = window.requestAnimationFrame(() => setEntryReady(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
-    const board = boardRef.current;
-    if (!board) {
-      return;
-    }
+  useEffect(() => {
+    setPlacedLandmarks(restoreMyScapeLayout(activeLayoutScopeKey));
+    setLoadedLayoutScopeKey(activeLayoutScopeKey);
+    setSelectedId(null);
+    setInfoItemId(null);
+    setActionMenuItemId(null);
+    setDraggingId(null);
+    setDragPreview(null);
+    setIsInventoryDropActive(false);
+  }, [activeLayoutScopeKey]);
 
-    setPlacedLandmarks((current) =>
-      unlockedAssets.reduce((next, asset) => {
-        if (!asset.imageSrc || !assetIds.has(asset.id) || next.some((item) => item.landmarkId === asset.id)) {
-          return next;
+  useEffect(() => {
+    setPlacedLandmarks((current) => {
+      return current.filter((item) => {
+        if (!assetIds.has(item.landmarkId)) {
+          return false;
         }
 
-        return [
-          ...next,
-          createPlacedLandmark(
-            asset.id,
-            next,
-            board.clientWidth,
-            board.clientHeight,
-            asset.defaultScale ?? 1,
-          ),
-        ];
-      }, current),
-    );
-  }, [assetIds, unlockedAssets]);
+        const asset = assetMap.get(item.landmarkId);
+        if (asset?.assetType === "landmark") {
+          return current.findIndex((entry) => entry.landmarkId === item.landmarkId) === current.indexOf(item);
+        }
+
+        return true;
+      });
+    });
+  }, [assetIds, assetMap]);
 
   useEffect(() => {
-    if (viewMode === "year") {
+    setPlacedLandmarks((current) =>
+      current.map((item, index, items) => {
+        const asset = assetMap.get(item.landmarkId);
+        const footprint = getAssetFootprint(asset);
+
+        if (typeof item.col === "number" && typeof item.row === "number") {
+          const normalized = clampGridPositionForFootprint(item.col, item.row, footprint.width, footprint.height);
+          const hasConflict = isGridCellOccupied(
+            normalized.col,
+            normalized.row,
+            items,
+            buildPlacementAssetLookup(item.landmarkId),
+            item.id,
+          );
+
+          if (!hasConflict && normalized.col === item.col && normalized.row === item.row) {
+            return {
+              ...item,
+              zIndex: getItemZIndex(item.col, item.row),
+            };
+          }
+        }
+
+        const fallback = createPlacedLandmark(item.landmarkId, current.slice(0, index), assetMap, item.scale);
+        return {
+          ...item,
+          col: fallback.col,
+          row: fallback.row,
+          zIndex: getItemZIndex(fallback.col, fallback.row),
+        };
+      }),
+    );
+  }, [assetMap]);
+
+  useEffect(() => {
+    if (!selectedId || placedLandmarks.some((item) => item.id === selectedId)) {
+      return;
+    }
+
+    setSelectedId(null);
+    setInfoItemId(null);
+    setActionMenuItemId(null);
+  }, [placedLandmarks, selectedId]);
+
+  useEffect(() => {
+    if (loadedLayoutScopeKey !== activeLayoutScopeKey) {
       return;
     }
 
     const saveTimer = window.setTimeout(() => {
-      saveMyScapeLayout(serializeMyScapeLayout(placedLandmarks));
+      saveMyScapeLayout(activeLayoutScopeKey, serializeMyScapeLayout(placedLandmarks));
     }, 120);
 
     return () => window.clearTimeout(saveTimer);
-  }, [placedLandmarks]);
+  }, [activeLayoutScopeKey, loadedLayoutScopeKey, placedLandmarks]);
+
+  useEffect(() => {
+    savePlacedAssetIds(Array.from(placedAssetIds));
+  }, [placedAssetIds]);
+
+  useEffect(() => {
+    if (summaryTab === "day" && !isSelectedDayToday && isEditMode) {
+      setIsEditMode(false);
+      setActionMenuItemId(null);
+      setInfoItemId(null);
+    }
+  }, [isEditMode, isSelectedDayToday, summaryTab]);
+
+  useEffect(
+    () => () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), 2600);
+  };
+
+  const handleSelectItem = (itemId: string) => {
+    if (suppressSelectRef.current) {
+      suppressSelectRef.current = false;
+      return;
+    }
+
+    setSelectedId(itemId);
+    if (isEditMode) {
+      setActionMenuItemId(itemId);
+      setInfoItemId(null);
+      return;
+    }
+
+    setInfoItemId(itemId);
+    setActionMenuItemId(null);
+  };
 
   const handleItemPointerDown = (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => {
+    if (!isEditMode) {
+      return;
+    }
+
     const board = boardRef.current;
     const target = event.currentTarget;
     if (!board) {
@@ -272,42 +367,40 @@ export const MyScapePage = () => {
 
     event.preventDefault();
     target.setPointerCapture(event.pointerId);
-    const boardRect = board.getBoundingClientRect();
-    const activeLandmarks = viewMode === "year" ? yearDemoLandmarks : placedLandmarks;
-    const item = activeLandmarks.find((entry) => entry.id === itemId);
-    if (!item) {
-      return;
-    }
-    setSelectedId(itemId);
-
-    if (longPressTimerRef.current) {
-      window.clearTimeout(longPressTimerRef.current);
-    }
-
-    longPressTimerRef.current = window.setTimeout(() => {
-      dragStateRef.current = {
-        itemId,
-        offsetX: event.clientX - boardRect.left - item.x,
-        offsetY: event.clientY - boardRect.top - item.y,
-      };
-
-      const raiseZIndex = (current: MyScapePlacedLandmark[]) =>
-        current.map((entry) =>
-          entry.id === itemId
-            ? {
-                ...entry,
-                zIndex: getNextZIndex(current),
-              }
-            : entry,
-        );
-
-      if (viewMode === "year") {
-        setYearDemoLandmarks(raiseZIndex);
+      const boardRect = board.getBoundingClientRect();
+      const item = placedLandmarks.find((entry) => entry.id === itemId);
+      if (!item) {
         return;
       }
 
-      setPlacedLandmarks(raiseZIndex);
-    }, longPressDurationMs);
+    setSelectedId(itemId);
+    setActionMenuItemId(null);
+    setInfoItemId(null);
+
+    const asset = assetMap.get(item.landmarkId);
+    const footprint = getAssetFootprint(asset);
+    const anchorPoint = getPlacementAnchorPoint(
+      item.col,
+      item.row,
+      footprint.width,
+      footprint.height,
+      board.clientWidth,
+      board.clientHeight,
+    );
+    const localPointerX = (event.clientX - boardRect.left) / MY_SCAPE_DEFAULT_ZOOM;
+    const localPointerY = (event.clientY - boardRect.top) / MY_SCAPE_DEFAULT_ZOOM;
+    dragStateRef.current = {
+      itemId,
+      moved: false,
+      pointerOffsetX: localPointerX - anchorPoint.x,
+      pointerOffsetY: localPointerY - anchorPoint.y,
+      previousCol: item.col,
+      previousRow: item.row,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+    };
+    setDraggingId(itemId);
+    setDragPreview(anchorPoint);
   };
 
   useEffect(() => {
@@ -318,44 +411,110 @@ export const MyScapePage = () => {
         return;
       }
 
+      const deltaX = event.clientX - dragState.startClientX;
+      const deltaY = event.clientY - dragState.startClientY;
+      if (!dragState.moved && Math.hypot(deltaX, deltaY) > 5) {
+        dragState.moved = true;
+      }
+
       const boardRect = board.getBoundingClientRect();
-      const updateLandmarks = (current: MyScapePlacedLandmark[]) =>
+      const localPointerX = (event.clientX - boardRect.left) / MY_SCAPE_DEFAULT_ZOOM;
+      const localPointerY = (event.clientY - boardRect.top) / MY_SCAPE_DEFAULT_ZOOM;
+      setIsInventoryDropActive(isPointerOverInventoryTray(event.clientX, event.clientY));
+      setDragPreview({
+        x: localPointerX - dragState.pointerOffsetX,
+        y: localPointerY - dragState.pointerOffsetY,
+      });
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const board = boardRef.current;
+      const dragState = dragStateRef.current;
+
+      if (!board || !dragState) {
+        dragStateRef.current = null;
+        setDraggingId(null);
+        setDragPreview(null);
+        setIsInventoryDropActive(false);
+        return;
+      }
+
+      const shouldReturnToInventory = isPointerOverInventoryTray(event.clientX, event.clientY);
+
+      if (shouldReturnToInventory) {
+        const returnedItem = placedLandmarks.find((item) => item.id === dragState.itemId) ?? null;
+        const returnedAsset = returnedItem ? assetMap.get(returnedItem.landmarkId) : null;
+
+        setPlacedLandmarks((current) => current.filter((item) => item.id !== dragState.itemId));
+        setSelectedId(null);
+        setInfoItemId(null);
+        setActionMenuItemId(null);
+        suppressSelectRef.current = true;
+        dragStateRef.current = null;
+        setDraggingId(null);
+        setDragPreview(null);
+        setIsInventoryDropActive(false);
+        showToast(returnedAsset ? `${returnedAsset.name} returned to inventory` : "Returned to inventory");
+        return;
+      }
+
+      const draggingItem = placedLandmarks.find((item) => item.id === dragState.itemId) ?? null;
+      const draggingAsset = draggingItem ? assetMap.get(draggingItem.landmarkId) : null;
+      const draggingFootprint = getAssetFootprint(draggingAsset);
+      const previousAnchor = getPlacementAnchorPoint(
+        dragState.previousCol,
+        dragState.previousRow,
+        draggingFootprint.width,
+        draggingFootprint.height,
+        board.clientWidth,
+        board.clientHeight,
+      );
+      const finalPreview = dragPreview ?? previousAnchor;
+      const snappedGrid = clampGridPositionForFootprint(
+        ...(() => {
+          const grid = screenToGrid(finalPreview.x, finalPreview.y, board.clientWidth, board.clientHeight);
+          return [grid.col, grid.row, draggingFootprint.width, draggingFootprint.height] as const;
+        })(),
+      );
+
+      setPlacedLandmarks((current) =>
         current.map((item) => {
           if (item.id !== dragState.itemId) {
             return item;
           }
 
-          const nextPosition = normalizeBoardPosition(
-            {
-              x: event.clientX - boardRect.left - dragState.offsetX,
-              y: event.clientY - boardRect.top - dragState.offsetY,
-            },
-            board.clientWidth,
-            board.clientHeight,
-            item.scale,
-          );
+          if (
+            isGridCellOccupied(
+              snappedGrid.col,
+              snappedGrid.row,
+              current,
+              buildPlacementAssetLookup(item.landmarkId),
+              item.id,
+            )
+          ) {
+            return {
+              ...item,
+              col: dragState.previousCol,
+              row: dragState.previousRow,
+              zIndex: getItemZIndex(dragState.previousCol, dragState.previousRow),
+            };
+          }
 
           return {
             ...item,
-            x: nextPosition.x,
-            y: nextPosition.y,
+            col: snappedGrid.col,
+            row: snappedGrid.row,
+            zIndex: getItemZIndex(snappedGrid.col, snappedGrid.row),
           };
-        });
+        }),
+      );
 
-      if (viewMode === "year") {
-        setYearDemoLandmarks(updateLandmarks);
-        return;
-      }
+      suppressSelectRef.current = dragState.moved;
 
-      setPlacedLandmarks(updateLandmarks);
-    };
-
-    const handlePointerUp = () => {
-      if (longPressTimerRef.current) {
-        window.clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
       dragStateRef.current = null;
+      setDraggingId(null);
+      setDragPreview(null);
+      setIsInventoryDropActive(false);
     };
 
     window.addEventListener("pointermove", handlePointerMove);
@@ -364,127 +523,379 @@ export const MyScapePage = () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [viewMode]);
+  }, [assetMap, dragPreview, placedLandmarks]);
 
-  const displayedLandmarks = viewMode === "year" ? yearDemoLandmarks : placedLandmarks;
+  const selectedItem = useMemo(
+    () => placedLandmarks.find((item) => item.id === selectedId) ?? null,
+    [placedLandmarks, selectedId],
+  );
+  const infoItem = useMemo(
+    () => placedLandmarks.find((item) => item.id === infoItemId) ?? null,
+    [infoItemId, placedLandmarks],
+  );
+
+  const placementPreview = useMemo(() => {
+    if (!isEditMode) {
+      return null;
+    }
+
+    if (draggingId && dragPreview && boardRef.current) {
+      const draggedItem = placedLandmarks.find((item) => item.id === draggingId) ?? null;
+      const draggedAsset = draggedItem ? assetMap.get(draggedItem.landmarkId) : null;
+      const footprint = getAssetFootprint(draggedAsset);
+      const snapped = screenToGrid(dragPreview.x, dragPreview.y, boardRef.current.clientWidth, boardRef.current.clientHeight);
+      const clampedGrid = clampGridPositionForFootprint(snapped.col, snapped.row, footprint.width, footprint.height);
+      const valid = !isGridCellOccupied(
+        clampedGrid.col,
+        clampedGrid.row,
+        placedLandmarks,
+        draggedItem ? buildPlacementAssetLookup(draggedItem.landmarkId) : assetMap,
+        draggingId,
+      );
+      return {
+        assetId: draggedItem?.landmarkId ?? "",
+        col: clampedGrid.col,
+        row: clampedGrid.row,
+        valid,
+        active: true,
+      };
+    }
+
+    if (selectedItem) {
+      return {
+        assetId: selectedItem.landmarkId,
+        col: selectedItem.col,
+        row: selectedItem.row,
+        valid: true,
+        active: false,
+      };
+    }
+
+    return null;
+  }, [assetMap, dragPreview, draggingId, isEditMode, placedLandmarks, selectedItem]);
+
+  const dayRuns = useMemo(
+    () => state.runHistory.filter((entry) => isWithinDay(entry.completedAt, selectedDayStart)),
+    [selectedDayStart, state.runHistory],
+  );
+  const dayRouteIds = useMemo(
+    () =>
+      new Set(
+        dayRuns
+          .filter((entry) => entry.runTargetType === "personal" && entry.routeId)
+          .map((entry) => entry.routeId as string),
+      ),
+    [dayRuns],
+  );
+  const dayUnlocks = useMemo(
+    () => unlockTimeline.filter((entry) => isWithinDay(entry.unlockedAt, selectedDayStart)),
+    [selectedDayStart, unlockTimeline],
+  );
+  const newTodayIds = useMemo(() => new Set(dayUnlocks.map((entry) => entry.id)), [dayUnlocks]);
+  const scopedCatalogAssets = useMemo(() => catalogAssets, [catalogAssets]);
+
+  const summaryStats = useMemo<Record<ScapeSummaryTab, SummaryStats>>(
+    () => ({
+      day: {
+        distanceKm: dayRuns.reduce((sum, entry) => sum + entry.distanceKm, 0),
+        runCount: dayRuns.length,
+        unlockCount: dayUnlocks.length,
+      },
+      overview: {
+        distanceKm: state.runHistory.reduce((sum, entry) => sum + entry.distanceKm, 0),
+        runCount: state.runHistory.length,
+        unlockCount: catalogAssets.filter((asset) => (asset.ownedCount ?? 0) > 0).length,
+      },
+    }),
+    [catalogAssets, dayRuns, dayUnlocks.length, state.runHistory],
+  );
+
+  const activeStats = summaryStats[summaryTab];
+  const placedCountsByAssetId = useMemo(
+    () =>
+      placedLandmarks.reduce<Record<string, number>>((accumulator, item) => {
+        accumulator[item.landmarkId] = (accumulator[item.landmarkId] ?? 0) + 1;
+        return accumulator;
+      }, {}),
+    [placedLandmarks],
+  );
+  const newUnplacedCount = useMemo(
+    () =>
+      unlockedAssets.filter((asset) => {
+        const ownedCount = asset.assetType === "landmark" ? 1 : asset.ownedCount ?? 1;
+        const placedCount = placedCountsByAssetId[asset.id] ?? 0;
+        return newTodayIds.has(asset.id) && !placedAssetIds.has(asset.id) && ownedCount - placedCount > 0;
+      }).length,
+    [newTodayIds, placedAssetIds, placedCountsByAssetId, unlockedAssets],
+  );
+  const arrangeDisabled = summaryTab === "day" && !isSelectedDayToday;
+
+  useEffect(() => {
+    if (!entryReady || newToastShownRef.current || newUnplacedCount <= 0) {
+      return;
+    }
+
+    newToastShownRef.current = true;
+    showToast(`${newUnplacedCount} new item${newUnplacedCount > 1 ? "s are" : " is"} ready to place`);
+  }, [entryReady, newUnplacedCount]);
+
+  const inventoryItems = useMemo(
+    () =>
+      scopedCatalogAssets
+        .map((asset) => {
+          const placedItem = placedLandmarks.find((item) => item.landmarkId === asset.id);
+          const ownedCount = asset.assetType === "landmark" ? Math.min(1, asset.ownedCount ?? 0) : asset.ownedCount ?? 0;
+          const isUnlocked = ownedCount > 0;
+          const isCollectedOnly = summaryTab === "day" && isUnlocked && !dayRouteIds.has(asset.routeId);
+          const placedCount = placedCountsByAssetId[asset.id] ?? 0;
+          const availableCount = Math.max(0, ownedCount - placedCount);
+          const isNew = !isCollectedOnly && newTodayIds.has(asset.id) && availableCount > 0 && !placedAssetIds.has(asset.id);
+          const stateLabel = (() => {
+            if (!isUnlocked) {
+              return "LOCKED";
+            }
+
+            if (isCollectedOnly) {
+              return "COLLECTED";
+            }
+
+            if (isNew) {
+              return "NEW";
+            }
+
+            if (asset.assetType === "decor") {
+              if (availableCount <= 0) {
+                return "ON LAWN";
+              }
+
+              if (availableCount > 1) {
+                return `×${availableCount} LEFT`;
+              }
+
+              return "AVAILABLE";
+            }
+
+            return availableCount > 0 ? "AVAILABLE" : "ON LAWN";
+          })();
+          const subtitleLabel = isUnlocked ? undefined : `From ${asset.routeName}`;
+
+          return {
+            asset,
+            availableCount,
+            isCollectedOnly,
+            isNew,
+            isUnlocked,
+            ownedCount,
+            placedCount,
+            placed: placedCount > 0,
+            selected: selectedId === placedItem?.id,
+            subtitleLabel,
+            stateLabel,
+          };
+        })
+        .sort((left, right) => {
+          const leftWeight = !left.isUnlocked ? 3 : left.isNew ? 0 : left.availableCount > 0 ? 1 : 2;
+          const rightWeight = !right.isUnlocked ? 3 : right.isNew ? 0 : right.availableCount > 0 ? 1 : 2;
+          return (
+            leftWeight - rightWeight ||
+            (left.asset.routeOrder ?? 0) - (right.asset.routeOrder ?? 0) ||
+            (left.asset.itemOrder ?? 0) - (right.asset.itemOrder ?? 0) ||
+            left.asset.name.localeCompare(right.asset.name)
+          );
+        }),
+    [dayRouteIds, newTodayIds, placedAssetIds, placedCountsByAssetId, placedLandmarks, scopedCatalogAssets, selectedId, summaryTab],
+  );
+
+  const placeAssetOnBoard = (assetId: string) => {
+    const asset = unlockedAssets.find((entry) => entry.id === assetId);
+    if (!asset) {
+      return;
+    }
+
+    const ownedCount = asset.assetType === "landmark" ? 1 : asset.ownedCount ?? 1;
+    const placedCount = placedCountsByAssetId[assetId] ?? 0;
+    const availableCount = Math.max(0, ownedCount - placedCount);
+    if (availableCount <= 0) {
+      const existingItem = placedLandmarks.find((item) => item.landmarkId === assetId);
+      if (existingItem) {
+        setSelectedId(existingItem.id);
+      }
+      return;
+    }
+
+    const created = createPlacedLandmark(asset.id, placedLandmarks, assetMap, asset.defaultScale ?? 1);
+    setPlacedLandmarks((current) => [...current, created]);
+    setPlacedAssetIds((current) => new Set(current).add(asset.id));
+    setSelectedId(created.id);
+    setActionMenuItemId(null);
+    setInfoItemId(null);
+  };
+
+  const focusPlacedAsset = (assetId: string) => {
+    const existingItem = placedLandmarks.find((item) => item.landmarkId === assetId);
+    if (!existingItem) {
+      placeAssetOnBoard(assetId);
+      return;
+    }
+
+    const asset = assetMap.get(assetId);
+    setSelectedId(existingItem.id);
+    setActionMenuItemId(null);
+    setInfoItemId(null);
+    showToast(asset ? `${asset.name} is already on your lawn` : "Already on your lawn");
+  };
+
+  const activeInfoAsset = infoItem ? assetMap.get(infoItem.landmarkId) ?? null : null;
+  const memoryContent = activeInfoAsset ? getMemoryContent(activeInfoAsset, unlockEventMap.get(activeInfoAsset.id) ?? null) : null;
+
+  const handleToggleArrange = () => {
+    if (arrangeDisabled) {
+      showToast("Past lawns are read-only");
+      return;
+    }
+
+    if (isEditMode) {
+      saveMyScapeLayout(activeLayoutScopeKey, serializeMyScapeLayout(placedLandmarks));
+      setIsEditMode(false);
+      setActionMenuItemId(null);
+      setInfoItemId(null);
+      showToast("Lawn arrangement saved");
+      return;
+    }
+
+    setIsEditMode(true);
+    setInfoItemId(null);
+    setActionMenuItemId(null);
+  };
 
   return (
-    <div className="-mx-4 -mt-[calc(5.4rem+1.95rem)] h-screen overflow-hidden bg-[linear-gradient(180deg,#f3f1eb_0%,#f6f4ef_100%)] text-ink">
-      <section className="relative h-[64vh] min-h-[520px] overflow-hidden">
-        <MyScapeBoard
-          boardRef={boardRef}
-          assets={assets}
-          placedLandmarks={displayedLandmarks}
-          selectedId={selectedId}
-          expanded={viewMode === "year"}
-          onItemPointerDown={handleItemPointerDown}
-          onSelectItem={setSelectedId}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+      className="relative min-h-screen overflow-hidden bg-[#f6f3ec] text-ink"
+    >
+      <ScapeBoardStage
+        viewKey={boardViewKey}
+        transitionDirection={summaryTab === "day" ? dayTransitionDirection : 0}
+        boardRef={boardRef}
+        assets={unlockedAssets}
+        placedLandmarks={placedLandmarks}
+        selectedId={selectedId}
+        draggingId={draggingId}
+        dragPreview={dragPreview}
+        entryReady={entryReady}
+        placementPreview={placementPreview}
+        isEditMode={isEditMode}
+        newTodayIds={newTodayIds}
+        onItemPointerDown={handleItemPointerDown}
+        onSelectItem={handleSelectItem}
+      />
+
+      <MyScapeHeaderControls
+        arrangeActive={isEditMode}
+        arrangeDisabled={arrangeDisabled}
+        hasNewItems={summaryTab === "overview" || isSelectedDayToday ? newUnplacedCount > 0 : false}
+        onBack={() => navigate(-1)}
+        onToggleArrange={handleToggleArrange}
+      />
+
+      {summaryTab === "day" ? (
+        <MyScapeDayDateSwitcher
+          canGoNext={!isSelectedDayToday}
+          dateLabel={formatDaySwitcherDate(selectedDayDate)}
+          direction={dayTransitionDirection}
+          subtitle={formatDaySwitcherSubtitle(selectedDayDate)}
+          emptyLabel={null}
+          onPrevious={goToPreviousDay}
+          onNext={goToNextDay}
         />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,rgba(243,241,235,0)_0%,rgba(243,241,235,0.96)_100%)]" />
-      </section>
+      ) : null}
 
-      <section className="relative z-10 -mt-8 h-[44vh] min-h-[200px] rounded-t-[38px] bg-[linear-gradient(180deg,rgba(247,245,239,0.98),rgba(244,241,234,1))] px-6 pb-10 pt-6 shadow-[0_-20px_40px_rgba(35,52,40,0.08)] ring-1 ring-white/75">
-        <div className="mx-auto flex h-full max-w-md flex-col overflow-y-auto overscroll-contain pr-1">
-          <div className="mb-8 space-y-6">
-          <div className="space-y-2">
-            <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-sage-500">My Scape</p>
-            <h1 className="font-destination-display text-[3rem] leading-[0.92] tracking-[0.01em] text-[#2e3e35]">
-              {getLawnTitle(viewMode, anchorDate)}
-            </h1>
-          </div>
+      <AnimatePresence>
+        {!isEditMode ? (
+          <FloatingStatsText
+            key={`${summaryTab}-${selectedDayKey}`}
+            tab={summaryTab}
+            distanceLabel={formatDistance(activeStats.distanceKm)}
+            runsLabel={`${activeStats.runCount}`}
+            unlocksLabel={`${activeStats.unlockCount}`}
+          />
+        ) : null}
+      </AnimatePresence>
 
-          <section className="rounded-[26px] bg-white/84 p-2 shadow-[0_18px_40px_rgba(35,52,40,0.08)] ring-1 ring-white/88 backdrop-blur-xl">
-            <div className="grid grid-cols-4 gap-2">
-              {viewModes.map((mode) => (
-                <button
-                  key={mode.key}
-                  type="button"
-                  onClick={() => {
-                    setViewMode(mode.key);
-                    setAnchorDate(today);
-                  }}
-                  className={`rounded-[16px] px-3 py-3 text-sm font-medium transition ${
-                    viewMode === mode.key
-                      ? "bg-[linear-gradient(180deg,#5f7567,#42574b)] text-white shadow-[0_14px_24px_rgba(45,62,53,0.16)]"
-                      : "bg-sage-50/70 text-sage-500"
-                  }`}
-                >
-                  {mode.label}
-                </button>
-              ))}
-            </div>
-          </section>
+      <NewUnlockToast message={toastMessage} />
 
-          <section className="space-y-5">
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setAnchorDate((current) => shiftAnchorDate(current, viewMode, -1))}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/72 text-sage-700 ring-1 ring-[#e6e0d4]"
-                aria-label="View previous period"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
+      {actionMenuItemId ? (
+        <button
+          type="button"
+          aria-label="Dismiss item actions"
+          className="absolute inset-0 z-20 bg-transparent"
+          onClick={() => setActionMenuItemId(null)}
+        />
+      ) : null}
 
-              <div className="text-center">
-                <p className="text-xl font-semibold tracking-[-0.03em] text-[#2f3f35]">{formatMyScapePeriodLabel(anchorDate, viewMode)}</p>
-                <p className="mt-1 text-xs uppercase tracking-[0.22em] text-sage-500">{getPeriodSummaryText(viewMode)}</p>
-              </div>
+      <ItemMemoryCard
+        open={Boolean(memoryContent)}
+        title={memoryContent?.title ?? ""}
+        itemType={memoryContent?.itemType ?? ""}
+        sourceLabel={memoryContent?.sourceLabel ?? ""}
+        unlockDateLabel={memoryContent?.unlockDateLabel ?? null}
+        detail={memoryContent?.detail ?? null}
+        subtitle={memoryContent?.subtitle ?? null}
+        onClose={() => setInfoItemId(null)}
+      />
 
-              <button
-                type="button"
-                onClick={() => setAnchorDate((current) => shiftAnchorDate(current, viewMode, 1))}
-                disabled={nextPeriodDisabled}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/72 text-sage-700 ring-1 ring-[#e6e0d4] disabled:opacity-35"
-                aria-label="View next period"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
+      <ItemActionMenu
+        open={isEditMode && Boolean(actionMenuItemId)}
+        onMove={() => setActionMenuItemId(null)}
+        onInfo={() => {
+          setInfoItemId(actionMenuItemId);
+          setActionMenuItemId(null);
+        }}
+      />
 
-            <div className="grid grid-cols-3 gap-3 rounded-[26px] bg-white/58 px-4 py-4 ring-1 ring-white/75">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.22em] text-sage-500">Distance</p>
-                <p className="mt-2 text-[1.55rem] font-semibold tracking-[-0.04em] text-[#2f3f35]">{formatDistance(totalDistanceKm)}</p>
-              </div>
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.22em] text-sage-500">Runs</p>
-                <p className="mt-2 text-[1.55rem] font-semibold tracking-[-0.04em] text-[#2f3f35]">{runCount}</p>
-              </div>
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.22em] text-sage-500">Unlocks</p>
-                <p className="mt-2 text-[1.55rem] font-semibold tracking-[-0.04em] text-[#2f3f35]">{unlocksInPeriod.length}</p>
-              </div>
-            </div>
-          </section>
-          </div>
+      <AnimatePresence mode="wait">
+        {isEditMode ? (
+          <ArrangeInventoryTray
+            key="inventory"
+            ref={inventoryTrayRef}
+            items={inventoryItems}
+            isReturnDropActive={isInventoryDropActive}
+            onSelectItem={(assetId) => {
+              const asset = scopedCatalogAssets.find((entry) => entry.id === assetId);
+              const ownedCount = asset?.assetType === "landmark" ? Math.min(1, asset?.ownedCount ?? 0) : asset?.ownedCount ?? 0;
+              if (!asset || ownedCount <= 0) {
+                showToast(asset ? `Locked: unlock from ${asset.routeName}` : "Locked");
+                return;
+              }
+              if (summaryTab === "day" && !dayRouteIds.has(asset.routeId)) {
+                showToast(asset ? `${asset.name} was collected earlier` : "Collected earlier");
+                return;
+              }
+              const placedCount = placedCountsByAssetId[assetId] ?? 0;
+              const availableCount = Math.max(0, ownedCount - placedCount);
 
-          <MyScapeChartCard title="Distance Distribution" points={chartData} emptyText="No run data in this period" />
+              if (availableCount <= 0) {
+                focusPlacedAsset(assetId);
+                return;
+              }
 
-          <section className="mt-4 rounded-[24px] bg-white/82 px-4 py-4 shadow-[0_16px_38px_rgba(35,52,40,0.08)] ring-1 ring-white/85 backdrop-blur-xl">
-            <h3 className="text-sm font-semibold text-ink">Unlocked This Period</h3>
-            {unlocksInPeriod.length > 0 ? (
-              <div className="mt-4 space-y-3">
-                {unlocksInPeriod
-                  .slice(-3)
-                  .reverse()
-                  .map((item: MyScapeUnlockEvent) => (
-                    <div key={`${item.id}-${item.unlockedAt}`} className="rounded-[18px] bg-sage-50/70 px-4 py-3">
-                      <p className="text-sm font-semibold text-ink">{item.name}</p>
-                      <p className="mt-1 text-xs text-sage-600">
-                        {item.routeName} · {item.city}
-                      </p>
-                    </div>
-                  ))}
-              </div>
-            ) : (
-              <div className="mt-4 rounded-[18px] bg-sage-50/70 px-4 py-6 text-sm text-sage-500">
-                No new landmarks unlocked in this period.
-              </div>
-            )}
-          </section>
-        </div>
-      </section>
-    </div>
+              placeAssetOnBoard(assetId);
+            }}
+          />
+        ) : (
+          <motion.div
+            key="tabs"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 18 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <ScapeBottomTabs activeTab={summaryTab} onChange={setSummaryTab} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 };
