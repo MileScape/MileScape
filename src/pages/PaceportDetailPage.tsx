@@ -9,6 +9,7 @@ import { useAppState } from "../hooks/useAppState";
 import { usePaceportGachaAdapter } from "../hooks/usePaceportGachaAdapter";
 import type { Landmark } from "../types";
 import { getAchievementTier } from "../utils/achievement";
+import { formatCountryName } from "../utils/location";
 import { getPaceportSummary } from "../utils/paceport";
 import { formatDistance } from "../utils/progress";
 
@@ -22,12 +23,10 @@ export const achievementLabel = {
 
 const paceportLandmarkImages: Record<string, string> = {
   "big-ben": "/models/landmarks/big-ben.png",
-  "eiffel-tower": "/models/landmarks/eiffel-tower.png",
+  "eiffel-tower": "/models/landmarks/paris-route/eiffel-tower.png",
   "leifeng-pagoda": "/models/landmarks/leifeng-pagoda.png",
-  "statue-of-liberty": "/models/landmarks/statue-of-liberty.png",
+  "statue-of-liberty": "/models/landmarks/central-park-route/statue-of-liberty.png",
   "three-pools": "/models/landmarks/three-pools.png",
-  "tokyo-tower": "/models/landmarks/tokyo tower.png",
-  "torii-gate": "/models/landmarks/torii.png",
   "tower-bridge": "/models/landmarks/london-bridge.png"
 };
 
@@ -71,7 +70,7 @@ export const PaceportDetailPage = () => {
         <div className="space-y-5">
           <div className="inline-flex items-center gap-2 rounded-full bg-sage-50 px-4 py-2 text-xs uppercase tracking-[0.2em] text-sage-700">
             <MapPin className="h-4 w-4" />
-            {route.city}, {route.country}
+            {route.city}, {formatCountryName(route.country)}
           </div>
 
           <div className="space-y-2">

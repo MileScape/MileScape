@@ -30,6 +30,7 @@ export const AppShell = () => {
     "/pacecrew/missions": t("app.paceCrewMissions"),
     "/paceport": t("app.paceport"),
     "/myscape": t("app.myScape"),
+    "/achievements": t("app.achievements"),
     "/wearables": t("app.wearables"),
     "/wearables/connect": "Connect Device",
     "/run/setup": t("app.chooseJourney"),
@@ -58,6 +59,8 @@ export const AppShell = () => {
         className={cn(
           "sticky top-0 z-30 flex items-center justify-between px-4 pt-5",
           isOnboarding
+            ? "hidden"
+            : isMyScapeHome
             ? "hidden"
             : isRunResult
             ? "mb-[-4.35rem] pb-3 backdrop-blur-2xl bg-[linear-gradient(180deg,rgba(245,243,238,0.86)_0%,rgba(245,243,238,0.56)_42%,rgba(245,243,238,0.18)_72%,rgba(245,243,238,0)_100%)]"
@@ -117,7 +120,9 @@ export const AppShell = () => {
           <p className={cn("uppercase tracking-[0.28em]", isPrimaryHome ? "text-[10px] text-white/92" : "text-[11px] text-sage-500")}>
             MILESCAPE
           </p>
-          {!isPrimaryHome && !isPaceCrewHome && !isWearablesFullBleed && !isMyScapeHome ? <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1> : null}
+          {!isPrimaryHome && !isPaceCrewHome && !isWearablesFullBleed && !isMyScapeHome && !isRunResult ? (
+            <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1>
+          ) : null}
         </div>
 
         <div className="h-11 w-11" />
@@ -125,9 +130,9 @@ export const AppShell = () => {
 
       <main
         className={cn(
-          "flex-1",
-          isOnboarding || isPrimaryHome || isWearablesFullBleed
-            ? "px-0 pb-0 pt-0"
+          "flex-1 min-h-0",
+          isOnboarding || isPrimaryHome || isWearablesFullBleed || isMyScapeHome
+            ? "overflow-hidden px-0 pb-0 pt-0"
             : isRunResult
               ? "px-0 pb-8 pt-0"
               : "px-4 pb-8 pt-1",

@@ -167,6 +167,7 @@ const createWearableSyncRecordFromRun = (
 
 export const AppProvider = ({ children }: AppProviderProps) => {
   const [state, setState] = useState<AppState>(() => normalizeState(loadState()));
+  const debugModeEnabled = state.debugModeEnabled ?? false;
 
   useEffect(() => {
     const synced = syncExpiredMissionStates(state);
@@ -185,8 +186,41 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     };
   }, [state]);
 
+  const effectiveState = useMemo<AppState>(() => {
+    if (!debugModeEnabled) {
+      return state;
+    }
+
+    const unlockedPersonalRouteIds = routes.filter((route) => route.sourceType === "personal").map((route) => route.id);
+    const unlockedCrewRouteIds = routes.filter((route) => route.sourceType === "pacecrew").map((route) => route.id);
+
+    return {
+      ...state,
+      routeProgress: routes.map((route) => {
+        const existingProgress = state.routeProgress.find((entry) => entry.routeId === route.id);
+        return {
+          routeId: route.id,
+          completedDistanceKm: existingProgress?.completedDistanceKm ?? 0,
+          unlockedLandmarkIds: route.landmarks.map((landmark) => landmark.id),
+          decorations: Object.fromEntries(
+            (route.decorations ?? []).map((decoration) => [
+              decoration.id,
+              Math.max(1, existingProgress?.decorations?.[decoration.id] ?? 0),
+            ]),
+          ),
+          runCount: existingProgress?.runCount ?? 0,
+          achievementTier: existingProgress?.achievementTier ?? "none",
+          completed: existingProgress?.completed ?? false,
+        };
+      }),
+      purchasedRouteIds: unlockedPersonalRouteIds,
+      unlockedCrewDestinationIds: unlockedCrewRouteIds,
+      selectedRouteId: state.selectedRouteId ?? unlockedPersonalRouteIds[0] ?? null,
+    };
+  }, [debugModeEnabled, state]);
+
   const playableRoutes = routes.filter(
-    (route) => route.sourceType === "personal" && isRouteOwned(route.id, state.purchasedRouteIds),
+    (route) => route.sourceType === "personal" && isRouteOwned(route.id, effectiveState.purchasedRouteIds),
   );
 
   const currentUser = users.find((user) => user.id === currentUserId) ?? users[0];
@@ -198,11 +232,16 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       users,
       routes,
       playableRoutes,
-      state,
+      state: effectiveState,
       t: (key, params) => translate(state.language, key, params),
       selectRoute: (routeId) => {
         setState((current) =>
-          playableRoutes.some((route) => route.id === routeId)
+          routes.some(
+            (route) =>
+              route.id === routeId &&
+              route.sourceType === "personal" &&
+              ((current.debugModeEnabled ?? false) || isRouteOwned(route.id, current.purchasedRouteIds)),
+          )
             ? { ...current, selectedRouteId: routeId }
             : current,
         );
@@ -217,7 +256,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           if (input.targetType === "personal") {
             const route = routes.find((entry) => entry.id === input.routeId && entry.sourceType === "personal");
 
-            if (!route || !isRouteOwned(route.id, synced.purchasedRouteIds)) {
+            if (!route || (!(synced.debugModeEnabled ?? false) && !isRouteOwned(route.id, synced.purchasedRouteIds))) {
               throw new Error(`Unknown or locked route: ${input.routeId}`);
             }
 
@@ -293,7 +332,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           return { success: false, message: "This destination is not sold in Shop" };
         }
 
-        if (state.purchasedRouteIds.includes(routeId)) {
+        if (debugModeEnabled || state.purchasedRouteIds.includes(routeId)) {
           return { success: false, message: "Already owned" };
         }
 
@@ -309,39 +348,15 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
         return { success: true, message: `${route.name} unlocked` };
       },
-      spendStampsForGacha: (amount) => {
-        if (amount <= 0) {
-          return { success: false, message: "Invalid draw cost" };
-        }
-
-        if (state.currentStamps < amount) {
-          return { success: false, message: "Insufficient Stamps" };
-        }
-
+      setDebugModeEnabled: (enabled) => {
         setState((current) => ({
           ...current,
-          currentStamps: Math.max(0, current.currentStamps - amount)
+          debugModeEnabled: enabled,
+          selectedRouteId:
+            enabled && !current.selectedRouteId
+              ? routes.find((route) => route.sourceType === "personal")?.id ?? null
+              : current.selectedRouteId,
         }));
-
-        return { success: true, message: `${amount} Stamps spent` };
-      },
-      unlockRouteByGacha: (routeId) => {
-        const route = routes.find((entry) => entry.id === routeId);
-
-        if (!route || route.sourceType !== "personal") {
-          return { success: false, message: "This route cannot be drawn" };
-        }
-
-        if (state.purchasedRouteIds.includes(routeId)) {
-          return { success: false, message: "Already owned" };
-        }
-
-        setState((current) => ({
-          ...current,
-          purchasedRouteIds: Array.from(new Set([...current.purchasedRouteIds, routeId]))
-        }));
-
-        return { success: true, message: `${route.name} access unlocked` };
       },
       setLanguage: (language) => {
         setState((current) => ({ ...current, language }));
@@ -610,7 +625,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         setState(createInitialState());
       }
     }),
-    [currentUser, playableRoutes, state],
+    [currentUser, debugModeEnabled, effectiveState, playableRoutes, state],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

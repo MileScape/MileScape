@@ -7,19 +7,12 @@ export interface RouteMapView {
 }
 
 export const routeMapViews: Record<string, RouteMapView> = {
-  "west-lake-loop": {
-    center: [120.1447, 30.2431],
-    zoom: 13.1,
-    pitch: 76,
-    bearing: -36,
-    marker: [120.1503, 30.2486]
-  },
   "central-park-loop": {
     center: [-73.9665, 40.7813],
-    zoom: 13.7,
+    zoom: 12.9,
     pitch: 78,
     bearing: 29,
-    marker: [-73.9681, 40.7818]
+    marker: [-73.9857, 40.7484]
   },
   "tokyo-city-route": {
     center: [139.7437, 35.6586],
@@ -27,13 +20,6 @@ export const routeMapViews: Record<string, RouteMapView> = {
     pitch: 77,
     bearing: -24,
     marker: [139.7454, 35.6581]
-  },
-  "lisbon-tram-route": {
-    center: [-9.1303, 38.7111],
-    zoom: 13.45,
-    pitch: 76,
-    bearing: -34,
-    marker: [-9.1287, 38.7124]
   },
   "barcelona-coast-route": {
     center: [2.1734, 41.3851],
@@ -44,7 +30,7 @@ export const routeMapViews: Record<string, RouteMapView> = {
   },
   "london-landmark-route": {
     center: [-0.1276, 51.5072],
-    zoom: 12.85,
+    zoom: 12.55,
     pitch: 77,
     bearing: 18,
     marker: [-0.0754, 51.5055]
@@ -56,25 +42,53 @@ export const routeMapViews: Record<string, RouteMapView> = {
     bearing: -16,
     marker: [2.2945, 48.8584]
   },
-  "mount-fuji-route": {
-    center: [138.7274, 35.3606],
-    zoom: 11.55,
-    pitch: 76,
-    bearing: 8,
-    marker: [138.7274, 35.3606]
-  },
-  "aurora-harbor-route": {
-    center: [-21.9382, 64.1466],
-    zoom: 12.55,
-    pitch: 75,
-    bearing: -12,
-    marker: [-21.9426, 64.1487]
-  },
-  "melbourne-laneway-route": {
-    center: [144.9631, -37.8136],
-    zoom: 12.95,
-    pitch: 76,
+  "cairo-pyramid-route": {
+    center: [31.1342, 29.9792],
+    zoom: 11.5,
+    pitch: 74,
     bearing: -18,
-    marker: [144.9671, -37.8183]
+    marker: [31.1342, 29.9792]
+  },
+  "seoul-heritage-route": {
+    center: [126.978, 37.5665],
+    zoom: 12.6,
+    pitch: 76,
+    bearing: -20,
+    marker: [126.9769, 37.5796]
+  },
+  "sydney-harbor-route": {
+    center: [151.214, -33.8568],
+    zoom: 12.6,
+    pitch: 76,
+    bearing: 24,
+    marker: [151.2153, -33.8568]
+  },
+  "rome-heritage-route": {
+    center: [12.4901, 41.8918],
+    zoom: 14.05,
+    pitch: 72,
+    bearing: -14,
+    marker: [12.4922, 41.8902]
+  },
+  "california-discovery-route": {
+    center: [-122.0982, 37.4298],
+    zoom: 12.45,
+    pitch: 72,
+    bearing: 24,
+    marker: [-122.0877, 37.4268]
+  },
+  "taipei-skyline-route": {
+    center: [121.5527, 25.0294],
+    zoom: 12.95,
+    pitch: 74,
+    bearing: -20,
+    marker: [121.5654, 25.033]
+  },
+  "bangkok-floating-route": {
+    center: [100.5018, 13.7563],
+    zoom: 12.25,
+    pitch: 74,
+    bearing: -22,
+    marker: [100.5018, 13.7563]
   }
 };

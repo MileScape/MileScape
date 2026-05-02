@@ -3,6 +3,7 @@ import { RouteArtwork } from "../components/route/RouteArtwork";
 import { buttonStyles } from "../components/ui/Button";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { useAppState } from "../hooks/useAppState";
+import { formatCountryName } from "../utils/location";
 import { getRouteProgress } from "../utils/progress";
 
 export const ExplorePage = () => {
@@ -26,7 +27,7 @@ export const ExplorePage = () => {
               <RouteArtwork routeId={route.id} size="md" />
               <div className="min-w-0 flex-1">
                 <p className="text-xs uppercase tracking-[0.2em] text-sage-500">
-                  {route.city}, {route.country}
+                  {route.city}, {formatCountryName(route.country)}
                 </p>
                 <h3 className="mt-1 text-xl font-semibold text-ink">{route.name}</h3>
                 <p className="mt-2 text-sm leading-6 text-sage-700">{route.description}</p>

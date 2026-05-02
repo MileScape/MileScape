@@ -1,30 +1,32 @@
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
-import { CheckCircle2, Flag, Sparkles, Users } from "lucide-react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { RunPosterCard } from "../components/run/RunPosterCard";
-import { RouteArtwork } from "../components/route/RouteArtwork";
 import { buttonStyles } from "../components/ui/Button";
 import { ProgressBar } from "../components/ui/ProgressBar";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { useAppState } from "../hooks/useAppState";
-import { achievementLabel } from "../pages/PaceportDetailPage";
-import { formatDistance, getProgressPercent } from "../utils/progress";
+import { formatCountryName } from "../utils/location";
+import { formatDistance } from "../utils/progress";
+import type { Decoration } from "../types";
+import { cn } from "../utils/cn";
 
 const defaultRunPosterImage = "/posters/run-cover.jpg";
 const defaultMissionPosterImage = "/posters/mission-cover.jpg";
 const routePosterImages: Record<string, string> = {
-  "west-lake-loop": "/posters/westlake.jpg",
   "central-park-loop": "/posters/centralpark.jpg",
   "tokyo-city-route": "/posters/Tokyo.jpg",
-  "lisbon-tram-route": "/posters/Lisbon.jpg",
   "barcelona-coast-route": "/posters/Barcelona.jpg",
   "london-landmark-route": "/posters/london.jpg",
   "paris-eiffel-route": "/posters/paris.jpg",
-  "mount-fuji-route": "/posters/fuji.jpg",
-  "aurora-harbor-route": "/posters/Reykjavik.jpg",
-  "melbourne-laneway-route": "/posters/Melbourne.jpg",
+  "cairo-pyramid-route": "/posters/Cairo-Pyramid.jpg",
+  "seoul-heritage-route": "/posters/Seoul.jpg",
+  "sydney-harbor-route": "/posters/sydney.jpg",
+  "rome-heritage-route": "/posters/rome.jpg",
+  "california-discovery-route": "/posters/California.jpg",
+  "taipei-skyline-route": "/posters/Taipei.jpg",
+  "bangkok-floating-route": "/posters/bangkok.jpg",
 };
 
 const formatPace = (distanceKm: number) => {
@@ -53,25 +55,100 @@ const getJourneyLoopMetrics = (totalLoggedDistanceKm: number, routeDistanceKm: n
   return { cycleCount, progressKm };
 };
 
+const rarityLabel: Record<"common" | "rare" | "epic" | "legendary", string> = {
+  common: "Common",
+  rare: "Rare",
+  epic: "Epic",
+  legendary: "Legendary",
+};
+
+const countDroppedDecorations = (droppedDecorations: Decoration[]) =>
+  droppedDecorations.reduce<Record<string, number>>((accumulator, decoration) => {
+    accumulator[decoration.id] = (accumulator[decoration.id] ?? 0) + 1;
+    return accumulator;
+  }, {});
+
+const CollectibleImageTile = ({
+  title,
+  subtitle,
+  imageSrc,
+  unlocked,
+  highlightLabel,
+  variant = "landmark",
+}: {
+  title: string;
+  subtitle: string;
+  imageSrc?: string;
+  unlocked: boolean;
+  highlightLabel?: string;
+  variant?: "landmark" | "decoration";
+}) => (
+  <div className="group text-center">
+    <div className="relative flex aspect-square items-center justify-center overflow-hidden transition">
+      {imageSrc ? (
+        <img
+          src={imageSrc}
+          alt={title}
+          className={cn(
+            "h-full w-full object-contain transition",
+            variant === "decoration" ? "p-2.5" : "p-5",
+            unlocked
+              ? "opacity-100 saturate-110"
+              : variant === "decoration"
+                ? "opacity-70 grayscale-[0.85]"
+                : "opacity-35 grayscale",
+          )}
+        />
+      ) : (
+        <div className="text-sm text-sage-500">{title}</div>
+      )}
+      {highlightLabel ? (
+        <div className="absolute right-2 top-2 rounded-full bg-sage-700 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
+          {highlightLabel}
+        </div>
+      ) : null}
+    </div>
+    <div className="mt-3 space-y-1 px-1">
+      <p className="text-sm font-semibold text-ink">{title}</p>
+      <p className="text-[11px] uppercase tracking-[0.18em] text-sage-500">{subtitle}</p>
+    </div>
+  </div>
+);
+
 const ResultHero = ({
   imageUrl,
+  fixed = true,
+  className,
+  imageStyle,
 }: {
   imageUrl: string;
+  fixed?: boolean;
+  className?: string;
+  imageStyle?: CSSProperties;
 }) => (
-  <div className="fixed inset-x-0 top-0 z-0 h-[68vh] overflow-hidden">
+  <div
+    className={cn(
+      "inset-x-0 top-0 overflow-hidden",
+      fixed ? "fixed z-0 h-[68vh]" : "absolute z-0 h-[78svh]",
+      className,
+    )}
+  >
     <img
       src={imageUrl}
       alt=""
       className="h-full w-full object-cover"
+      style={imageStyle}
       loading="eager"
       decoding="async"
       fetchPriority="high"
     />
-    <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#0d1711]/24 via-[#0d1711]/10 to-transparent" />
-    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(13,23,17,0.03)_0%,rgba(13,23,17,0.08)_36%,rgba(13,23,17,0.42)_100%)]" />
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#f5f3ee] via-[#f5f3ee]/82 to-transparent" />
-    <div className="pointer-events-none absolute inset-x-0 bottom-[-36px] h-32 bg-[#f5f3ee]/72 blur-2xl" />
-    <div className="pointer-events-none absolute inset-x-6 bottom-10 h-24 rounded-[999px] bg-[#f5f3ee]/58 blur-3xl" />
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-40 bg-gradient-to-b from-[#f8f7f1]/95 via-[#f8f7f1]/55 to-transparent" />
+    <div className="pointer-events-none absolute inset-x-0 top-[-40px] z-10 h-36 bg-[#f8f7f1]/74 blur-3xl" />
+    <div className="pointer-events-none absolute inset-x-6 top-8 z-10 h-24 rounded-[999px] bg-[#f8f7f1]/54 blur-3xl" />
+    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(13,23,17,0.03)_0%,rgba(13,23,17,0.07)_34%,rgba(13,23,17,0.20)_82%,rgba(13,23,17,0.12)_100%)]" />
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-56 bg-gradient-to-t from-[#f8f7f1] via-[#f8f7f1]/70 to-transparent" />
+    <div className="pointer-events-none absolute inset-x-0 bottom-[-40px] z-10 h-36 bg-[#f8f7f1]/72 blur-3xl" />
+    <div className="pointer-events-none absolute inset-x-6 bottom-8 z-10 h-24 rounded-[999px] bg-[#f8f7f1]/54 blur-3xl" />
   </div>
 );
 
@@ -80,20 +157,26 @@ const ResultHeroCopy = ({
   title,
   meta,
   progress,
+  className,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
-  meta: string;
+  meta?: string;
   progress: import("framer-motion").MotionValue<number>;
+  className?: string;
 }) => {
   const opacity = useTransform(progress, [0, 0.26], [1, 0]);
   const y = useTransform(progress, [0, 0.26], [0, -16]);
 
   return (
-    <motion.div className="relative z-20 mt-[33vh] px-6 text-white" style={{ opacity, y }}>
-      <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-white/72">{eyebrow}</p>
-      <h1 className="mt-3 text-[2.7rem] font-semibold leading-[0.92] tracking-[-0.06em]">{title}</h1>
-      <p className="mt-5 max-w-[26ch] text-sm text-white/80">{meta}</p>
+    <motion.div className={cn("relative z-30 px-6 text-white", className)} style={{ opacity, y }}>
+      {eyebrow ? (
+        <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-white/72">{eyebrow}</p>
+      ) : null}
+      <h1 className={cn("text-[2.7rem] font-semibold leading-[0.92] tracking-[-0.06em]", eyebrow ? "mt-3" : "")}>
+        {title}
+      </h1>
+      {meta ? <p className="mt-5 max-w-[26ch] text-sm text-white/80">{meta}</p> : null}
     </motion.div>
   );
 };
@@ -355,8 +438,9 @@ export const RunResultPage = () => {
 
           <section
             ref={statusCardRef}
-            className="relative z-20 mt-4 rounded-t-[34px] border-t border-white/82 bg-[linear-gradient(180deg,rgba(250,249,245,0.97)_0%,rgba(245,243,238,0.99)_100%)] px-6 pb-8 pt-6 shadow-[0_-20px_40px_rgba(34,49,38,0.10)] backdrop-blur-2xl"
+            className="relative z-20 -mt-4 rounded-t-[40px] bg-[#fbfaf6] px-6 pb-8 pt-6 shadow-[0_-18px_50px_rgba(30,45,35,0.08)] backdrop-blur-2xl border border-black/5"
           >
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-10 rounded-t-[40px] bg-gradient-to-b from-[#fbfaf6] via-[#fbfaf6]/88 to-transparent" />
             <div className="space-y-6">
               <div className="space-y-3">
                 <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">MISSION STATUS</p>
@@ -424,17 +508,20 @@ export const RunResultPage = () => {
     .reduce((sum, entry) => sum + entry.distanceKm, 0);
   const previousTotalDistanceKm = Math.max(0, totalLoggedDistanceKm - summary.runDistanceKm);
   const journeyLoop = getJourneyLoopMetrics(totalLoggedDistanceKm, route.totalDistanceKm);
-  const progressPercent = getProgressPercent(route, journeyLoop.progressKm);
   const routePosterImage = routePosterImages[route.id] ?? defaultRunPosterImage;
   const paceValue = formatPace(summary.runDistanceKm);
   const averageHeartRate = estimateAverageHeartRate(summary.runDistanceKm, summary.dataSource === "wearable");
+  const routeProgress = state.routeProgress.find((entry) => entry.routeId === route.id);
   const routeCompletedThisRun =
     previousTotalDistanceKm < route.totalDistanceKm && totalLoggedDistanceKm >= route.totalDistanceKm;
+  const droppedDecorationCounts = countDroppedDecorations(summary.droppedDecorations);
+  const unlockedLandmarkIds = new Set(routeProgress?.unlockedLandmarkIds ?? []);
+  const ownedDecorationCounts = routeProgress?.decorations ?? summary.updatedDecorations;
   const personalPoster = (
     <RunPosterCard
       imageUrl={routePosterImage}
       title={route.name}
-      subtitle={`${route.city} · ${route.country}`}
+      subtitle={`${route.city} · ${formatCountryName(route.country)}`}
       dateLabel={posterDateLabel}
       topLabel=""
     />
@@ -451,20 +538,20 @@ export const RunResultPage = () => {
 
   return (
     <PosterTransitionShell poster={personalPoster} backFace={personalBackFace}>
-      <div className="relative min-h-screen bg-canvas pb-8">
-        <ResultHero imageUrl={routePosterImage} />
-        <ResultHeroCopy
-          eyebrow={t("result.runCompleted")}
-          title={route.name}
-          meta={t("result.youRan", { distance: formatDistance(summary.runDistanceKm) })}
-          progress={scrollYProgress}
-        />
+      <main className="bg-canvas">
+        <section className="relative min-h-[100svh] overflow-hidden">
+          <ResultHero
+            imageUrl={routePosterImage}
+            fixed={false}
+            imageStyle={{ objectPosition: "center 26px" }}
+          />
 
-        <section
-          ref={statusCardRef}
-          className="relative z-20 mt-10 rounded-t-[34px] border-t border-white/82 bg-[linear-gradient(180deg,rgba(250,249,245,0.97)_0%,rgba(245,243,238,0.99)_100%)] px-6 pb-8 pt-6 shadow-[0_-20px_40px_rgba(34,49,38,0.10)] backdrop-blur-2xl"
-        >
-          <div className="space-y-6">
+
+          <section
+            ref={statusCardRef}
+            className="absolute inset-x-0 bottom-0 z-20 -mb-px rounded-t-[40px] border border-black/5 bg-[#fbfaf6] px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-6 shadow-[0_-18px_50px_rgba(30,45,35,0.08)] backdrop-blur-2xl"
+          >
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-10 rounded-t-[40px] bg-gradient-to-b from-[#fbfaf6] via-[#fbfaf6]/88 to-transparent" />
             <div className="space-y-3">
               <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">RUN STATUS</p>
               <h2 className="text-[2.2rem] leading-[0.94] tracking-[-0.05em] text-ink">
@@ -491,8 +578,12 @@ export const RunResultPage = () => {
               </p>
               {summary.fallbackReason ? <p className="text-xs text-sage-500">{summary.fallbackReason}</p> : null}
             </div>
+          </section>
+        </section>
 
-            <div className="grid grid-cols-2 gap-4 border-t border-sage-900/8 pt-5">
+        <section className="bg-[linear-gradient(180deg,rgba(250,249,245,0.97)_0%,rgba(245,243,238,0.99)_100%)] px-6 pb-8 pt-8">
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.18em] text-sage-500">{t("result.stampsEarned")}</p>
                 <p className="mt-2 text-[2rem] font-semibold tracking-[-0.05em] text-ink">+{summary.earnedStamps}</p>
@@ -501,7 +592,7 @@ export const RunResultPage = () => {
               <div>
                 <p className="text-[11px] uppercase tracking-[0.18em] text-sage-500">{t("result.runCount")}</p>
                 <p className="mt-2 text-[2rem] font-semibold tracking-[-0.05em] text-ink">{summary.updatedRunCount}</p>
-                <p className="mt-2 text-xs text-sage-500">{achievementLabel[summary.updatedAchievementTier]}</p>
+                <p className="mt-2 text-xs text-sage-500">Route repetition tier</p>
               </div>
             </div>
 
@@ -520,43 +611,75 @@ export const RunResultPage = () => {
               </div>
             </div>
 
-            <div className="border-t border-sage-900/8 pt-5">
-              <ProgressBar value={progressPercent} />
-              <p className="mt-3 text-sm leading-6 text-sage-600">
-                Progress tracks the current route loop, while your total distance keeps accumulating across repeats.
-              </p>
-            </div>
-
             <section className="space-y-4 border-t border-sage-900/8 pt-5">
               <SectionHeader
                 eyebrow={t("result.unlocks")}
-                title={summary.newlyUnlockedLandmarks.length > 0 ? t("result.newMemories") : t("result.noLandmark")}
+                title={unlockedLandmarkIds.size === route.landmarks.length ? "All landmarks unlocked" : "Landmark progress"}
               />
-              <AnimatePresence mode="popLayout">
-                {summary.newlyUnlockedLandmarks.length > 0 ? (
-                  <div className="space-y-4">
-                    {summary.newlyUnlockedLandmarks.map((landmark, index) => (
+              <div className="grid grid-cols-3 gap-4">
+                {route.landmarks.map((landmark, index) => {
+                  const unlocked = unlockedLandmarkIds.has(landmark.id);
+                  const justUnlocked = summary.newlyUnlockedLandmarks.some((entry) => entry.id === landmark.id);
+                  const distanceRemaining = Math.max(0, landmark.milestoneKm - summary.updatedDistanceKm);
+
+                  return (
+                    <motion.div
+                      key={landmark.id}
+                      initial={{ opacity: 0, y: 18, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ delay: index * 0.06, duration: 0.35 }}
+                    >
+                      <CollectibleImageTile
+                        title={landmark.name}
+                        subtitle={
+                          unlocked
+                            ? `${landmark.milestoneKm} km landmark`
+                            : `${formatDistance(distanceRemaining)} to unlock`
+                        }
+                        imageSrc={landmark.image}
+                        unlocked={unlocked}
+                        highlightLabel={justUnlocked ? "New" : undefined}
+                      />
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="space-y-4 border-t border-sage-900/8 pt-5">
+              <SectionHeader
+                eyebrow="Decorations"
+                title={route.decorations?.length ? "Decoration collection" : "No decorations on this route"}
+              />
+              {route.decorations?.length ? (
+                <div className="grid grid-cols-3 gap-4">
+                  {route.decorations.map((decoration, index) => {
+                    const ownedCount = ownedDecorationCounts[decoration.id] ?? 0;
+                    const droppedThisRun = droppedDecorationCounts[decoration.id] ?? 0;
+                    const unlocked = ownedCount > 0;
+
+                    return (
                       <motion.div
-                        key={landmark.id}
+                        key={decoration.id}
                         initial={{ opacity: 0, y: 18, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -12 }}
-                        transition={{ delay: index * 0.08, duration: 0.35 }}
-                        className="border-t border-sage-900/8 py-4 first:border-t-0 first:pt-0"
+                        transition={{ delay: index * 0.06, duration: 0.35 }}
                       >
-                        <p className="inline-flex items-center gap-1 rounded-full bg-sage-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-sage-700">
-                          <Sparkles className="h-3.5 w-3.5" />
-                          Landmark unlocked
-                        </p>
-                        <h3 className="mt-3 text-lg font-semibold text-ink">{landmark.name}</h3>
-                        <p className="mt-2 text-sm leading-6 text-sage-700">{landmark.description}</p>
+                        <CollectibleImageTile
+                          title={decoration.name}
+                          subtitle={rarityLabel[decoration.rarity]}
+                          imageSrc={decoration.image}
+                          unlocked={unlocked}
+                          highlightLabel={droppedThisRun > 0 ? `+${droppedThisRun}` : undefined}
+                          variant="decoration"
+                        />
                       </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-sage-700">{t("result.noNewLandmark")}</p>
-                )}
-              </AnimatePresence>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-sage-700">This route has no decoration drops yet.</p>
+              )}
             </section>
 
             <Link to="/paceport" className={buttonStyles({ fullWidth: true })}>
@@ -564,7 +687,7 @@ export const RunResultPage = () => {
             </Link>
           </div>
         </section>
-      </div>
+      </main>
     </PosterTransitionShell>
   );
 };

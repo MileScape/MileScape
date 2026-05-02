@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
+import { AchievementsPage } from "../pages/AchievementsPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { HomePage } from "../pages/HomePage";
 import { MyScapePage } from "../pages/MyScapePage";
@@ -31,6 +32,7 @@ export const router = createBrowserRouter([
       { path: "paceport", element: <PaceportOverviewPage /> },
       { path: "paceport/:routeId", element: <PaceportDetailPage /> },
       { path: "myscape", element: <MyScapePage /> },
+      { path: "achievements", element: <AchievementsPage /> },
       { path: "run/setup", element: <RunSetupPage /> },
       { path: "run/result", element: <RunResultPage /> },
       { path: "wearables", element: <WearablesPage /> },

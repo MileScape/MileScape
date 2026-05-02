@@ -1,6 +1,7 @@
 import { ArrowRight, CheckCircle2, Lock, Route as RouteIcon, Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { AchievementTier, PaceportStatus, Route } from "../../types";
+import { formatCountryName } from "../../utils/location";
 import { formatDistance } from "../../utils/progress";
 import { ProgressRing } from "./ProgressRing";
 
@@ -60,7 +61,7 @@ export const PaceportDestinationCard = ({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-[0.24em] text-sage-500">
-              {route.city.toUpperCase()} · {route.country.toUpperCase()}
+              {route.city.toUpperCase()} · {formatCountryName(route.country, { uppercase: true })}
             </p>
             <h3 className="mt-1 text-[1.08rem] font-semibold tracking-[-0.02em] text-ink">{route.name}</h3>
             <p className="mt-2 text-sm text-sage-600">

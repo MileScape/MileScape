@@ -7,7 +7,7 @@ import { useAppState } from "../hooks/useAppState";
 import { formatDistance, getRouteProgress } from "../utils/progress";
 
 export const DashboardPage = () => {
-  const { routes, state, resetDemo, setLanguage, setSliderMaxDistanceKm, t } = useAppState();
+  const { routes, state, resetDemo, setDebugModeEnabled, setLanguage, setSliderMaxDistanceKm, t } = useAppState();
   const [sliderMaxInput, setSliderMaxInput] = useState(String(state.sliderMaxDistanceKm));
   const totalDistance = state.runHistory.reduce((sum, run) => sum + run.distanceKm, 0);
   const routesInProgress = routes.filter((route) => {
@@ -116,6 +116,35 @@ export const DashboardPage = () => {
           >
             {t("dashboard.chinese")}
           </button>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeader eyebrow={t("dashboard.settings")} title="Debug Mode" />
+        <div className="rounded-[28px] bg-white p-5 shadow-card ring-1 ring-sage-100">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-ink">Unlock all maps and landmarks</p>
+              <p className="mt-1 text-sm text-sage-600">
+                When enabled, all destinations become available and every landmark is treated as unlocked.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDebugModeEnabled(!(state.debugModeEnabled ?? false))}
+              className={`relative inline-flex h-8 w-14 items-center rounded-full transition ${
+                state.debugModeEnabled ? "bg-sage-700" : "bg-sage-200"
+              }`}
+              aria-pressed={state.debugModeEnabled ?? false}
+              aria-label="Toggle debug mode"
+            >
+              <span
+                className={`inline-block h-6 w-6 rounded-full bg-white shadow-sm transition ${
+                  state.debugModeEnabled ? "translate-x-7" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
         </div>
       </section>
 

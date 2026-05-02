@@ -4,11 +4,37 @@ import { type PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import runnerIcon from "../assets/runner-slider.svg";
 import { RouteArtwork } from "../components/route/RouteArtwork";
+import { MapHeroShell } from "../components/ui/MapHeroShell";
 import { Button } from "../components/ui/Button";
 import { useAppState } from "../hooks/useAppState";
+import { formatCountryName } from "../utils/location";
 import { getRunSimulationDurationSeconds } from "../utils/routeSimulation";
 import { getAcceptedMissionStatesForUser, getMissionProgress } from "../utils/paceCrew";
 import { hasSeenJourneySwipeGuide, markJourneySwipeGuideSeen, markOnboardingSeen } from "../utils/storage";
+
+const getRouteTitleSizeClassName = (routeName: string, variant: "compact" | "hero") => {
+  if (variant === "compact") {
+    if (routeName.length >= 22) {
+      return "text-[1.32rem]";
+    }
+
+    if (routeName.length >= 19) {
+      return "text-[1.46rem]";
+    }
+
+    return "text-[1.62rem]";
+  }
+
+  if (routeName.length >= 22) {
+    return "text-[1.92rem]";
+  }
+
+  if (routeName.length >= 19) {
+    return "text-[2.1rem]";
+  }
+
+  return "text-[2.35rem]";
+};
 
 export const RunSetupPage = () => {
   const navigate = useNavigate();
@@ -117,8 +143,8 @@ export const RunSetupPage = () => {
     targetType === "pacecrew_mission" && selectedMissionBundle ? "pacecrew_mission" : "personal";
   const effectiveDistance = selectedDistance;
   const runSimulationDurationSeconds = useMemo(
-    () => getRunSimulationDurationSeconds(effectiveDistance),
-    [effectiveDistance],
+    () => getRunSimulationDurationSeconds(effectiveDistance, route?.id),
+    [effectiveDistance, route?.id],
   );
 
   const preview = useMemo(() => {
@@ -163,7 +189,7 @@ export const RunSetupPage = () => {
       cycleCount: progressCycleCount,
       hasOverflowPreview,
       targetTitle: route.name,
-      targetMeta: `${route.city}, ${route.country}`
+      targetMeta: `${route.city}, ${formatCountryName(route.country)}`
     };
   }, [activeTargetType, effectiveDistance, route, selectedMissionBundle, state.routeProgress]);
 
@@ -185,7 +211,7 @@ export const RunSetupPage = () => {
     activeTargetType === "pacecrew_mission" && selectedMissionBundle
       ? "PACECREW MISSION"
       : route
-        ? `${route.city.toUpperCase()} · ${route.country.toUpperCase()}`
+        ? `${route.city.toUpperCase()} · ${formatCountryName(route.country, { uppercase: true })}`
         : "";
   const metadataLabel =
     activeTargetType === "pacecrew_mission" && selectedMissionBundle
@@ -440,28 +466,32 @@ export const RunSetupPage = () => {
 
   return (
     <>
-      <div className="relative min-h-screen overflow-hidden bg-canvas pb-6">
+      <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-canvas">
         {activeTargetType === "personal" && route ? (
           <motion.div
-            className="relative overflow-hidden"
+            className="relative shrink-0 overflow-hidden"
             animate={{ height: isSubmitting ? "calc(100vh - 104px)" : "62vh" }}
             transition={{ duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="block h-full w-full text-left">
-              <RouteArtwork
-                routeId={route.id}
-                variant="hero"
-                className="h-full w-full"
-                simulation={{
-                  active: isSubmitting,
-                  durationSeconds: runSimulationDurationSeconds,
-                  distanceKm: effectiveDistance,
-                  routeDistanceKm: route.totalDistanceKm
-                }}
-              />
-            </div>
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#0d1711]/24 via-[#0d1711]/10 to-transparent" />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#f5f3ee] via-[#f5f3ee]/82 to-transparent" />
+            <MapHeroShell
+              className="h-full"
+              topFadeClassName="h-28 bg-gradient-to-b from-[#0d1711]/24 via-[#0d1711]/10 to-transparent"
+              bottomFadeClassName="h-28 bg-gradient-to-t from-[#f5f3ee] via-[#f5f3ee]/82 to-transparent"
+            >
+              <div className="block h-full w-full text-left">
+                <RouteArtwork
+                  routeId={route.id}
+                  variant="hero"
+                  className="h-full w-full"
+                  simulation={{
+                    active: isSubmitting,
+                    durationSeconds: runSimulationDurationSeconds,
+                    distanceKm: effectiveDistance,
+                    routeDistanceKm: route.totalDistanceKm
+                  }}
+                />
+              </div>
+            </MapHeroShell>
           </motion.div>
         ) : (
           <div className="relative flex h-[62vh] items-end overflow-hidden bg-[linear-gradient(180deg,#d9e8dd_0%,#eef4ee_38%,#f5f3ee_100%)] px-6 pb-10">
@@ -495,8 +525,8 @@ export const RunSetupPage = () => {
             height: isSubmitting ? 136 : "auto",
           }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className={`relative z-20 -mt-8 rounded-t-[34px] border-t border-white/75 bg-[linear-gradient(180deg,rgba(250,249,245,0.94)_0%,rgba(245,243,238,0.98)_100%)] px-6 shadow-[0_-14px_32px_rgba(34,49,38,0.08)] backdrop-blur-2xl ${
-            isSubmitting ? "flex items-center overflow-hidden py-4" : "pb-8 pt-5"
+          className={`relative z-20 -mt-8 min-h-0 rounded-t-[34px] border-t border-white/75 bg-[linear-gradient(180deg,rgba(250,249,245,0.94)_0%,rgba(245,243,238,0.98)_100%)] px-6 shadow-[0_-14px_32px_rgba(34,49,38,0.08)] backdrop-blur-2xl ${
+            isSubmitting ? "flex items-center overflow-hidden py-4" : "pb-6 pt-5"
           }`}
         >
           {showSwipeGuide && activeTargetType === "personal" && !isSubmitting ? (
@@ -545,9 +575,12 @@ export const RunSetupPage = () => {
             >
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">
-                  {route.city.toUpperCase()} · {route.country.toUpperCase()}
+                  {route.city.toUpperCase()} · {formatCountryName(route.country, { uppercase: true })}
                 </p>
-                <h2 className="mt-1.5 truncate font-destination-display text-[1.62rem] leading-[0.94] tracking-[0.01em] text-ink">
+                <h2
+                  className={`mt-1.5 overflow-hidden text-ellipsis whitespace-nowrap font-destination-display leading-[0.94] tracking-[0.01em] text-ink ${getRouteTitleSizeClassName(route.name, "compact")}`}
+                  title={route.name}
+                >
                   {route.name}
                 </h2>
               </div>
@@ -626,9 +659,12 @@ export const RunSetupPage = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">
-                          {item.city.toUpperCase()} · {item.country.toUpperCase()}
+                          {item.city.toUpperCase()} · {formatCountryName(item.country, { uppercase: true })}
                         </p>
-                        <h2 className="mt-3 truncate font-destination-display text-[2.35rem] leading-[0.94] tracking-[0.01em] text-ink">
+                        <h2
+                          className={`mt-3 overflow-hidden text-ellipsis whitespace-nowrap font-destination-display leading-[0.94] tracking-[0.01em] text-ink ${getRouteTitleSizeClassName(item.name, "hero")}`}
+                          title={item.name}
+                        >
                           {item.name}
                         </h2>
                       </div>
@@ -699,7 +735,10 @@ export const RunSetupPage = () => {
             <div>
               <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">{locationLabel}</p>
               <div className="mt-3 flex items-start justify-between gap-3">
-                <h2 className="font-destination-display text-[2.35rem] leading-[0.94] tracking-[0.01em] text-ink">
+                <h2
+                  className={`overflow-hidden text-ellipsis whitespace-nowrap font-destination-display leading-[0.94] tracking-[0.01em] text-ink ${getRouteTitleSizeClassName(preview?.targetTitle ?? "", "hero")}`}
+                  title={preview?.targetTitle}
+                >
                   {preview?.targetTitle}
                 </h2>
                 {hasWearablePriority ? (
