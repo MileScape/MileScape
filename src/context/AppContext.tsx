@@ -348,6 +348,49 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
         return { success: true, message: `${route.name} unlocked` };
       },
+      spendStampsForGacha: (amount) => {
+        const cost = Math.floor(amount);
+
+        if (cost <= 0) {
+          return { success: false, message: "Invalid Gacha cost" };
+        }
+
+        if (debugModeEnabled) {
+          return { success: true, message: "Debug draw approved" };
+        }
+
+        if (state.currentStamps < cost) {
+          return { success: false, message: "Insufficient Stamps" };
+        }
+
+        setState((current) => ({
+          ...current,
+          currentStamps: Math.max(0, current.currentStamps - cost),
+        }));
+
+        return { success: true, message: `${cost} Stamps spent` };
+      },
+      unlockRouteByGacha: (routeId) => {
+        const route = routes.find((entry) => entry.id === routeId);
+
+        if (!route || route.sourceType !== "personal") {
+          return { success: false, message: "This destination cannot be unlocked by Gacha" };
+        }
+
+        if (debugModeEnabled || state.purchasedRouteIds.includes(routeId)) {
+          return { success: false, message: "Already owned" };
+        }
+
+        setState((current) => ({
+          ...current,
+          selectedRouteId: current.selectedRouteId ?? routeId,
+          purchasedRouteIds: current.purchasedRouteIds.includes(routeId)
+            ? current.purchasedRouteIds
+            : [...current.purchasedRouteIds, routeId],
+        }));
+
+        return { success: true, message: `${route.name} unlocked` };
+      },
       setDebugModeEnabled: (enabled) => {
         setState((current) => ({
           ...current,

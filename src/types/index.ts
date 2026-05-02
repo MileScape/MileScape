@@ -167,12 +167,12 @@ export interface WearableSyncRecord {
 export interface MyScapePlacedLandmark {
   id: string;
   landmarkId: string;
-  col: number;
-  row: number;
+  col?: number;
+  row?: number;
   scale: number;
-  x?: number;
-  y?: number;
-  zIndex?: number;
+  x: number;
+  y: number;
+  zIndex: number;
 }
 
 export interface MyScapeLayout {

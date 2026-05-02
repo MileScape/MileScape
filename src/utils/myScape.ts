@@ -1,33 +1,28 @@
-import { myScapeAssetConfigs, type MyScapeAssetConfig } from "../data/myScapeAssetConfigs";
-import type { Decoration, MyScapeLayout, MyScapePlacedLandmark, Route, RouteProgress, RunHistoryItem } from "../types";
-import { loadMyScapeLayout, loadPlacedAssetIds } from "./storage";
+import type { Decoration, Landmark, MyScapeLayout, MyScapePlacedLandmark, Route, RouteProgress, RunHistoryItem } from "../types";
+import { loadMyScapeLayout } from "./storage";
 
-export interface UnlockedLandmarkAsset {
-  id: string;
-  name: string;
-  description: string;
-  image: string;
+export interface MyScapeAsset {
   routeId: string;
   routeName: string;
   city: string;
   country: string;
+  id: string;
+  name: string;
+  description?: string;
   imageSrc?: string;
+  image?: string;
   assetType: "landmark" | "decor";
   defaultScale?: number;
   milestoneKm?: number;
   rarity?: Decoration["rarity"];
-  ownedCount?: number;
-  routeOrder?: number;
-  itemOrder?: number;
-  offsetX?: number;
-  offsetY?: number;
-  footprintWidth?: number;
-  footprintHeight?: number;
+  icon?: string;
 }
+
+export type UnlockedLandmarkAsset = MyScapeAsset;
 
 export type MyScapeViewMode = "day" | "week" | "month" | "year";
 
-export interface MyScapeUnlockEvent extends UnlockedLandmarkAsset {
+export interface MyScapeUnlockEvent extends MyScapeAsset {
   unlockedAt: string;
 }
 
@@ -36,184 +31,133 @@ export interface MyScapeChartPoint {
   value: number;
 }
 
-export const MY_SCAPE_TILE_WIDTH = 64;
-export const MY_SCAPE_TILE_HEIGHT = 32;
-export const MY_SCAPE_GRID_COLUMNS = 8;
-export const MY_SCAPE_GRID_ROWS = 8;
+export const MY_SCAPE_GRID_SIZE = 42;
 export const MY_SCAPE_MIN_SCALE = 0.8;
 export const MY_SCAPE_MAX_SCALE = 1.4;
-const MY_SCAPE_ORIGIN_X_RATIO = 0.5;
-const MY_SCAPE_ORIGIN_Y_RATIO = 0.12;
-const MY_SCAPE_ORIGIN_X_OFFSET = 0;
-const MY_SCAPE_ORIGIN_Y_OFFSET = 12;
+const BOARD_FOOTPRINT = 90;
 
-const DEFAULT_FOOTPRINT_WIDTH = 1;
-const DEFAULT_FOOTPRINT_HEIGHT = 1;
+const myScapeLandmarkImages: Record<string, { imageSrc: string; defaultScale: number }> = {
+  "big-ben": {
+    imageSrc: "/models/landmarks/london-route/BigBen.png",
+    defaultScale: 1.1,
+  },
+  "eiffel-tower": {
+    imageSrc: "/models/landmarks/paris-route/eiffel-tower.png",
+    defaultScale: 1.1,
+  },
+  "louvre-courtyard": {
+    imageSrc: "/models/landmarks/paris-route/louvre-courtyard.png",
+    defaultScale: 1.08,
+  },
+  "arc-de-triomphe": {
+    imageSrc: "/models/landmarks/paris-route/arc-de-triomphe.png",
+    defaultScale: 1.08,
+  },
+  "leifeng-pagoda": {
+    imageSrc: "/models/landmarks/leifeng-pagoda.png",
+    defaultScale: 1.12,
+  },
+  "statue-of-liberty": {
+    imageSrc: "/models/landmarks/central-park-route/statue-of-liberty.png",
+    defaultScale: 1.14,
+  },
+  "three-pools": {
+    imageSrc: "/models/landmarks/three-pools.png",
+    defaultScale: 1.12,
+  },
+  "tokyo-tower": {
+    imageSrc: "/models/landmarks/tokyo-route/tokyo-tower.png",
+    defaultScale: 1.18,
+  },
+  "shibuya": {
+    imageSrc: "/models/landmarks/tokyo-route/shibuya.png",
+    defaultScale: 1.16,
+  },
+  "senso-ji": {
+    imageSrc: "/models/landmarks/tokyo-route/senso-ji.png",
+    defaultScale: 1.14,
+  },
+  "tower-bridge": {
+    imageSrc: "/models/landmarks/london-route/TowerBridge.png",
+    defaultScale: 1.08,
+  },
+};
 
 export const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-export const getMyScapeOrigin = (boardWidth: number, boardHeight: number) => ({
-  originX: boardWidth * MY_SCAPE_ORIGIN_X_RATIO + MY_SCAPE_ORIGIN_X_OFFSET,
-  originY: boardHeight * MY_SCAPE_ORIGIN_Y_RATIO + MY_SCAPE_ORIGIN_Y_OFFSET,
-});
+export const snapToGrid = (value: number, gridSize = MY_SCAPE_GRID_SIZE) => Math.round(value / gridSize) * gridSize;
 
-export const gridToScreen = (
-  col: number,
-  row: number,
+export const clampToBoard = (
+  point: { x: number; y: number },
   boardWidth: number,
   boardHeight: number,
+  itemScale = 1,
 ) => {
-  const { originX, originY } = getMyScapeOrigin(boardWidth, boardHeight);
+  const footprint = BOARD_FOOTPRINT * itemScale;
+  const maxX = Math.max(0, boardWidth - footprint);
+  const maxY = Math.max(0, boardHeight - footprint);
+  const clampedX = clamp(point.x, 0, maxX);
+  const clampedY = clamp(point.y, 0, maxY);
+  const centerX = clampedX + footprint / 2;
+  const centerY = clampedY + footprint / 2;
+  const halfWidth = Math.max(1, (boardWidth - footprint) / 2 + 10);
+  const halfHeight = Math.max(1, (boardHeight - footprint) / 2 + 50);
+  const distanceX = centerX - boardWidth / 2;
+  const distanceY = centerY - boardHeight / 2;
+  const normalizedDistance = Math.abs(distanceX) / halfWidth + Math.abs(distanceY) / halfHeight;
+
+  if (normalizedDistance <= 1) {
+    return {
+      x: clampedX,
+      y: clampedY,
+    };
+  }
+
+  const ratio = 1 / normalizedDistance;
+  const projectedCenterX = boardWidth / 2 + distanceX * ratio;
+  const projectedCenterY = boardHeight / 2 + distanceY * ratio;
+
   return {
-    x: originX + ((col - row) * MY_SCAPE_TILE_WIDTH) / 2,
-    y: originY + ((col + row) * MY_SCAPE_TILE_HEIGHT) / 2,
+    x: clamp(projectedCenterX - footprint / 2, 0, maxX),
+    y: clamp(projectedCenterY - footprint / 2, 0, maxY),
   };
 };
 
-export const screenToGrid = (
-  x: number,
-  y: number,
+export const normalizeBoardPosition = (
+  point: { x: number; y: number },
   boardWidth: number,
   boardHeight: number,
-): { col: number; row: number } => {
-  const { originX, originY } = getMyScapeOrigin(boardWidth, boardHeight);
-  const dx = x - originX;
-  const dy = y - originY;
+  itemScale = 1,
+) => clampToBoard(point, boardWidth, boardHeight, itemScale);
 
-  return {
-    col: Math.round(dx / MY_SCAPE_TILE_WIDTH + dy / MY_SCAPE_TILE_HEIGHT),
-    row: Math.round(dy / MY_SCAPE_TILE_HEIGHT - dx / MY_SCAPE_TILE_WIDTH),
-  };
-};
-
-export const clampGridPosition = (col: number, row: number) => ({
-  col: clamp(col, 0, MY_SCAPE_GRID_COLUMNS - 1),
-  row: clamp(row, 0, MY_SCAPE_GRID_ROWS - 1),
-});
-
-export const getItemZIndex = (col: number, row: number) => col + row + 10;
-
-export const serializeMyScapeLayout = (
-  placedLandmarks: MyScapePlacedLandmark[],
-): MyScapeLayout => ({
+export const serializeMyScapeLayout = (placedLandmarks: MyScapePlacedLandmark[]): MyScapeLayout => ({
   placedLandmarks,
   updatedAt: new Date().toISOString(),
 });
 
-export const restoreMyScapeLayout = (scopeKey = "overview") => loadMyScapeLayout(scopeKey)?.placedLandmarks ?? [];
-
-export const restorePlacedAssetIds = () => loadPlacedAssetIds();
-
-export const getMyScapeDateKey = (value: Date) => {
-  const year = value.getFullYear();
-  const month = `${value.getMonth() + 1}`.padStart(2, "0");
-  const day = `${value.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
-const getDecorationDefaultScale = (decoration: Decoration) => {
-  if (decoration.rarity === "legendary") {
-    return 1;
-  }
-
-  if (decoration.rarity === "epic") {
-    return 0.96;
-  }
-
-  if (decoration.rarity === "rare") {
-    return 0.92;
-  }
-
-  return 0.88;
-};
-
-export const getMyScapeAssetConfig = (assetId: string): MyScapeAssetConfig => myScapeAssetConfigs[assetId] ?? {};
-
-export const getAssetFootprint = (
-  asset: Pick<UnlockedLandmarkAsset, "footprintWidth" | "footprintHeight"> | undefined | null,
-) => ({
-  width: Math.max(1, Math.round(asset?.footprintWidth ?? DEFAULT_FOOTPRINT_WIDTH)),
-  height: Math.max(1, Math.round(asset?.footprintHeight ?? DEFAULT_FOOTPRINT_HEIGHT)),
+export const normalizePlacedLandmark = (item: MyScapePlacedLandmark, index = 0): MyScapePlacedLandmark => ({
+  ...item,
+  x: item.x ?? (item.col ?? 0) * MY_SCAPE_GRID_SIZE,
+  y: item.y ?? (item.row ?? 0) * MY_SCAPE_GRID_SIZE,
+  zIndex: item.zIndex ?? index + 1,
 });
 
-export const clampGridPositionForFootprint = (
-  col: number,
-  row: number,
-  footprintWidth = DEFAULT_FOOTPRINT_WIDTH,
-  footprintHeight = DEFAULT_FOOTPRINT_HEIGHT,
-) => ({
-  col: clamp(col, 0, Math.max(0, MY_SCAPE_GRID_COLUMNS - footprintWidth)),
-  row: clamp(row, 0, Math.max(0, MY_SCAPE_GRID_ROWS - footprintHeight)),
-});
-
-const getOccupiedCells = (
-  col: number,
-  row: number,
-  footprintWidth = DEFAULT_FOOTPRINT_WIDTH,
-  footprintHeight = DEFAULT_FOOTPRINT_HEIGHT,
-) => {
-  const cells: Array<{ col: number; row: number }> = [];
-
-  for (let colOffset = 0; colOffset < footprintWidth; colOffset += 1) {
-    for (let rowOffset = 0; rowOffset < footprintHeight; rowOffset += 1) {
-      cells.push({ col: col + colOffset, row: row + rowOffset });
-    }
-  }
-
-  return cells;
-};
-
-const placementsOverlap = (
-  left: { col: number; row: number; width: number; height: number },
-  right: { col: number; row: number; width: number; height: number },
-) =>
-  left.col < right.col + right.width &&
-  left.col + left.width > right.col &&
-  left.row < right.row + right.height &&
-  left.row + left.height > right.row;
-
-export const getPlacementPreviewCells = (
-  col: number,
-  row: number,
-  footprintWidth = DEFAULT_FOOTPRINT_WIDTH,
-  footprintHeight = DEFAULT_FOOTPRINT_HEIGHT,
-) => getOccupiedCells(col, row, footprintWidth, footprintHeight);
-
-export const getPlacementAnchorPoint = (
-  col: number,
-  row: number,
-  footprintWidth: number,
-  footprintHeight: number,
-  boardWidth: number,
-  boardHeight: number,
-) => {
-  if (footprintWidth === 1 && footprintHeight === 1) {
-    return gridToScreen(col, row, boardWidth, boardHeight);
-  }
-
-  const start = gridToScreen(col, row, boardWidth, boardHeight);
-  const end = gridToScreen(col + footprintWidth - 1, row + footprintHeight - 1, boardWidth, boardHeight);
-
-  return {
-    x: (start.x + end.x) / 2,
-    y: Math.max(start.y, end.y),
-  };
-};
+export const restoreMyScapeLayout = () => (loadMyScapeLayout()?.placedLandmarks ?? []).map(normalizePlacedLandmark);
 
 export const resolveUnlockedLandmarkAssets = (
   routes: Route[],
   routeProgress: RouteProgress[],
-): UnlockedLandmarkAsset[] =>
+): MyScapeAsset[] =>
   routes.flatMap((route) => {
     const progress = routeProgress.find((entry) => entry.routeId === route.id);
-    if (!progress) {
+    if (!progress || progress.unlockedLandmarkIds.length === 0) {
       return [];
     }
 
-    const landmarks = route.landmarks
+    return route.landmarks
       .filter((landmark) => progress.unlockedLandmarkIds.includes(landmark.id))
       .map((landmark) => {
-        const landmarkConfig = getMyScapeAssetConfig(landmark.id);
+        const landmarkImage = myScapeLandmarkImages[landmark.id];
 
         return {
           ...landmark,
@@ -222,105 +166,13 @@ export const resolveUnlockedLandmarkAssets = (
           city: route.city,
           country: route.country,
           assetType: "landmark" as const,
-          imageSrc: landmarkConfig.imageSrc ?? landmark.image,
-          defaultScale: landmarkConfig.defaultScale,
-          ownedCount: 1,
-          offsetX: landmarkConfig.offsetX,
-          offsetY: landmarkConfig.offsetY,
-          footprintWidth: landmarkConfig.footprintWidth,
-          footprintHeight: landmarkConfig.footprintHeight,
+          imageSrc: landmarkImage?.imageSrc ?? landmark.image,
+          defaultScale: landmarkImage?.defaultScale,
         };
       });
-
-    const decorations = (route.decorations ?? [])
-      .filter((decoration) => (progress.decorations[decoration.id] ?? 0) > 0)
-      .map((decoration) => {
-        const decorationConfig = getMyScapeAssetConfig(decoration.id);
-
-        return {
-          id: decoration.id,
-          name: decoration.name,
-          description: decoration.description ?? `${route.city} decoration`,
-          image: decoration.image ?? decoration.icon ?? "",
-          imageSrc: decorationConfig.imageSrc ?? decoration.image ?? decoration.icon,
-          routeId: route.id,
-          routeName: route.name,
-          city: route.city,
-          country: route.country,
-          assetType: "decor" as const,
-          defaultScale: decorationConfig.defaultScale ?? getDecorationDefaultScale(decoration),
-          rarity: decoration.rarity,
-          ownedCount: progress.decorations[decoration.id] ?? 0,
-          offsetX: decorationConfig.offsetX,
-          offsetY: decorationConfig.offsetY,
-          footprintWidth: decorationConfig.footprintWidth,
-          footprintHeight: decorationConfig.footprintHeight,
-        };
-      });
-
-    return [...landmarks, ...decorations];
   });
 
-export const resolveMyScapeCatalogAssets = (
-  routes: Route[],
-  routeProgress: RouteProgress[],
-): UnlockedLandmarkAsset[] =>
-  routes.flatMap((route, routeIndex) => {
-    const progress = routeProgress.find((entry) => entry.routeId === route.id);
-
-    const landmarks = route.landmarks.map((landmark, landmarkIndex) => {
-      const landmarkConfig = getMyScapeAssetConfig(landmark.id);
-      const isUnlocked = progress?.unlockedLandmarkIds.includes(landmark.id) ?? false;
-
-      return {
-        ...landmark,
-        routeId: route.id,
-        routeName: route.name,
-        city: route.city,
-        country: route.country,
-        assetType: "landmark" as const,
-        imageSrc: landmarkConfig.imageSrc ?? landmark.image,
-        defaultScale: landmarkConfig.defaultScale,
-        ownedCount: isUnlocked ? 1 : 0,
-        routeOrder: routeIndex,
-        itemOrder: landmarkIndex,
-        offsetX: landmarkConfig.offsetX,
-        offsetY: landmarkConfig.offsetY,
-        footprintWidth: landmarkConfig.footprintWidth,
-        footprintHeight: landmarkConfig.footprintHeight,
-      };
-    });
-
-    const decorations = (route.decorations ?? []).map((decoration, decorationIndex) => {
-      const decorationConfig = getMyScapeAssetConfig(decoration.id);
-
-      return {
-        id: decoration.id,
-        name: decoration.name,
-        description: decoration.description ?? `${route.city} decoration`,
-        image: decoration.image ?? decoration.icon ?? "",
-        imageSrc: decorationConfig.imageSrc ?? decoration.image ?? decoration.icon,
-        routeId: route.id,
-        routeName: route.name,
-        city: route.city,
-        country: route.country,
-        assetType: "decor" as const,
-        defaultScale: decorationConfig.defaultScale ?? getDecorationDefaultScale(decoration),
-        rarity: decoration.rarity,
-        ownedCount: progress?.decorations[decoration.id] ?? 0,
-        routeOrder: routeIndex,
-        itemOrder: decorationIndex,
-        offsetX: decorationConfig.offsetX,
-        offsetY: decorationConfig.offsetY,
-        footprintWidth: decorationConfig.footprintWidth,
-        footprintHeight: decorationConfig.footprintHeight,
-      };
-    });
-
-    return [...landmarks, ...decorations];
-  });
-
-export const getMyScapeYearDemoAssets = (): UnlockedLandmarkAsset[] => [
+export const getMyScapeYearDemoAssets = (): MyScapeAsset[] => [
   {
     id: "shibuya",
     name: "Shibuya Crossing",
@@ -436,104 +288,68 @@ export const getMyScapeYearDemoAssets = (): UnlockedLandmarkAsset[] => [
 ];
 
 export const getNextZIndex = (placedLandmarks: MyScapePlacedLandmark[]) =>
-  placedLandmarks.reduce((max, item) => Math.max(max, item.zIndex ?? getItemZIndex(item.col, item.row)), 0) + 1;
+  placedLandmarks.reduce((max, item) => Math.max(max, item.zIndex), 0) + 1;
 
-export const isGridCellOccupied = (
-  col: number,
-  row: number,
-  items: MyScapePlacedLandmark[],
-  assetLookup?: Map<string, UnlockedLandmarkAsset>,
-  excludeId?: string,
+const hasPlacementConflict = (
+  candidate: { x: number; y: number },
+  existing: MyScapePlacedLandmark[],
+  itemScale = 1,
 ) => {
-  const targetAsset = assetLookup?.get("__placement-preview__");
-  const targetFootprint = getAssetFootprint(targetAsset);
-  const normalizedTarget = clampGridPositionForFootprint(col, row, targetFootprint.width, targetFootprint.height);
+  const candidateFootprint = BOARD_FOOTPRINT * itemScale;
 
-  return items.some((item) => {
-    if (item.id === excludeId) {
-      return false;
-    }
-
-    const itemAsset = assetLookup?.get(item.landmarkId);
-    const itemFootprint = getAssetFootprint(itemAsset);
-    const normalizedItem = clampGridPositionForFootprint(item.col, item.row, itemFootprint.width, itemFootprint.height);
-
-    return placementsOverlap(
-      {
-        col: normalizedTarget.col,
-        row: normalizedTarget.row,
-        width: targetFootprint.width,
-        height: targetFootprint.height,
-      },
-      {
-        col: normalizedItem.col,
-        row: normalizedItem.row,
-        width: itemFootprint.width,
-        height: itemFootprint.height,
-      },
-    );
+  return existing.some((item) => {
+    const existingFootprint = BOARD_FOOTPRINT * item.scale;
+    const minGap = (candidateFootprint + existingFootprint) / 2 - 10;
+    return Math.hypot(item.x - candidate.x, item.y - candidate.y) < minGap;
   });
 };
 
 export const createPlacedLandmark = (
   landmarkId: string,
   existing: MyScapePlacedLandmark[],
-  assetLookup?: Map<string, UnlockedLandmarkAsset>,
+  boardWidth: number,
+  boardHeight: number,
   initialScale = 1,
 ): MyScapePlacedLandmark => {
-  const asset = assetLookup?.get(landmarkId);
-  const footprint = getAssetFootprint(asset);
-  const centerCol = Math.floor(MY_SCAPE_GRID_COLUMNS / 2);
-  const centerRow = Math.floor(MY_SCAPE_GRID_ROWS / 2);
-  const centeredStart = clampGridPositionForFootprint(
-    centerCol - Math.floor((footprint.width - 1) / 2),
-    centerRow - Math.floor((footprint.height - 1) / 2),
-    footprint.width,
-    footprint.height,
-  );
-  const candidateOffsets = [{ col: centeredStart.col, row: centeredStart.row }];
+  const centerX = Math.max(0, boardWidth / 2 - BOARD_FOOTPRINT / 2);
+  const centerY = Math.max(0, boardHeight / 2 - BOARD_FOOTPRINT / 2);
+  const stepX = 34;
+  const stepY = 24;
+  const candidateOffsets = [{ x: 0, y: 0 }];
 
-  for (let ring = 1; ring <= Math.max(MY_SCAPE_GRID_COLUMNS, MY_SCAPE_GRID_ROWS); ring += 1) {
-    for (let colOffset = -ring; colOffset <= ring; colOffset += 1) {
-      const rowOffset = ring - Math.abs(colOffset);
-      candidateOffsets.push(
-        clampGridPositionForFootprint(
-          centeredStart.col + colOffset,
-          centeredStart.row + rowOffset,
-          footprint.width,
-          footprint.height,
-        ),
-      );
-      if (rowOffset !== 0) {
-        candidateOffsets.push(
-          clampGridPositionForFootprint(
-            centeredStart.col + colOffset,
-            centeredStart.row - rowOffset,
-            footprint.width,
-            footprint.height,
-          ),
-        );
+  for (let ring = 1; ring <= 7; ring += 1) {
+    for (let xStep = -ring; xStep <= ring; xStep += 1) {
+      const yStep = ring - Math.abs(xStep);
+      candidateOffsets.push({ x: xStep * stepX, y: yStep * stepY });
+      if (yStep !== 0) {
+        candidateOffsets.push({ x: xStep * stepX, y: -yStep * stepY });
       }
     }
   }
 
   const nextPoint =
-    candidateOffsets.find((candidate) => {
-      const placementAssetLookup = new Map(assetLookup);
-      if (asset) {
-        placementAssetLookup.set("__placement-preview__", asset);
-      }
-      return !isGridCellOccupied(candidate.col, candidate.row, existing, placementAssetLookup);
-    }) ??
-    clampGridPositionForFootprint(centeredStart.col, centeredStart.row, footprint.width, footprint.height);
+    candidateOffsets
+      .map((offset) =>
+        normalizeBoardPosition(
+          {
+            x: centerX + offset.x,
+            y: centerY + offset.y,
+          },
+          boardWidth,
+          boardHeight,
+          initialScale,
+        ),
+      )
+      .find((point) => !hasPlacementConflict(point, existing, initialScale)) ??
+    normalizeBoardPosition({ x: centerX, y: centerY }, boardWidth, boardHeight, initialScale);
 
   return {
     id: crypto.randomUUID(),
     landmarkId,
-    col: nextPoint.col,
-    row: nextPoint.row,
+    x: nextPoint.x,
+    y: nextPoint.y,
     scale: initialScale,
-    zIndex: getItemZIndex(nextPoint.col, nextPoint.row),
+    zIndex: getNextZIndex(existing),
   };
 };
 
@@ -673,7 +489,6 @@ export const buildMyScapeUnlockTimeline = (routes: Route[], runHistory: RunHisto
     route.landmarks
       .filter((landmark) => landmark.milestoneKm > previousDistance && landmark.milestoneKm <= nextDistance)
       .forEach((landmark) => {
-        const landmarkConfig = getMyScapeAssetConfig(landmark.id);
         unlocks.push({
           ...landmark,
           routeId: route.id,
@@ -681,13 +496,6 @@ export const buildMyScapeUnlockTimeline = (routes: Route[], runHistory: RunHisto
           city: route.city,
           country: route.country,
           assetType: "landmark",
-          imageSrc: landmarkConfig.imageSrc ?? landmark.image,
-          defaultScale: landmarkConfig.defaultScale,
-          ownedCount: 1,
-          offsetX: landmarkConfig.offsetX,
-          offsetY: landmarkConfig.offsetY,
-          footprintWidth: landmarkConfig.footprintWidth,
-          footprintHeight: landmarkConfig.footprintHeight,
           unlockedAt: run.completedAt,
         });
       });

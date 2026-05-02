@@ -1,32 +1,18 @@
 import type { PointerEvent as ReactPointerEvent, RefObject } from "react";
 import type { MyScapePlacedLandmark } from "../../types";
-import {
-  getAssetFootprint,
-  getPlacementAnchorPoint,
-  getPlacementPreviewCells,
-  gridToScreen,
-  MY_SCAPE_GRID_COLUMNS,
-  MY_SCAPE_GRID_ROWS,
-  MY_SCAPE_TILE_HEIGHT,
-  MY_SCAPE_TILE_WIDTH,
-  type UnlockedLandmarkAsset,
-} from "../../utils/myScape";
+import type { MyScapeAsset } from "../../utils/myScape";
 import { PlacedLandmark } from "./PlacedLandmark";
 
 interface MyScapeBoardProps {
   boardRef: RefObject<HTMLDivElement>;
-  assets: UnlockedLandmarkAsset[];
+  assets: MyScapeAsset[];
   placedLandmarks: MyScapePlacedLandmark[];
   selectedId: string | null;
-  draggingId: string | null;
-  entryReady?: boolean;
-  dragPreview: { x: number; y: number } | null;
-  placementPreview: { assetId: string; col: number; row: number; valid: boolean; active: boolean } | null;
-  isEditMode: boolean;
-  newTodayIds: Set<string>;
   expanded?: boolean;
   onItemPointerDown: (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => void;
   onSelectItem: (itemId: string) => void;
+  overlaySlot?: React.ReactNode;
+  onReturnToBox?: (itemId: string) => void;
 }
 
 export const MyScapeBoard = ({
@@ -34,102 +20,44 @@ export const MyScapeBoard = ({
   assets,
   placedLandmarks,
   selectedId,
-  draggingId,
-  entryReady = false,
-  dragPreview,
-  placementPreview,
-  isEditMode,
-  newTodayIds,
   expanded = false,
   onItemPointerDown,
   onSelectItem,
+  overlaySlot,
+  onReturnToBox,
 }: MyScapeBoardProps) => {
-  const boardScale = expanded ? 1 : 0.76;
   const assetMap = new Map(assets.map((asset) => [asset.id, asset]));
-  const stageWidth = expanded ? 424 : 386;
-  const stageHeight = expanded ? 356 : 327;
-  const boardWidth = expanded ? 352 : 320;
-  const boardHeight = expanded ? 222 : 196;
-  const boardLeft = expanded ? 36 : 33;
-  const boardTop = 24;
-  const boardOriginX = boardLeft + boardWidth / 2;
-  const boardOriginY = boardTop + boardHeight * 0.12 + 12;
-  const gridHalfWidth = (MY_SCAPE_GRID_COLUMNS * MY_SCAPE_TILE_WIDTH) / 2;
-  const gridHalfDepth = (MY_SCAPE_GRID_ROWS * MY_SCAPE_TILE_WIDTH) / 2;
-  const platformThickness = expanded ? 52 : 44;
-  const soilInset = expanded ? 12 : 10;
-  const topPoint = `${boardOriginX},${boardOriginY - MY_SCAPE_TILE_HEIGHT / 2}`;
-  const rightPoint = `${boardOriginX + gridHalfWidth},${boardOriginY + (MY_SCAPE_GRID_COLUMNS * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2}`;
-  const bottomPoint = `${boardOriginX},${boardOriginY + ((MY_SCAPE_GRID_COLUMNS + MY_SCAPE_GRID_ROWS) * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2}`;
-  const leftPoint = `${boardOriginX - gridHalfDepth},${boardOriginY + (MY_SCAPE_GRID_ROWS * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2}`;
-  const leftBottomPoint = `${boardOriginX},${boardOriginY + ((MY_SCAPE_GRID_COLUMNS + MY_SCAPE_GRID_ROWS) * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2 + platformThickness}`;
-  const rightBottomPoint = `${boardOriginX + gridHalfWidth},${boardOriginY + (MY_SCAPE_GRID_COLUMNS * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2 + platformThickness}`;
-  const leftFrontPoint = `${boardOriginX - gridHalfDepth},${boardOriginY + (MY_SCAPE_GRID_ROWS * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2 + platformThickness}`;
-  const innerTopPoint = `${boardOriginX},${boardOriginY - MY_SCAPE_TILE_HEIGHT / 2 + soilInset}`;
-  const innerRightPoint = `${boardOriginX + gridHalfWidth - soilInset * 1.15},${boardOriginY + (MY_SCAPE_GRID_COLUMNS * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2 + soilInset * 0.58}`;
-  const innerBottomPoint = `${boardOriginX},${boardOriginY + ((MY_SCAPE_GRID_COLUMNS + MY_SCAPE_GRID_ROWS) * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2 - soilInset}`;
-  const innerLeftPoint = `${boardOriginX - gridHalfDepth + soilInset * 1.15},${boardOriginY + (MY_SCAPE_GRID_ROWS * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2 + soilInset * 0.58}`;
-
-  const placementPreviewPolygon = placementPreview
-    ? (() => {
-        const previewAsset = assetMap.get(placementPreview.assetId);
-        const footprint = getAssetFootprint(previewAsset);
-
-        return getPlacementPreviewCells(
-          placementPreview.col,
-          placementPreview.row,
-          footprint.width,
-          footprint.height,
-        ).map((cell) => {
-          const center = gridToScreen(cell.col, cell.row, boardWidth, boardHeight);
-          const top = `${center.x},${center.y - MY_SCAPE_TILE_HEIGHT / 2}`;
-          const right = `${center.x + MY_SCAPE_TILE_WIDTH / 2},${center.y}`;
-          const bottom = `${center.x},${center.y + MY_SCAPE_TILE_HEIGHT / 2}`;
-          const left = `${center.x - MY_SCAPE_TILE_WIDTH / 2},${center.y}`;
-
-          return `${top} ${right} ${bottom} ${left}`;
-        });
-      })()
-    : null;
-  const gridCells = Array.from({ length: MY_SCAPE_GRID_COLUMNS * MY_SCAPE_GRID_ROWS }, (_, index) => {
-    const col = index % MY_SCAPE_GRID_COLUMNS;
-    const row = Math.floor(index / MY_SCAPE_GRID_COLUMNS);
-    const center = gridToScreen(col, row, boardWidth, boardHeight);
-    const top = `${center.x},${center.y - MY_SCAPE_TILE_HEIGHT / 2}`;
-    const right = `${center.x + MY_SCAPE_TILE_WIDTH / 2},${center.y}`;
-    const bottom = `${center.x},${center.y + MY_SCAPE_TILE_HEIGHT / 2}`;
-    const left = `${center.x - MY_SCAPE_TILE_WIDTH / 2},${center.y}`;
-    return { id: `${col}-${row}`, points: `${top} ${right} ${bottom} ${left}` };
-  });
 
   return (
-    <div className="relative h-full min-h-[420px] overflow-hidden bg-transparent">
-      <div className="absolute inset-0 bg-[radial-gradient(88%_58%_at_50%_18%,rgba(255,255,255,0.34)_0%,rgba(255,255,255,0.08)_42%,rgba(255,255,255,0)_70%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(247,244,237,0.14)_0%,rgba(239,243,234,0.05)_54%,rgba(235,239,230,0)_100%)]" />
+    <div className="relative h-full min-h-[285px] overflow-hidden bg-[linear-gradient(180deg,#f6f4ee_0%,#eef2eb_36%,#edf1ea_100%)]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.92),rgba(255,255,255,0)_46%)]" />
+      <div className="absolute inset-x-0 bottom-0 h-28 bg-[linear-gradient(180deg,rgba(238,242,235,0)_0%,rgba(238,242,235,0.88)_100%)]" />
+      <div className="absolute inset-x-4 top-6 h-24 rounded-full bg-[radial-gradient(circle,rgba(190,213,195,0.3),rgba(190,213,195,0)_72%)] blur-2xl" />
+      <div
+        className={`absolute left-1/2 rounded-full bg-[radial-gradient(circle,rgba(57,77,63,0.14),rgba(57,77,63,0)_72%)] blur-md ${
+          expanded ? "bottom-10 h-20 w-[364px] -translate-x-1/2" : "bottom-14 h-16 w-[306px] -translate-x-1/2"
+        }`}
+      />
 
       <div
         className={`absolute left-1/2 -translate-x-1/2 -translate-y-1/2 ${
-          expanded ? "top-[48%] h-[356px] w-[424px]" : "top-[45%] h-[327px] w-[386px]"
+          expanded ? "top-[50%] h-[324px] w-[386px]" : "top-[51%] h-[286px] w-[340px]"
         }`}
-        style={{
-          transform: `translate(-50%, -50%) scale(${boardScale})`,
-          transformOrigin: "center center",
-        }}
       >
-        <svg viewBox={`0 0 ${stageWidth} ${stageHeight}`} className="pointer-events-none h-full w-full overflow-visible">
+        <svg viewBox="0 0 296 250" className="h-full w-full overflow-visible">
             <defs>
               <linearGradient id="myscape-top" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#eef5ec" />
-                <stop offset="52%" stopColor="#d9e6d7" />
-                <stop offset="100%" stopColor="#bdd1c0" />
+                <stop offset="0%" stopColor="#e9f0e7" />
+                <stop offset="48%" stopColor="#d7e4d5" />
+                <stop offset="100%" stopColor="#bdd0c0" />
               </linearGradient>
               <linearGradient id="myscape-left" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#8fa594" />
-                <stop offset="100%" stopColor="#728677" />
+                <stop offset="0%" stopColor="#8ea192" />
+                <stop offset="100%" stopColor="#6f8374" />
               </linearGradient>
               <linearGradient id="myscape-right" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#7e9384" />
-                <stop offset="100%" stopColor="#617568" />
+                <stop offset="0%" stopColor="#7b8f80" />
+                <stop offset="100%" stopColor="#607367" />
               </linearGradient>
               <linearGradient id="myscape-soil-left" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#98866d" />
@@ -143,110 +71,55 @@ export const MyScapeBoard = ({
                 <circle cx="10" cy="10" r="6" fill="rgba(134,115,91,0.24)" />
                 <circle cx="23" cy="22" r="5" fill="rgba(171,152,126,0.14)" />
               </pattern>
-              <pattern id="myscape-grass-speckles" width="34" height="34" patternUnits="userSpaceOnUse">
-                <circle cx="9" cy="9" r="3.2" fill="rgba(255,255,255,0.14)" />
-                <circle cx="24" cy="18" r="2.6" fill="rgba(171,194,177,0.18)" />
-                <circle cx="16" cy="28" r="2.2" fill="rgba(123,151,131,0.08)" />
-              </pattern>
             </defs>
 
-            <polygon points={`${topPoint} ${rightPoint} ${bottomPoint} ${leftPoint}`} fill="url(#myscape-top)" />
-            <polygon points={`${leftPoint} ${bottomPoint} ${leftBottomPoint} ${leftFrontPoint}`} fill="url(#myscape-left)" />
-            <polygon points={`${rightPoint} ${bottomPoint} ${leftBottomPoint} ${rightBottomPoint}`} fill="url(#myscape-right)" />
+            <polygon points="148,24 280,94 148,164 16,94" fill="url(#myscape-top)" />
+            <polygon points="16,94 148,164 148,208 16,146" fill="url(#myscape-left)" />
+            <polygon points="280,94 148,164 148,208 280,146" fill="url(#myscape-right)" />
 
-            <polygon points={`${innerTopPoint} ${innerRightPoint} ${innerBottomPoint} ${innerLeftPoint}`} fill="url(#myscape-grass-speckles)" opacity="0.9" />
-            <polygon points={`${leftPoint} ${bottomPoint} ${leftBottomPoint} ${leftFrontPoint}`} fill="url(#myscape-soil-left)" opacity="0.9" />
-            <polygon points={`${rightPoint} ${bottomPoint} ${leftBottomPoint} ${rightBottomPoint}`} fill="url(#myscape-soil-right)" opacity="0.94" />
-            <polygon points={`${leftPoint} ${bottomPoint} ${leftBottomPoint} ${leftFrontPoint}`} fill="url(#myscape-soil-dots)" opacity="0.82" />
-            <polygon points={`${rightPoint} ${bottomPoint} ${leftBottomPoint} ${rightBottomPoint}`} fill="url(#myscape-soil-dots)" opacity="0.72" />
+            <polygon points="16,104 148,172 148,208 16,146" fill="url(#myscape-soil-left)" />
+            <polygon points="280,104 148,172 148,208 280,146" fill="url(#myscape-soil-right)" />
+            <polygon points="16,104 148,172 148,208 16,146" fill="url(#myscape-soil-dots)" opacity="0.9" />
+            <polygon points="280,104 148,172 148,208 280,146" fill="url(#myscape-soil-dots)" opacity="0.78" />
 
-            <polygon points={`${topPoint} ${rightPoint} ${bottomPoint} ${leftPoint}`} fill="rgba(255,255,255,0.06)" />
-            <path d={`M ${topPoint} L ${rightPoint}`} stroke="rgba(255,255,255,0.24)" strokeWidth="2" />
-            <path d={`M ${topPoint} L ${leftPoint}`} stroke="rgba(255,255,255,0.18)" strokeWidth="2" />
-            <path d={`M ${leftPoint} L ${bottomPoint} L ${rightPoint}`} fill="none" stroke="rgba(96,121,109,0.24)" strokeWidth="1.5" />
-            <path d={`M ${leftPoint} L ${leftFrontPoint} L ${leftBottomPoint} L ${rightBottomPoint} L ${rightPoint}`} fill="none" stroke="rgba(70,88,52,0.14)" strokeWidth="1.5" />
+            <polygon points="148,24 280,94 148,164 16,94" fill="rgba(255,255,255,0.08)" />
+            <path d="M148 24 L280 94" stroke="rgba(255,255,255,0.28)" strokeWidth="2" />
+            <path d="M148 24 L16 94" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+            <path d="M16 94 L148 164 L280 94" fill="none" stroke="rgba(96,121,109,0.24)" strokeWidth="1.5" />
+            <path d="M16 94 L16 146 L148 208 L280 146 L280 94" fill="none" stroke="rgba(70,88,52,0.14)" strokeWidth="1.5" />
         </svg>
         <div
           ref={boardRef}
-           className={expanded ? "absolute left-[36px] top-[24px] h-[222px] w-[352px]" : "absolute left-[33px] top-[24px] h-[196px] w-[320px]"}
+          className={expanded ? "absolute left-[24px] top-[13px] h-[189px] w-[313px]" : "absolute left-[21px] top-[12px] h-[166px] w-[274px]"}
         >
-          {isEditMode ? (
-            <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
-              {gridCells.map((cell) => (
-                <polygon
-                  key={cell.id}
-                  points={cell.points}
-                  className="myscape-grid-cell"
-                  fill="rgba(255,255,255,0.02)"
-                  stroke="rgba(98,122,108,0.18)"
-                  strokeWidth="1"
-                />
-              ))}
-            </svg>
-          ) : null}
-          {isEditMode ? (
-            <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
-              {placementPreview && placementPreviewPolygon ? (
-                <g>
-                  {placementPreviewPolygon.map((points, index) => (
-                    <g key={`${placementPreview.assetId}-${placementPreview.col}-${placementPreview.row}-${index}`}>
-                      <polygon
-                        points={points}
-                        fill={placementPreview.valid ? "rgba(76, 175, 80, 0.28)" : "rgba(231, 76, 60, 0.28)"}
-                        stroke={placementPreview.valid ? "rgba(102, 187, 106, 0.92)" : "rgba(239, 83, 80, 0.94)"}
-                        strokeWidth="2"
-                      />
-                      <polygon
-                        points={points}
-                        fill="none"
-                        stroke={placementPreview.valid ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.28)"}
-                        strokeWidth="0.8"
-                      />
-                    </g>
-                  ))}
-                </g>
-              ) : null}
-            </svg>
-          ) : null}
           {placedLandmarks.map((item) => {
             const asset = assetMap.get(item.landmarkId);
             if (!asset) {
               return null;
             }
 
-            const footprint = getAssetFootprint(asset);
-            const snappedPosition = getPlacementAnchorPoint(
-              item.col,
-              item.row,
-              footprint.width,
-              footprint.height,
-              boardWidth,
-              boardHeight,
-            );
-            const isDragging = draggingId === item.id;
-            const renderedPosition = isDragging && dragPreview ? dragPreview : snappedPosition;
-
             return (
               <PlacedLandmark
                 key={item.id}
                 asset={asset}
                 item={item}
-                animateIn={entryReady}
-                editable={isEditMode}
-                index={placedLandmarks.findIndex((entry) => entry.id === item.id)}
-                screenX={renderedPosition.x}
-                screenY={renderedPosition.y}
-                isEditMode={isEditMode}
                 selected={selectedId === item.id}
-                dragging={isDragging}
                 onPointerDown={onItemPointerDown}
                 onSelect={onSelectItem}
+                onReturnToBox={onReturnToBox}
               />
             );
           })}
+          {overlaySlot ? <div className="pointer-events-none absolute inset-0 z-[120] overflow-visible">{overlaySlot}</div> : null}
         </div>
       </div>
 
+      {placedLandmarks.length === 0 ? (
+        <div className="pointer-events-none absolute left-1/2 top-[45%] z-10 flex w-[210px] -translate-x-1/2 -translate-y-1/2 flex-col items-center rounded-[26px] bg-white/60 px-5 py-3.5 text-center shadow-[0_18px_36px_rgba(35,52,40,0.08)] ring-1 ring-white/80 backdrop-blur">
+          <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-sage-500">Empty Lawn</p>
+          <p className="mt-2 text-sm text-sage-600">Place items from Box.</p>
+        </div>
+      ) : null}
     </div>
   );
 };

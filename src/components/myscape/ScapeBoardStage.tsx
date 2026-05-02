@@ -28,9 +28,7 @@ export const ScapeBoardStage = ({
   draggingId,
   entryReady,
   isEditMode,
-  newTodayIds,
   placedLandmarks,
-  placementPreview,
   selectedId,
   transitionDirection = 0,
   viewKey,
@@ -73,12 +71,6 @@ export const ScapeBoardStage = ({
           assets={assets}
           placedLandmarks={placedLandmarks}
           selectedId={selectedId}
-          draggingId={draggingId}
-          entryReady={entryReady}
-          dragPreview={dragPreview}
-          placementPreview={placementPreview}
-          isEditMode={isEditMode}
-          newTodayIds={newTodayIds}
           onItemPointerDown={onItemPointerDown}
           onSelectItem={onSelectItem}
         />

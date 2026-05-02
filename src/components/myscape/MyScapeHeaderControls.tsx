@@ -4,6 +4,7 @@ interface MyScapeHeaderControlsProps {
   arrangeActive: boolean;
   arrangeDisabled?: boolean;
   hasNewItems?: boolean;
+  showArrange?: boolean;
   onBack: () => void;
   onToggleArrange: () => void;
 }
@@ -15,10 +16,11 @@ export const MyScapeHeaderControls = ({
   arrangeActive,
   arrangeDisabled = false,
   hasNewItems = false,
+  showArrange = true,
   onBack,
   onToggleArrange,
 }: MyScapeHeaderControlsProps) => (
-  <div className="pointer-events-none absolute inset-x-0 top-0 z-30 px-4 pb-2 pt-[calc(env(safe-area-inset-top,0px)+16px)]">
+  <div className="pointer-events-none absolute inset-x-0 top-0 z-[80] px-4 pb-2 pt-[calc(env(safe-area-inset-top,0px)+16px)]">
     <div className="relative flex items-start justify-between gap-3">
       <button type="button" onClick={onBack} className={`${glassButtonClassName} h-12 w-12`} aria-label="Go back">
         <ArrowLeft className="h-5 w-5" />
@@ -28,20 +30,24 @@ export const MyScapeHeaderControls = ({
         <p className="text-[11px] font-medium uppercase tracking-[0.42em] text-[#56685f]/88">MILESCAPE</p>
       </div>
 
-      <div className="relative pointer-events-auto">
-        <button
-          type="button"
-          onClick={onToggleArrange}
-          aria-disabled={arrangeDisabled}
-          className={`${glassButtonClassName} min-w-[116px] gap-2 px-4 py-3 text-sm font-medium ${
-            arrangeActive ? "bg-[#3f5548]/86 text-white border-white/20" : arrangeDisabled ? "opacity-55" : ""
-          }`}
-        >
-          <Grid3X3 className="h-4 w-4" />
-          {arrangeActive ? "Done" : "Arrange"}
-        </button>
-        {!arrangeActive && hasNewItems ? <span className="myscape-new-dot absolute right-2 top-2" /> : null}
-      </div>
+      {showArrange ? (
+        <div className="relative pointer-events-auto">
+          <button
+            type="button"
+            onClick={onToggleArrange}
+            aria-disabled={arrangeDisabled}
+            className={`${glassButtonClassName} min-w-[116px] gap-2 px-4 py-3 text-sm font-medium ${
+              arrangeActive ? "bg-[#3f5548]/86 text-white border-white/20" : arrangeDisabled ? "opacity-55" : ""
+            }`}
+          >
+            <Grid3X3 className="h-4 w-4" />
+            {arrangeActive ? "Done" : "Arrange"}
+          </button>
+          {!arrangeActive && hasNewItems ? <span className="myscape-new-dot absolute right-2 top-2" /> : null}
+        </div>
+      ) : (
+        <div className="h-12 w-12" aria-hidden="true" />
+      )}
     </div>
   </div>
 );
