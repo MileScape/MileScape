@@ -143,8 +143,8 @@ export const RunSetupPage = () => {
     targetType === "pacecrew_mission" && selectedMissionBundle ? "pacecrew_mission" : "personal";
   const effectiveDistance = selectedDistance;
   const runSimulationDurationSeconds = useMemo(
-    () => getRunSimulationDurationSeconds(effectiveDistance),
-    [effectiveDistance],
+    () => getRunSimulationDurationSeconds(effectiveDistance, route?.id),
+    [effectiveDistance, route?.id],
   );
 
   const preview = useMemo(() => {

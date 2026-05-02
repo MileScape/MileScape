@@ -65,15 +65,20 @@ export const routeWalkingWaypoints: Record<string, LngLatTuple[]> = {
     [2.1536, 41.4036]
   ],
   "london-landmark-route": [
-    [-0.1419, 51.5014],
     [-0.1246, 51.5007],
     [-0.1195, 51.5033],
+    [-0.1161, 51.5061],
+    [-0.1083, 51.5082],
+    [-0.0986, 51.5081],
     [-0.0877, 51.5079],
+    [-0.0785, 51.5067],
     [-0.0754, 51.5055],
-    [-0.0805, 51.5116],
+    [-0.0796, 51.5077],
+    [-0.0903, 51.5102],
     [-0.1025, 51.5128],
+    [-0.1162, 51.5117],
     [-0.1236, 51.5104],
-    [-0.1419, 51.5014]
+    [-0.1246, 51.5007]
   ],
   "paris-eiffel-route": [
     [2.2865, 48.8625],
@@ -123,15 +128,65 @@ export const routeWalkingWaypoints: Record<string, LngLatTuple[]> = {
     [144.9732, -37.8236],
     [144.9625, -37.8239],
     [144.9577, -37.8183]
+  ],
+  "seoul-heritage-route": [
+    [126.9769, 37.5796],
+    [126.977, 37.5759],
+    [126.9786, 37.5718],
+    [126.9822, 37.5691],
+    [126.9911, 37.5702],
+    [126.9948, 37.5747],
+    [126.9972, 37.5701],
+    [126.9963, 37.5645],
+    [126.9941, 37.5608],
+    [126.9882, 37.5563]
+  ],
+  "california-discovery-route": [
+    [-122.0877, 37.4268],
+    [-122.0826, 37.4316],
+    [-122.0741, 37.4415],
+    [-122.0778, 37.4495],
+    [-122.0906, 37.4526],
+    [-122.1048, 37.4515],
+    [-122.1135, 37.4448],
+    [-122.1211, 37.4382],
+    [-122.1166, 37.4299],
+    [-122.1035, 37.4251],
+    [-122.0916, 37.4242],
+    [-122.0877, 37.4268]
+  ],
+  "taipei-skyline-route": [
+    [121.5654, 25.033],
+    [121.5617, 25.0337],
+    [121.5566, 25.0341],
+    [121.5487, 25.034],
+    [121.5433, 25.0329],
+    [121.5388, 25.031],
+    [121.542, 25.0251],
+    [121.5503, 25.0226],
+    [121.5585, 25.0217],
+    [121.5652, 25.0261],
+    [121.5654, 25.033]
   ]
 };
 
-export const getRunSimulationDurationSeconds = (distanceKm: number) => {
+const routeDurationMultipliers: Record<string, number> = {
+  "california-discovery-route": 1.4,
+  "london-landmark-route": 1.65,
+  "seoul-heritage-route": 1.35
+};
+
+export const getRunSimulationDurationSeconds = (distanceKm: number, routeId?: string) => {
   if (!Number.isFinite(distanceKm) || distanceKm <= 0) {
     return 6;
   }
 
-  return Math.min(18, Math.max(6, 5 + distanceKm * 0.95));
+  const baseDuration = Math.min(18, Math.max(6, 5 + distanceKm * 0.95));
+  const multiplier = routeId ? routeDurationMultipliers[routeId] ?? 1 : 1;
+  const maxDuration =
+    routeId === "london-landmark-route" ? 30 : routeId === "seoul-heritage-route" ? 24 : routeId === "california-discovery-route" ? 25 : 18;
+
+  return Math.min(maxDuration, Math.max(6, baseDuration * multiplier));
 };
 
 export const getSimulationProgressTarget = (distanceKm: number, routeDistanceKm: number) => {
@@ -327,6 +382,11 @@ export const buildSimulationPath = (
   marker?: LngLatTuple
 ) => {
   const anchor = marker ?? center;
+  const walkingWaypoints = routeWalkingWaypoints[routeId];
+  if (walkingWaypoints && walkingWaypoints.length >= 2) {
+    return walkingWaypoints;
+  }
+
   const routeSpecificPath = buildRouteSpecificSimulationPath(routeId, anchor);
 
   if (routeSpecificPath) {

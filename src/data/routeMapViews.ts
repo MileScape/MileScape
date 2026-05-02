@@ -64,24 +64,24 @@ export const routeMapViews: Record<string, RouteMapView> = {
     marker: [151.2153, -33.8568]
   },
   "rome-heritage-route": {
-    center: [12.4922, 41.8902],
-    zoom: 12.7,
-    pitch: 76,
-    bearing: -18,
+    center: [12.4901, 41.8918],
+    zoom: 14.05,
+    pitch: 72,
+    bearing: -14,
     marker: [12.4922, 41.8902]
   },
   "california-discovery-route": {
-    center: [-121.9, 37.3318],
-    zoom: 7.4,
-    pitch: 70,
-    bearing: -12,
-    marker: [-122.009, 37.3349]
+    center: [-122.0982, 37.4298],
+    zoom: 12.45,
+    pitch: 72,
+    bearing: 24,
+    marker: [-122.0877, 37.4268]
   },
   "taipei-skyline-route": {
-    center: [121.5654, 25.033],
-    zoom: 12.4,
-    pitch: 76,
-    bearing: -18,
+    center: [121.5527, 25.0294],
+    zoom: 12.95,
+    pitch: 74,
+    bearing: -20,
     marker: [121.5654, 25.033]
   },
   "bangkok-floating-route": {
