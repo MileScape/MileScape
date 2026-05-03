@@ -11,6 +11,7 @@ import {
   getMissionById,
   isCrewOrganizer,
   isRouteOwnedInPaceport,
+  reconcilePaceCrewMembershipUnlockRouteIds,
   syncExpiredMissionStates
 } from "../utils/paceCrew";
 import { isRouteOwned } from "../utils/shop";
@@ -219,9 +220,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     };
   }, [debugModeEnabled, state]);
 
-  const playableRoutes = routes.filter(
-    (route) => route.sourceType === "personal" && isRouteOwned(route.id, effectiveState.purchasedRouteIds),
-  );
+  const playableRoutes = routes.filter((route) => isRouteOwnedInPaceport(route.id, effectiveState));
 
   const currentUser = users.find((user) => user.id === currentUserId) ?? users[0];
 
@@ -236,12 +235,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       t: (key, params) => translate(state.language, key, params),
       selectRoute: (routeId) => {
         setState((current) =>
-          routes.some(
-            (route) =>
-              route.id === routeId &&
-              route.sourceType === "personal" &&
-              ((current.debugModeEnabled ?? false) || isRouteOwned(route.id, current.purchasedRouteIds)),
-          )
+          routes.some((route) => route.id === routeId && ((current.debugModeEnabled ?? false) || isRouteOwnedInPaceport(route.id, current)))
             ? { ...current, selectedRouteId: routeId }
             : current,
         );
@@ -254,9 +248,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           const measurement = resolveRunMeasurement(synced, input.distanceKm);
 
           if (input.targetType === "personal") {
-            const route = routes.find((entry) => entry.id === input.routeId && entry.sourceType === "personal");
+            const route = routes.find((entry) => entry.id === input.routeId);
 
-            if (!route || (!(synced.debugModeEnabled ?? false) && !isRouteOwned(route.id, synced.purchasedRouteIds))) {
+            if (!route || (!(synced.debugModeEnabled ?? false) && !isRouteOwnedInPaceport(route.id, synced))) {
               throw new Error(`Unknown or locked route: ${input.routeId}`);
             }
 
@@ -374,25 +368,33 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
         const crewId = createCrewId(name);
 
-        setState((current) => ({
-          ...current,
-          paceCrews: [
-            ...current.paceCrews,
-            {
-              id: crewId,
-              name,
-              description,
-              organizerId: currentUserId,
-              memberIds: [currentUserId],
-              createdAt: new Date().toISOString(),
-              exclusiveDestinationIds: []
-            }
-          ],
-          userPaceCrewState: {
-            organizedCrewId: crewId,
-            memberships: [...current.userPaceCrewState.memberships, createMembership(crewId, "organizer")]
-          }
-        }));
+        setState((current) => {
+          const memberships = [...current.userPaceCrewState.memberships, createMembership(crewId, "organizer")];
+
+          return {
+            ...current,
+            paceCrews: [
+              ...current.paceCrews,
+              {
+                id: crewId,
+                name,
+                description,
+                organizerId: currentUserId,
+                memberIds: [currentUserId],
+                createdAt: new Date().toISOString(),
+                exclusiveDestinationIds: []
+              }
+            ],
+            userPaceCrewState: {
+              organizedCrewId: crewId,
+              memberships
+            },
+            unlockedCrewDestinationIds: reconcilePaceCrewMembershipUnlockRouteIds(
+              current.unlockedCrewDestinationIds,
+              memberships.length,
+            )
+          };
+        });
 
         return { success: true, message: "PaceCrew created" };
       },
@@ -407,18 +409,26 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           return { success: false, message: "Already joined" };
         }
 
-        setState((current) => ({
-          ...current,
-          paceCrews: current.paceCrews.map((entry) =>
-            entry.id === crewId && !entry.memberIds.includes(currentUserId)
-              ? { ...entry, memberIds: [...entry.memberIds, currentUserId] }
-              : entry,
-          ),
-          userPaceCrewState: {
-            ...current.userPaceCrewState,
-            memberships: [...current.userPaceCrewState.memberships, createMembership(crewId, "member")]
-          }
-        }));
+        setState((current) => {
+          const memberships = [...current.userPaceCrewState.memberships, createMembership(crewId, "member")];
+
+          return {
+            ...current,
+            paceCrews: current.paceCrews.map((entry) =>
+              entry.id === crewId && !entry.memberIds.includes(currentUserId)
+                ? { ...entry, memberIds: [...entry.memberIds, currentUserId] }
+                : entry,
+            ),
+            userPaceCrewState: {
+              ...current.userPaceCrewState,
+              memberships
+            },
+            unlockedCrewDestinationIds: reconcilePaceCrewMembershipUnlockRouteIds(
+              current.unlockedCrewDestinationIds,
+              memberships.length,
+            ),
+          };
+        });
 
         return { success: true, message: `${crew.name} joined` };
       },
@@ -431,19 +441,33 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           return { success: false, message: "You are not a member of this PaceCrew" };
         }
 
-        setState((current) => ({
-          ...current,
-          paceCrews: current.paceCrews.map((entry) =>
-            entry.id === crewId
-              ? { ...entry, memberIds: entry.memberIds.filter((memberId) => memberId !== currentUserId) }
-              : entry,
-          ),
-          userPaceCrewState: {
-            ...current.userPaceCrewState,
-            memberships: current.userPaceCrewState.memberships.filter((membership) => membership.crewId !== crewId)
-          },
-          userMissionStates: current.userMissionStates.filter((missionState) => missionState.crewId !== crewId)
-        }));
+        setState((current) => {
+          const memberships = current.userPaceCrewState.memberships.filter((membership) => membership.crewId !== crewId);
+          const unlockedCrewDestinationIds = reconcilePaceCrewMembershipUnlockRouteIds(
+            current.unlockedCrewDestinationIds,
+            memberships.length,
+          );
+          const selectedRouteStillOwned =
+            !current.selectedRouteId ||
+            current.purchasedRouteIds.includes(current.selectedRouteId) ||
+            unlockedCrewDestinationIds.includes(current.selectedRouteId);
+
+          return {
+            ...current,
+            paceCrews: current.paceCrews.map((entry) =>
+              entry.id === crewId
+                ? { ...entry, memberIds: entry.memberIds.filter((memberId) => memberId !== currentUserId) }
+                : entry,
+            ),
+            selectedRouteId: selectedRouteStillOwned ? current.selectedRouteId : current.purchasedRouteIds[0] ?? null,
+            userPaceCrewState: {
+              ...current.userPaceCrewState,
+              memberships
+            },
+            unlockedCrewDestinationIds,
+            userMissionStates: current.userMissionStates.filter((missionState) => missionState.crewId !== crewId)
+          };
+        });
 
         return { success: true, message: "Left PaceCrew" };
       },
@@ -452,16 +476,30 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           return { success: false, message: "Only the organizer can dissolve this PaceCrew" };
         }
 
-        setState((current) => ({
-          ...current,
-          paceCrews: current.paceCrews.filter((crew) => crew.id !== crewId),
-          paceCrewMissions: current.paceCrewMissions.filter((mission) => mission.crewId !== crewId),
-          userMissionStates: current.userMissionStates.filter((missionState) => missionState.crewId !== crewId),
-          userPaceCrewState: {
-            organizedCrewId: null,
-            memberships: current.userPaceCrewState.memberships.filter((membership) => membership.crewId !== crewId)
-          }
-        }));
+        setState((current) => {
+          const memberships = current.userPaceCrewState.memberships.filter((membership) => membership.crewId !== crewId);
+          const unlockedCrewDestinationIds = reconcilePaceCrewMembershipUnlockRouteIds(
+            current.unlockedCrewDestinationIds,
+            memberships.length,
+          );
+          const selectedRouteStillOwned =
+            !current.selectedRouteId ||
+            current.purchasedRouteIds.includes(current.selectedRouteId) ||
+            unlockedCrewDestinationIds.includes(current.selectedRouteId);
+
+          return {
+            ...current,
+            paceCrews: current.paceCrews.filter((crew) => crew.id !== crewId),
+            paceCrewMissions: current.paceCrewMissions.filter((mission) => mission.crewId !== crewId),
+            selectedRouteId: selectedRouteStillOwned ? current.selectedRouteId : current.purchasedRouteIds[0] ?? null,
+            unlockedCrewDestinationIds,
+            userMissionStates: current.userMissionStates.filter((missionState) => missionState.crewId !== crewId),
+            userPaceCrewState: {
+              organizedCrewId: null,
+              memberships
+            }
+          };
+        });
 
         return { success: true, message: "PaceCrew dissolved" };
       },

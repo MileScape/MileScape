@@ -11,6 +11,16 @@ import type {
 
 export const isCrewOnlyRoute = (route: Route) => route.sourceType === "pacecrew" || route.crewOnly;
 
+export const paceCrewMembershipUnlockRouteIds = ["sydney-harbor-route", "bangkok-floating-route"];
+
+export const getPaceCrewMembershipUnlockRouteIds = (state: AppState) =>
+  state.userPaceCrewState.memberships.length > 0 ? paceCrewMembershipUnlockRouteIds : [];
+
+export const reconcilePaceCrewMembershipUnlockRouteIds = (routeIds: string[], membershipCount: number) =>
+  membershipCount > 0
+    ? Array.from(new Set([...routeIds, ...paceCrewMembershipUnlockRouteIds]))
+    : routeIds.filter((routeId) => !paceCrewMembershipUnlockRouteIds.includes(routeId));
+
 export const getOwnedRouteIds = (state: AppState) =>
   Array.from(new Set([...state.purchasedRouteIds, ...state.unlockedCrewDestinationIds]));
 

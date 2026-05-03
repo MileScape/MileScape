@@ -117,7 +117,7 @@ export const RunSetupPage = () => {
   const route = routeCatalog.find((entry) => entry.id === selectedCatalogRouteId) ?? playableRoutes[0] ?? routeCatalog[0];
   const routeIndex = route ? routeCatalog.findIndex((entry) => entry.id === route.id) : -1;
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(acceptedMissions[0]?.mission.id ?? null);
-  const canStartPersonalRun = Boolean(route && route.sourceType === "personal" && runnableRouteIds.has(route.id));
+  const canStartPersonalRun = Boolean(route && runnableRouteIds.has(route.id));
 
   useEffect(() => {
     if (state.selectedRouteId) {
@@ -806,9 +806,7 @@ export const RunSetupPage = () => {
                 : activeTargetType === "pacecrew_mission"
                   ? t("run.startMissionRun")
                   : !canStartPersonalRun
-                    ? route?.sourceType === "pacecrew"
-                      ? t("paceport.pacecrewOnly")
-                      : "Unlock in Paceport"
+                    ? "Unlock in Paceport"
                   : t("run.startRun")}
             </Button>
           </div> : null}

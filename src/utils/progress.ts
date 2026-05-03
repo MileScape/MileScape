@@ -19,7 +19,7 @@ import type {
 } from "../types";
 import { getAchievementTier } from "./achievement";
 import { getMissionCompletionStampReward } from "./missionRewards";
-import { createMembership, syncExpiredMissionStates } from "./paceCrew";
+import { createMembership, paceCrewMembershipUnlockRouteIds, reconcilePaceCrewMembershipUnlockRouteIds, syncExpiredMissionStates } from "./paceCrew";
 import { calculateEarnedStamps } from "./stamps";
 
 const defaultPurchasedRouteIds = ["tokyo-city-route", "central-park-loop", "barcelona-coast-route"];
@@ -46,7 +46,7 @@ export const createInitialState = (): AppState =>
     currentStamps: 0,
     totalStampsEarned: 0,
     purchasedRouteIds: defaultPurchasedRouteIds,
-    unlockedCrewDestinationIds: [],
+    unlockedCrewDestinationIds: paceCrewMembershipUnlockRouteIds,
     sliderMaxDistanceKm: 20,
     userPaceCrewState: {
       organizedCrewId: null,
@@ -89,17 +89,12 @@ export const normalizeState = (loadedState: Partial<AppState> | null): AppState 
       ? Array.from(new Set([...defaultPurchasedRouteIds, ...loadedState.purchasedRouteIds]))
       : defaultPurchasedRouteIds;
 
-  const selectedRouteId =
-    loadedState.selectedRouteId && purchasedRouteIds.includes(loadedState.selectedRouteId)
-      ? loadedState.selectedRouteId
-      : purchasedRouteIds[0] ?? initialState.selectedRouteId;
-
   const memberships = loadedState.userPaceCrewState?.memberships ?? initialState.userPaceCrewState.memberships;
 
-  return syncExpiredMissionStates({
+  const normalizedState: AppState = {
     debugModeEnabled: loadedState.debugModeEnabled ?? false,
     language: loadedState.language ?? "en",
-    selectedRouteId,
+    selectedRouteId: loadedState.selectedRouteId ?? purchasedRouteIds[0] ?? initialState.selectedRouteId,
     routeProgress: mergedProgress,
     runHistory: loadedState.runHistory?.map((item) => ({
       ...item,
@@ -133,6 +128,21 @@ export const normalizeState = (loadedState: Partial<AppState> | null): AppState 
           updatedDecorations: loadedState.lastRunResult.updatedDecorations ?? {}
         }
       : null
+  };
+
+  const unlockedCrewDestinationIds = reconcilePaceCrewMembershipUnlockRouteIds(
+    normalizedState.unlockedCrewDestinationIds,
+    normalizedState.userPaceCrewState.memberships.length,
+  );
+  const ownedRouteIds = new Set([...normalizedState.purchasedRouteIds, ...unlockedCrewDestinationIds]);
+
+  return syncExpiredMissionStates({
+    ...normalizedState,
+    selectedRouteId:
+      normalizedState.selectedRouteId && ownedRouteIds.has(normalizedState.selectedRouteId)
+        ? normalizedState.selectedRouteId
+        : normalizedState.purchasedRouteIds[0] ?? initialState.selectedRouteId,
+    unlockedCrewDestinationIds
   });
 };
 

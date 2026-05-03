@@ -1,4 +1,4 @@
-import { ChevronRight, Plus, Search, Sparkles, X } from "lucide-react";
+import { ChevronRight, Compass, Plus, Search, Sparkles, Users, X, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { MissionDepositDialog } from "../components/pacecrew/MissionDepositDialog";
@@ -9,7 +9,6 @@ import {
   getAvailableCrewsToJoin,
   getCrewMemberProfiles,
   getMissionProgress,
-  getUserProfile,
   isCrewMember
 } from "../utils/paceCrew";
 import { cn } from "../utils/cn";
@@ -17,11 +16,19 @@ import { cn } from "../utils/cn";
 type PaceCrewTab = "discover" | "my-crew" | "joined";
 type SheetMode = "create-crew" | "create-mission" | null;
 
-const tabs: Array<{ id: PaceCrewTab; label: string }> = [
-  { id: "discover", label: "Discover" },
-  { id: "my-crew", label: "My Crew" },
-  { id: "joined", label: "Joined" }
+const tabs: Array<{ id: PaceCrewTab; label: string; icon: LucideIcon }> = [
+  { id: "discover", label: "Discover", icon: Compass },
+  { id: "my-crew", label: "My Crew", icon: Sparkles },
+  { id: "joined", label: "Joined", icon: Users }
 ];
+
+const nodePositions = [
+  { x: "18%", y: "42%", size: "lg", tone: "sage" },
+  { x: "67%", y: "27%", size: "md", tone: "gold" },
+  { x: "72%", y: "64%", size: "sm", tone: "blush" },
+  { x: "36%", y: "18%", size: "sm", tone: "sand" },
+  { x: "29%", y: "70%", size: "md", tone: "sage" }
+] as const;
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleDateString(undefined, {
@@ -37,110 +44,36 @@ const getRewardRoutesForCrew = (crew: PaceCrew | null, routes: Route[]) => {
   return routes.filter((route) => route.crewOnly);
 };
 
-const Section = ({
-  title,
-  eyebrow,
-  action,
-  children
-}: {
-  title: string;
-  eyebrow?: string;
-  action?: ReactNode;
-  children: ReactNode;
-}) => (
-  <section className="space-y-4 border-t border-sage-900/8 pt-6 first:border-t-0 first:pt-0">
-    <div className="flex items-end justify-between gap-3">
-      <div>
-        {eyebrow ? <p className="text-[11px] uppercase tracking-[0.24em] text-sage-500">{eyebrow}</p> : null}
-        <h2 className="mt-1 text-[1.35rem] font-semibold tracking-[-0.03em] text-ink">{title}</h2>
-      </div>
-      {action}
-    </div>
-    {children}
-  </section>
-);
+const getInitials = (name: string) =>
+  name
+    .split(" ")
+    .map((part) => part.slice(0, 1))
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
-const Surface = ({
-  children,
-  className
-}: {
-  children: ReactNode;
-  className?: string;
-}) => (
-  <div
-    className={cn(
-      "rounded-[28px] bg-white/68 p-5 shadow-[0_22px_60px_rgba(49,60,50,0.08)] ring-1 ring-white/80 backdrop-blur-xl",
-      className,
-    )}
-  >
-    {children}
-  </div>
-);
-
-const CrewListItem = ({
+const getCrewSignal = ({
   crew,
-  organizerName,
   missionCount,
-  rewardCount,
-  actionLabel,
-  onAction,
-  onPreview,
-  muted = false
+  isMember,
+  isOrganizer
 }: {
   crew: PaceCrew;
-  organizerName: string;
   missionCount: number;
-  rewardCount: number;
-  actionLabel?: string;
-  onAction?: () => void;
-  onPreview: () => void;
-  muted?: boolean;
-}) => (
-  <div className="border-t border-sage-900/8 py-4 first:border-t-0 first:pt-0 last:pb-0">
-    <div className="flex items-start justify-between gap-4">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <h3 className="text-[1.05rem] font-semibold tracking-[-0.02em] text-ink">{crew.name}</h3>
-          {muted ? (
-            <span className="rounded-full bg-sage-100/80 px-2 py-1 text-[10px] uppercase tracking-[0.14em] text-sage-600">
-              Joined
-            </span>
-          ) : null}
-        </div>
-        <p className="mt-2 text-sm leading-6 text-sage-700">{crew.description}</p>
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[13px] text-sage-600">
-          <span>{crew.memberIds.length} members</span>
-          <span>{missionCount} open missions</span>
-          <span>{rewardCount} rewards</span>
-          <span>Hosted by {organizerName}</span>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={onPreview}
-        className="rounded-full bg-white/75 px-3 py-2 text-xs font-medium text-sage-700 ring-1 ring-sage-900/8 transition hover:bg-white"
-      >
-        Preview
-      </button>
-    </div>
-
-    {actionLabel && onAction ? (
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={onAction}
-          className={cn(
-            "inline-flex items-center rounded-full px-4 py-2.5 text-sm font-semibold transition",
-            muted ? "bg-sage-900/5 text-sage-700 ring-1 ring-sage-900/8 hover:bg-sage-900/8" : "bg-sage-700 text-white hover:bg-sage-800",
-          )}
-        >
-          {actionLabel}
-        </button>
-      </div>
-    ) : null}
-  </div>
-);
+  isMember: boolean;
+  isOrganizer: boolean;
+}) => {
+  if (isOrganizer) {
+    return "Organizing";
+  }
+  if (isMember) {
+    return "Joined";
+  }
+  if (missionCount > 0) {
+    return `${missionCount} missions`;
+  }
+  return `${crew.memberIds.length} runners`;
+};
 
 const BottomSheet = ({
   open,
@@ -160,14 +93,14 @@ const BottomSheet = ({
   }
 
   return (
-    <div className="fixed inset-0 z-40">
+    <div className="fixed inset-0 z-50">
       <button
         type="button"
         aria-label="Close sheet"
         className="absolute inset-0 bg-ink/18 backdrop-blur-[2px]"
         onClick={onClose}
       />
-      <div className="absolute inset-x-0 bottom-0 mx-auto max-w-md rounded-t-[32px] bg-[#fbf9f4]/96 px-5 pb-8 pt-4 shadow-[0_-18px_60px_rgba(36,50,40,0.18)] ring-1 ring-sage-900/8 backdrop-blur-2xl">
+      <div className="absolute inset-x-0 bottom-0 mx-auto max-h-[84vh] max-w-md overflow-y-auto rounded-t-[30px] bg-[#fbf9f4]/96 px-5 pb-8 pt-4 shadow-[0_-18px_60px_rgba(36,50,40,0.18)] ring-1 ring-sage-900/8 backdrop-blur-2xl">
         <div className="mx-auto h-1.5 w-14 rounded-full bg-sage-200" />
         <div className="mt-4 flex items-start justify-between gap-4">
           <div>
@@ -187,6 +120,68 @@ const BottomSheet = ({
         <div className="mt-5">{children}</div>
       </div>
     </div>
+  );
+};
+
+const CrewNode = ({
+  crew,
+  index,
+  missionCount,
+  rewardCount,
+  isSelected,
+  isMember,
+  isOrganizer,
+  onSelect
+}: {
+  crew: PaceCrew;
+  index: number;
+  missionCount: number;
+  rewardCount: number;
+  isSelected: boolean;
+  isMember: boolean;
+  isOrganizer: boolean;
+  onSelect: () => void;
+}) => {
+  const position = nodePositions[index % nodePositions.length];
+  const sizeClass =
+    position.size === "lg" ? "h-[74px] w-[74px]" : position.size === "md" ? "h-[64px] w-[64px]" : "h-[54px] w-[54px]";
+  const toneClass =
+    position.tone === "gold"
+      ? "bg-[#fff2bf] text-[#6b5a1c] ring-[#f5d980]/70"
+      : position.tone === "blush"
+        ? "bg-[#ffe1d8] text-[#7d4436] ring-[#f4b7a5]/60"
+        : position.tone === "sand"
+          ? "bg-sand text-sage-800 ring-white/80"
+          : "bg-[#edf5e9] text-sage-800 ring-sage-200/80";
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2 text-center"
+      style={{ left: position.x, top: position.y }}
+      aria-label={`Preview ${crew.name}`}
+    >
+      <span
+        className={cn(
+          "relative grid rounded-full shadow-[0_18px_38px_rgba(38,60,54,0.2)] ring-4 transition duration-300",
+          sizeClass,
+          toneClass,
+          isSelected ? "scale-110 ring-white" : "hover:scale-105",
+        )}
+      >
+        <span className="m-auto text-sm font-semibold tracking-[-0.02em]">{getInitials(crew.name)}</span>
+        <span className="absolute -right-1 -top-1 grid h-6 w-6 place-items-center rounded-full bg-white text-[10px] font-semibold text-sage-700 ring-1 ring-sage-900/10">
+          {crew.memberIds.length}
+        </span>
+      </span>
+      <span className="max-w-[92px] rounded-full bg-white/54 px-2.5 py-1 text-[11px] font-semibold text-ink shadow-[0_8px_20px_rgba(55,77,69,0.12)] backdrop-blur-xl">
+        {crew.name}
+      </span>
+      <span className="sr-only">
+        {missionCount} missions, {rewardCount} rewards, {getCrewSignal({ crew, missionCount, isMember, isOrganizer })}
+      </span>
+    </button>
   );
 };
 
@@ -231,10 +226,6 @@ export const PaceCrewPage = () => {
     ? state.paceCrews.find((crew) => crew.id === state.userPaceCrewState.organizedCrewId) ?? null
     : null;
 
-  const selectedCrew = selectedCrewId
-    ? state.paceCrews.find((crew) => crew.id === selectedCrewId) ?? null
-    : null;
-
   const joinedCrews = useMemo(
     () =>
       state.paceCrews.filter(
@@ -264,29 +255,30 @@ export const PaceCrewPage = () => {
       });
   }, [searchValue, state]);
 
-  const recommendedCrews = discoverCrews.slice(0, 2);
-  const exploreCrews = discoverCrews.slice(2);
-  const myCrewMissions = organizedCrew
-    ? state.paceCrewMissions.filter((mission) => mission.crewId === organizedCrew.id)
-    : [];
+  const allVisibleCrews = useMemo(() => {
+    const ordered = [organizedCrew, ...joinedCrews, ...discoverCrews].filter(Boolean) as PaceCrew[];
+    const unique = new Map<string, PaceCrew>();
+    ordered.forEach((crew) => unique.set(crew.id, crew));
+    return Array.from(unique.values());
+  }, [discoverCrews, joinedCrews, organizedCrew]);
+
+  const stageCrews = activeTab === "my-crew" ? (organizedCrew ? [organizedCrew] : []) : activeTab === "joined" ? joinedCrews : allVisibleCrews;
+  const selectedCrew = selectedCrewId ? state.paceCrews.find((crew) => crew.id === selectedCrewId) ?? null : null;
+  const fallbackCrew = activeTab === "my-crew" ? organizedCrew : activeTab === "joined" ? joinedCrews[0] ?? null : allVisibleCrews[0] ?? null;
+  const displayCrew = selectedCrew ?? fallbackCrew;
+
   const myCrewRewards = getRewardRoutesForCrew(organizedCrew, routes);
-  const myCrewMembers = organizedCrew ? getCrewMemberProfiles(organizedCrew, state) : [];
-
-  const joinedMissionEntries = useMemo(
-    () =>
-      joinedCrews.flatMap((crew) =>
-        state.paceCrewMissions
-          .filter((mission) => mission.crewId === crew.id)
-          .map((mission) => ({
-            crew,
-            mission,
-            missionState: getAcceptedMissionState(state, mission.id)
-          })),
-      ),
-    [joinedCrews, state],
-  );
-
-  const acceptedJoinedMissions = joinedMissionEntries.filter((entry) => entry.missionState?.status === "accepted");
+  const selectedCrewMissions = displayCrew
+    ? state.paceCrewMissions.filter((mission) => mission.crewId === displayCrew.id)
+    : [];
+  const selectedCrewRewards = getRewardRoutesForCrew(displayCrew, routes);
+  const selectedCrewMembers = displayCrew ? getCrewMemberProfiles(displayCrew, state) : [];
+  const selectedCrewIsMember = displayCrew ? isCrewMember(state, displayCrew.id) : false;
+  const selectedCrewIsOrganizer = displayCrew ? displayCrew.organizerId === currentUser.id : false;
+  const openMissionCount = selectedCrewMissions.filter((mission) => mission.status === "open").length;
+  const emptyTitle = activeTab === "my-crew" ? "Create your group" : activeTab === "joined" ? "No joined groups" : "Find your group";
+  const bottomActionLabel = organizedCrew ? "New mission" : "Create crew";
+  const bottomActionShort = organizedCrew ? "New" : "Create";
 
   const showToast = (message: string) => setToast(message);
 
@@ -378,303 +370,13 @@ export const PaceCrewPage = () => {
     }
   };
 
-  const renderDiscoverTab = () => (
-    <div className="space-y-6">
-      <Surface className="bg-[linear-gradient(140deg,rgba(255,255,255,0.76),rgba(240,245,238,0.92))]">
-        <p className="text-[11px] uppercase tracking-[0.24em] text-sage-500">Discover</p>
-        <h2 className="mt-2 text-[1.7rem] font-semibold tracking-[-0.04em] text-ink">Find a PaceCrew that matches your rhythm.</h2>
-        <label className="mt-5 flex items-center gap-3 rounded-full bg-white/78 px-4 py-3 ring-1 ring-sage-900/8">
-          <Search className="h-4 w-4 text-sage-500" />
-          <input
-            value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
-            placeholder="Search crews"
-            className="w-full border-0 bg-transparent text-sm text-ink outline-none placeholder:text-sage-400"
-          />
-        </label>
-      </Surface>
-
-      <Section title="Recommended for you" eyebrow="Curated">
-        <Surface>
-          {recommendedCrews.length > 0 ? (
-            recommendedCrews.map((crew) => (
-              <CrewListItem
-                key={crew.id}
-                crew={crew}
-                organizerName={getUserProfile(crew.organizerId).name}
-                missionCount={state.paceCrewMissions.filter((mission) => mission.crewId === crew.id && mission.status === "open").length}
-                rewardCount={getRewardRoutesForCrew(crew, routes).length}
-                actionLabel="Join"
-                onAction={() => handleJoin(crew.id)}
-                onPreview={() => setSelectedCrewId(crew.id)}
-              />
-            ))
-          ) : (
-            <p className="text-sm leading-6 text-sage-600">You’ve already joined every available PaceCrew.</p>
-          )}
-        </Surface>
-      </Section>
-
-      <Section title="Explore crews" eyebrow="Browse">
-        <Surface>
-          {exploreCrews.length > 0 ? (
-            exploreCrews.map((crew) => (
-              <CrewListItem
-                key={crew.id}
-                crew={crew}
-                organizerName={getUserProfile(crew.organizerId).name}
-                missionCount={state.paceCrewMissions.filter((mission) => mission.crewId === crew.id && mission.status === "open").length}
-                rewardCount={getRewardRoutesForCrew(crew, routes).length}
-                actionLabel="Join"
-                onAction={() => handleJoin(crew.id)}
-                onPreview={() => setSelectedCrewId(crew.id)}
-              />
-            ))
-          ) : (
-            <p className="text-sm leading-6 text-sage-600">No additional crews match your search right now.</p>
-          )}
-        </Surface>
-      </Section>
-    </div>
-  );
-
-  const renderMyCrewTab = () => (
-    <div className="space-y-6">
-      {!organizedCrew ? (
-        <Surface className="flex min-h-[62vh] flex-col justify-between bg-[linear-gradient(160deg,rgba(255,255,255,0.82),rgba(232,241,232,0.96))] px-6 py-7">
-          <p className="text-[11px] uppercase tracking-[0.24em] text-sage-500">My Crew</p>
-
-          <div className="space-y-3 py-6">
-            <p className="text-[0.95rem] font-medium uppercase tracking-[0.34em] text-sage-500">
-              CREATE ONE
-            </p>
-            <h2 className="text-[3.9rem] font-semibold uppercase leading-[0.88] tracking-[-0.08em] text-ink">
-              PACECREW
-            </h2>
-            <p className="max-w-[12ch] text-[1.5rem] font-medium leading-[1.02] tracking-[-0.04em] text-sage-700">
-              you&apos;ll organize
-            </p>
-          </div>
-
-          <div className="space-y-4">
-          <button
-            type="button"
-            onClick={() => setSheetMode("create-crew")}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-ink px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-sage-900"
-          >
-            <Plus className="h-4 w-4" />
-            Create PaceCrew
-          </button>
-          </div>
-        </Surface>
-      ) : (
-        <>
-          <Surface className="space-y-5 bg-[linear-gradient(150deg,rgba(255,255,255,0.78),rgba(234,242,233,0.94))]">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-sage-500">Organizer View</p>
-                <h2 className="mt-2 text-[1.7rem] font-semibold tracking-[-0.04em] text-ink">{organizedCrew.name}</h2>
-                <p className="mt-3 text-sm leading-6 text-sage-600">{organizedCrew.description}</p>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSheetMode("create-mission")}
-                  className="rounded-full bg-white/80 px-4 py-2.5 text-sm font-semibold text-sage-700 ring-1 ring-sage-900/8 transition hover:bg-white"
-                >
-                  New mission
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDissolveCrew}
-                  className="rounded-full bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-600 ring-1 ring-rose-100 transition hover:bg-rose-100"
-                >
-                  Dissolve
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-[22px] bg-white/75 px-3 py-4 ring-1 ring-sage-900/8">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-sage-500">Members</p>
-                <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-ink">{organizedCrew.memberIds.length}</p>
-              </div>
-              <div className="rounded-[22px] bg-white/75 px-3 py-4 ring-1 ring-sage-900/8">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-sage-500">Missions</p>
-                <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-ink">{myCrewMissions.length}</p>
-              </div>
-              <div className="rounded-[22px] bg-white/75 px-3 py-4 ring-1 ring-sage-900/8">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-sage-500">Rewards</p>
-                <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-ink">{myCrewRewards.length}</p>
-              </div>
-            </div>
-          </Surface>
-
-          <Section title="Member preview" eyebrow="People">
-            <Surface className="space-y-4">
-              <div className="flex flex-wrap gap-3">
-                {myCrewMembers.map((member) => (
-                  <div key={member.user.id} className="min-w-[92px] flex-1 rounded-[22px] bg-sage-50/90 px-3 py-4 ring-1 ring-sage-900/6">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sage-200 text-sm font-semibold text-sage-800">
-                      {member.user.name.slice(0, 1)}
-                    </div>
-                    <p className="mt-3 text-sm font-semibold text-ink">{member.user.name}</p>
-                    <p className="mt-1 text-xs text-sage-500">{member.user.id === organizedCrew.organizerId ? "Organizer" : "Member"}</p>
-                  </div>
-                ))}
-              </div>
-            </Surface>
-          </Section>
-
-          <Section
-            title="Active missions"
-            eyebrow="Progress"
-            action={
-              <button
-                type="button"
-                onClick={() => setSheetMode("create-mission")}
-                className="text-sm font-medium text-sage-700"
-              >
-                Create
-              </button>
-            }
-          >
-            <Surface>
-              {myCrewMissions.length > 0 ? (
-                myCrewMissions.map((mission) => (
-                  <div key={mission.id} className="border-t border-sage-900/8 py-4 first:border-t-0 first:pt-0 last:pb-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="text-base font-semibold text-ink">{mission.title}</h3>
-                        <p className="mt-2 text-sm leading-6 text-sage-600">{mission.description}</p>
-                      </div>
-                      <span className="rounded-full bg-sage-100/85 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-sage-700">
-                        {mission.status}
-                      </span>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[13px] text-sage-600">
-                      <span>{mission.targetDistanceKm} km target</span>
-                      <span>{mission.rewardStamps} Stamps reward</span>
-                      <span>Due {formatDate(mission.deadline)}</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm leading-6 text-sage-600">No missions yet. Publish the first one from the organizer sheet.</p>
-              )}
-            </Surface>
-          </Section>
-
-          <Section title="Crew-only rewards" eyebrow="Paceport">
-            <Surface>
-              {myCrewRewards.length > 0 ? (
-                myCrewRewards.map((route) => (
-                  <div key={route.id} className="border-t border-sage-900/8 py-4 first:border-t-0 first:pt-0 last:pb-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="text-base font-semibold text-ink">{route.name}</h3>
-                        <p className="mt-2 text-sm leading-6 text-sage-600">{route.description}</p>
-                      </div>
-                      <span className="rounded-full bg-[#eef3ea] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-sage-700">
-                        Paceport
-                      </span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm leading-6 text-sage-600">No exclusive destinations yet. Mission rewards will appear here as your crew grows.</p>
-              )}
-            </Surface>
-          </Section>
-        </>
-      )}
-    </div>
-  );
-
-  const renderJoinedTab = () => (
-    <div className="space-y-6">
-      <Surface className="bg-[linear-gradient(145deg,rgba(255,255,255,0.76),rgba(239,244,238,0.93))]">
-        <p className="text-[11px] uppercase tracking-[0.24em] text-sage-500">Joined</p>
-        <div className="mt-4 flex flex-wrap gap-3 text-sm text-sage-600">
-          <span className="rounded-full bg-white/78 px-3 py-2 ring-1 ring-sage-900/8">{joinedCrews.length} crews joined</span>
-          <span className="rounded-full bg-white/78 px-3 py-2 ring-1 ring-sage-900/8">{acceptedJoinedMissions.length} active missions</span>
-          <span className="rounded-full bg-white/78 px-3 py-2 ring-1 ring-sage-900/8">{state.currentStamps} Stamps available</span>
-        </div>
-      </Surface>
-
-      <Section title="Active accepted missions" eyebrow="In Progress">
-        <Surface>
-          {acceptedJoinedMissions.length > 0 ? (
-            acceptedJoinedMissions.map(({ crew, mission, missionState }) => {
-              const progress = getMissionProgress(mission, missionState);
-
-              return (
-                <div key={mission.id} className="border-t border-sage-900/8 py-4 first:border-t-0 first:pt-0 last:pb-0">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-sage-500">{crew.name}</p>
-                      <h3 className="mt-1 text-base font-semibold text-ink">{mission.title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-sage-600">{mission.description}</p>
-                    </div>
-                    <Link to="/run/setup" className="rounded-full bg-sage-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sage-800">
-                      Run
-                    </Link>
-                  </div>
-                  <div className="mt-4">
-                    <div className="h-2 rounded-full bg-sage-100">
-                      <div className="h-full rounded-full bg-sage-600 transition-all" style={{ width: `${progress.progressPercent}%` }} />
-                    </div>
-                    <div className="mt-2 flex items-center justify-between text-[13px] text-sage-600">
-                      <span>{progress.completedDistanceKm.toFixed(1)} km logged</span>
-                      <span>{progress.remainingDistanceKm.toFixed(1)} km left</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <p className="text-sm leading-6 text-sage-600">No accepted crew missions yet. Join one from Discover or accept a mission from a joined crew preview.</p>
-          )}
-        </Surface>
-      </Section>
-
-      <Section title="Joined PaceCrews" eyebrow="Memberships">
-        <Surface>
-          {joinedCrews.length > 0 ? (
-            joinedCrews.map((crew) => (
-              <CrewListItem
-                key={crew.id}
-                crew={crew}
-                organizerName={getUserProfile(crew.organizerId).name}
-                missionCount={state.paceCrewMissions.filter((mission) => mission.crewId === crew.id && mission.status === "open").length}
-                rewardCount={getRewardRoutesForCrew(crew, routes).length}
-                actionLabel="Leave"
-                onAction={() => handleLeave(crew.id)}
-                onPreview={() => setSelectedCrewId(crew.id)}
-                muted
-              />
-            ))
-          ) : (
-            <p className="text-sm leading-6 text-sage-600">You have not joined any additional PaceCrews yet.</p>
-          )}
-        </Surface>
-      </Section>
-    </div>
-  );
-
-  const selectedCrewMissions = selectedCrew
-    ? state.paceCrewMissions.filter((mission) => mission.crewId === selectedCrew.id)
-    : [];
-  const selectedCrewRewards = getRewardRoutesForCrew(selectedCrew, routes);
-  const selectedCrewMembers = selectedCrew ? getCrewMemberProfiles(selectedCrew, state) : [];
-  const selectedCrewIsMember = selectedCrew ? isCrewMember(state, selectedCrew.id) : false;
-  const selectedCrewIsOrganizer = selectedCrew ? selectedCrew.organizerId === currentUser.id : false;
-
   return (
-    <div className="pb-32">
+    <div className="-mx-4 -mt-1 min-h-[calc(100vh-4rem)] overflow-hidden bg-[linear-gradient(180deg,rgba(220,232,221,0.98)_0%,rgba(236,230,220,0.74)_58%,rgba(245,243,238,1)_100%)] px-4 pb-32 text-ink">
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-10 mx-auto h-36 max-w-md bg-[linear-gradient(180deg,rgba(245,243,238,0.9)_0%,rgba(245,243,238,0.68)_42%,rgba(245,243,238,0.22)_76%,rgba(245,243,238,0)_100%)] backdrop-blur-[5px]" />
+
       {toast ? (
-        <div className="fixed left-1/2 top-4 z-[70] w-[calc(100%-2rem)] max-w-[430px] -translate-x-1/2">
-          <div className="rounded-[22px] bg-sage-700 px-4 py-3 text-sm font-medium text-white shadow-[0_18px_46px_rgba(40,62,50,0.24)] ring-1 ring-white/20">
+        <div className="fixed left-1/2 top-20 z-[70] w-[calc(100%-3rem)] max-w-[360px] -translate-x-1/2">
+          <div className="rounded-full bg-sage-700/94 px-4 py-3 text-center text-sm font-medium text-white shadow-[0_18px_46px_rgba(40,62,50,0.24)] ring-1 ring-white/20 backdrop-blur-xl">
             {toast}
           </div>
         </div>
@@ -689,72 +391,157 @@ export const PaceCrewPage = () => {
         />
       ) : null}
 
-      <section className="space-y-3 pt-2">
-        <p className="text-[11px] uppercase tracking-[0.24em] text-sage-500">PACECREW</p>
-        <h1 className="text-[2rem] font-semibold tracking-[-0.06em] text-ink">
-          Run together, unlock together
-        </h1>
+      <section className="relative -mx-4 flex min-h-[calc(100vh-11rem)] flex-col justify-center overflow-hidden px-4 pb-5 pt-10">
+        <div className="absolute left-[-18%] top-[-6%] h-36 w-72 rounded-[100%] bg-white/34 blur-2xl" />
+        <div className="absolute right-[-20%] bottom-[18%] h-28 w-72 rounded-[100%] bg-sage-50/54 blur-2xl" />
+
+        <div className="relative z-10 mx-auto h-[390px] w-full max-w-[390px] overflow-hidden">
+          <div className="absolute left-1/2 top-[50%] h-[238px] w-[238px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/46" />
+          <div className="absolute left-1/2 top-[50%] h-[172px] w-[172px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/56" />
+          <div className="absolute left-1/2 top-[50%] h-[108px] w-[108px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/68" />
+          <div className="absolute left-1/2 top-[50%] grid h-20 w-20 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-sage-700 text-white shadow-[0_18px_46px_rgba(64,79,71,0.26)] ring-1 ring-white/70">
+            <Users className="h-7 w-7" />
+          </div>
+
+          {stageCrews.length > 0 ? (
+            stageCrews.slice(0, 5).map((crew, index) => {
+              const missionCount = state.paceCrewMissions.filter((mission) => mission.crewId === crew.id && mission.status === "open").length;
+              const rewardCount = getRewardRoutesForCrew(crew, routes).length;
+              const isMember = isCrewMember(state, crew.id);
+              const isOrganizer = crew.organizerId === currentUser.id;
+
+              return (
+                <CrewNode
+                  key={crew.id}
+                  crew={crew}
+                  index={index}
+                  missionCount={missionCount}
+                  rewardCount={rewardCount}
+                  isSelected={displayCrew?.id === crew.id}
+                  isMember={isMember}
+                  isOrganizer={isOrganizer}
+                  onSelect={() => setSelectedCrewId(crew.id)}
+                />
+              );
+            })
+          ) : (
+            <div className="absolute inset-x-0 top-[58%] text-center">
+              <button
+                type="button"
+                onClick={() => setSheetMode("create-crew")}
+                className="rounded-full bg-white/66 px-4 py-2 text-sm font-semibold text-sage-700 shadow-[0_10px_28px_rgba(70,92,80,0.12)] ring-1 ring-white/80 backdrop-blur-xl"
+              >
+                Create PaceCrew
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="relative z-10 mx-auto -mt-1 max-w-[320px] text-center">
+          <h1 className="text-[1.55rem] font-semibold tracking-[-0.045em] text-ink">
+            {displayCrew?.name ?? emptyTitle}
+          </h1>
+          {displayCrew ? (
+            <p className="mt-2 text-sm font-medium text-sage-600">
+              {displayCrew.memberIds.length} members · {openMissionCount} missions
+            </p>
+          ) : null}
+        </div>
       </section>
 
-      <div className="mt-8">
-        {activeTab === "discover" ? renderDiscoverTab() : null}
-        {activeTab === "my-crew" ? renderMyCrewTab() : null}
-        {activeTab === "joined" ? renderJoinedTab() : null}
-      </div>
+      <div className="fixed bottom-4 left-1/2 z-40 w-[calc(100%-2rem)] max-w-[390px] -translate-x-1/2">
+        <div className="grid grid-cols-[minmax(0,1fr)_2.65rem_2.65rem_2.65rem_3.6rem] items-center gap-1.5 rounded-[24px] bg-[#fbf9f4]/90 p-2 shadow-[0_24px_60px_rgba(45,57,47,0.18)] ring-1 ring-white/85 backdrop-blur-2xl">
+          <label className="flex min-h-11 min-w-0 items-center gap-2 rounded-[18px] bg-white/74 px-3 text-sage-700 ring-1 ring-sage-900/8">
+            <Search className="h-4 w-4 shrink-0 text-sage-500" />
+            <input
+              value={searchValue}
+              onChange={(event) => {
+                setSearchValue(event.target.value);
+                setActiveTab("discover");
+              }}
+              placeholder="Search"
+              className="min-w-0 flex-1 border-0 bg-transparent text-[12px] font-semibold text-ink outline-none placeholder:text-sage-400"
+            />
+          </label>
 
-      <div className="fixed bottom-5 left-1/2 z-30 w-[calc(100%-2rem)] max-w-[390px] -translate-x-1/2">
-        <div className="grid grid-cols-3 rounded-full bg-[#fbf9f4]/92 p-1.5 shadow-[0_24px_60px_rgba(45,57,47,0.18)] ring-1 ring-white/85 backdrop-blur-2xl">
           {tabs.map((tab) => {
             const isActive = tab.id === activeTab;
+            const Icon = tab.icon;
 
             return (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
+                aria-label={tab.label}
                 className={cn(
-                  "rounded-full px-4 py-3 text-sm transition",
-                  isActive ? "bg-sage-700 text-white shadow-[0_10px_24px_rgba(58,78,67,0.22)]" : "text-sage-600 hover:text-ink",
+                  "inline-flex min-h-11 items-center justify-center rounded-[18px] text-[12px] font-semibold transition",
+                  isActive ? "bg-sage-700 text-white shadow-[0_10px_24px_rgba(58,78,67,0.2)]" : "text-sage-600 hover:bg-white/58",
                 )}
               >
-                {tab.label}
+                <Icon className="h-4 w-4" />
               </button>
             );
           })}
+
+          <button
+            type="button"
+            onClick={() => setSheetMode(organizedCrew ? "create-mission" : "create-crew")}
+            aria-label={bottomActionLabel}
+            className="inline-flex min-h-11 items-center justify-center gap-1 rounded-[18px] bg-ink px-2 text-[11px] font-semibold text-white"
+          >
+            <Plus className="h-4 w-4" />
+            {bottomActionShort}
+          </button>
         </div>
       </div>
 
       <BottomSheet
-        open={Boolean(selectedCrew)}
-        title={selectedCrew?.name ?? ""}
-        subtitle={selectedCrew?.description}
+        open={Boolean(selectedCrewId && displayCrew)}
+        title={displayCrew?.name ?? ""}
+        subtitle={displayCrew?.description}
         onClose={() => setSelectedCrewId(null)}
       >
-        {selectedCrew ? (
-          <div className="space-y-5">
-            <div className="flex flex-wrap gap-2 text-sm text-sage-600">
-              <span className="rounded-full bg-white/80 px-3 py-2 ring-1 ring-sage-900/8">{selectedCrew.memberIds.length} members</span>
-              <span className="rounded-full bg-white/80 px-3 py-2 ring-1 ring-sage-900/8">{selectedCrewMissions.length} missions</span>
-              <span className="rounded-full bg-white/80 px-3 py-2 ring-1 ring-sage-900/8">{selectedCrewRewards.length} rewards</span>
+        {displayCrew ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-[20px] bg-white/72 px-3 py-3 ring-1 ring-sage-900/8">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-sage-500">Members</p>
+                <p className="mt-1 text-xl font-semibold text-ink">{displayCrew.memberIds.length}</p>
+              </div>
+              <div className="rounded-[20px] bg-white/72 px-3 py-3 ring-1 ring-sage-900/8">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-sage-500">Missions</p>
+                <p className="mt-1 text-xl font-semibold text-ink">{selectedCrewMissions.length}</p>
+              </div>
+              <div className="rounded-[20px] bg-white/72 px-3 py-3 ring-1 ring-sage-900/8">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-sage-500">Rewards</p>
+                <p className="mt-1 text-xl font-semibold text-ink">{selectedCrewRewards.length}</p>
+              </div>
             </div>
 
-            <div className="space-y-3">
+            <div>
               <p className="text-[11px] uppercase tracking-[0.24em] text-sage-500">Members</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {selectedCrewMembers.map((member) => (
-                  <div key={member.user.id} className="rounded-full bg-white/80 px-3 py-2 text-sm text-sage-700 ring-1 ring-sage-900/8">
+                  <div key={member.user.id} className="inline-flex items-center gap-2 rounded-full bg-white/74 px-3 py-2 text-sm text-sage-700 ring-1 ring-sage-900/8">
+                    <span className="grid h-7 w-7 place-items-center rounded-full bg-sage-100 text-[11px] font-semibold text-sage-700">
+                      {getInitials(member.user.name)}
+                    </span>
                     {member.user.name}
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="space-y-3">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-sage-500">Open missions</p>
-              <div className="space-y-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-sage-500">Missions</p>
+              <h4 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-ink">Open and accepted</h4>
+
+              <div className="mt-3 space-y-3">
                 {selectedCrewMissions.length > 0 ? (
                   selectedCrewMissions.map((mission: PaceCrewMission) => {
                     const missionState = getAcceptedMissionState(state, mission.id);
+                    const progress = getMissionProgress(mission, missionState);
                     const canAccept =
                       !missionState && selectedCrewIsMember && mission.status === "open";
 
@@ -775,9 +562,22 @@ export const PaceCrewPage = () => {
                           <span>Due {formatDate(mission.deadline)}</span>
                         </div>
                         {missionState ? (
-                          <p className="mt-3 text-sm font-medium text-sage-700">
-                            Accepted: {missionState.completedDistanceKm.toFixed(1)} / {mission.targetDistanceKm} km
-                          </p>
+                          <div className="mt-4">
+                            <div className="h-2 rounded-full bg-sage-100">
+                              <div className="h-full rounded-full bg-sage-600 transition-all" style={{ width: `${progress.progressPercent}%` }} />
+                            </div>
+                            <div className="mt-3 flex items-center justify-between gap-3">
+                              <p className="text-sm font-medium text-sage-700">
+                                {progress.completedDistanceKm.toFixed(1)} / {mission.targetDistanceKm} km
+                              </p>
+                              <Link
+                                to="/run/setup"
+                                className="rounded-full bg-sage-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sage-800"
+                              >
+                                Run
+                              </Link>
+                            </div>
+                          </div>
                         ) : canAccept ? (
                           <button
                             type="button"
@@ -791,16 +591,31 @@ export const PaceCrewPage = () => {
                     );
                   })
                 ) : (
-                  <p className="text-sm leading-6 text-sage-600">No missions published yet.</p>
+                  <p className="rounded-[22px] bg-white/60 px-4 py-4 text-sm leading-6 text-sage-600 ring-1 ring-sage-900/8">
+                    No missions published yet.
+                  </p>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            {selectedCrewIsOrganizer ? (
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.24em] text-sage-500">Organizer</p>
+                <button
+                  type="button"
+                  onClick={handleDissolveCrew}
+                  className="mt-3 rounded-full bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600 ring-1 ring-rose-100"
+                >
+                  Dissolve
+                </button>
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap items-center gap-3">
               {!selectedCrewIsMember ? (
                 <button
                   type="button"
-                  onClick={() => handleJoin(selectedCrew.id)}
+                  onClick={() => handleJoin(displayCrew.id)}
                   className="inline-flex items-center rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:bg-sage-900"
                 >
                   Join PaceCrew
@@ -808,7 +623,7 @@ export const PaceCrewPage = () => {
               ) : !selectedCrewIsOrganizer ? (
                 <button
                   type="button"
-                  onClick={() => handleLeave(selectedCrew.id)}
+                  onClick={() => handleLeave(displayCrew.id)}
                   className="inline-flex items-center rounded-full bg-sage-900/5 px-5 py-3 text-sm font-semibold text-sage-700 ring-1 ring-sage-900/8 transition hover:bg-sage-900/8"
                 >
                   Leave
@@ -816,7 +631,7 @@ export const PaceCrewPage = () => {
               ) : null}
 
               <Link
-                to={`/pacecrew/${selectedCrew.id}`}
+                to={`/pacecrew/${displayCrew.id}`}
                 className="inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium text-sage-700"
               >
                 Full details
@@ -830,7 +645,7 @@ export const PaceCrewPage = () => {
       <BottomSheet
         open={sheetMode === "create-crew"}
         title="Create a PaceCrew"
-        subtitle="Because you can organize only one PaceCrew, this should feel like a crew home rather than a disposable group."
+        subtitle="Set up the group you will organize."
         onClose={() => setSheetMode(null)}
       >
         <div className="space-y-3">
@@ -860,7 +675,7 @@ export const PaceCrewPage = () => {
       <BottomSheet
         open={sheetMode === "create-mission"}
         title="Publish a mission"
-        subtitle="Keep the organizer flow light: missions start here, then appear directly in your crew home."
+        subtitle="Missions appear inside your group and can be accepted by members."
         onClose={() => setSheetMode(null)}
       >
         <div className="space-y-3">
