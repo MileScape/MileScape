@@ -101,6 +101,18 @@ const defaultView = {
 const SIMULATION_SOURCE_ID = "route-simulation-path";
 const SIMULATION_GHOST_LAYER_ID = "route-simulation-ghost";
 const SIMULATION_ACTIVE_LAYER_ID = "route-simulation-active";
+const TOKYO_SIMULATION_SCREEN_PADDING = {
+  hero: {
+    x: 92,
+    top: 88,
+    bottom: 132
+  },
+  card: {
+    x: 28,
+    top: 26,
+    bottom: 34
+  }
+};
 const walkingPathCache = new Map<string, LngLatTuple[] | null>();
 const walkingPathRequestCache = new Map<string, Promise<LngLatTuple[] | null>>();
 type WindowWithIdleCallback = Window &
@@ -275,7 +287,7 @@ export const RouteArtwork = ({
     }
 
     if (routeId === "tokyo-city-route") {
-      return 0.6;
+      return 0;
     }
 
     if (routeId === "central-park-loop") {
@@ -684,6 +696,12 @@ export const RouteArtwork = ({
     const lookAheadOffset = 0.022;
     const lngPadding = simulationBounds ? (simulationBounds.maxLng - simulationBounds.minLng) * 0.5 : 0;
     const latPadding = simulationBounds ? (simulationBounds.maxLat - simulationBounds.minLat) * 0.5 : 0;
+    const screenPadding =
+      routeId === "tokyo-city-route"
+        ? variant === "hero"
+          ? TOKYO_SIMULATION_SCREEN_PADDING.hero
+          : TOKYO_SIMULATION_SCREEN_PADDING.card
+        : null;
 
     const tick = (timestamp: number) => {
       if (mapRef.current !== map) {
@@ -726,15 +744,40 @@ export const RouteArtwork = ({
         : targetCenter;
 
       const currentCenter = map.getCenter();
+      const smoothedCenter: LngLatTuple = [
+        currentCenter.lng + (clampedTargetCenter[0] - currentCenter.lng) * 0.16,
+        currentCenter.lat + (clampedTargetCenter[1] - currentCenter.lat) * 0.16
+      ];
+
       map.jumpTo({
-        center: [
-          currentCenter.lng + (clampedTargetCenter[0] - currentCenter.lng) * 0.16,
-          currentCenter.lat + (clampedTargetCenter[1] - currentCenter.lat) * 0.16
-        ],
+        center: smoothedCenter,
         zoom: cameraView.zoom,
         pitch: cameraView.pitch,
         bearing: cameraView.bearing
       });
+
+      if (screenPadding) {
+        const runnerPoint = map.project(currentRunnerCoordinate);
+        const maxX = Math.max(screenPadding.x, map.getContainer().clientWidth - screenPadding.x);
+        const maxY = Math.max(screenPadding.top, map.getContainer().clientHeight - screenPadding.bottom);
+        const clampedRunnerX = Math.min(maxX, Math.max(screenPadding.x, runnerPoint.x));
+        const clampedRunnerY = Math.min(maxY, Math.max(screenPadding.top, runnerPoint.y));
+
+        if (clampedRunnerX !== runnerPoint.x || clampedRunnerY !== runnerPoint.y) {
+          const centerPoint = map.project(smoothedCenter);
+          const adjustedCenter = map.unproject([
+            centerPoint.x + runnerPoint.x - clampedRunnerX,
+            centerPoint.y + runnerPoint.y - clampedRunnerY
+          ]);
+
+          map.jumpTo({
+            center: [adjustedCenter.lng, adjustedCenter.lat],
+            zoom: cameraView.zoom,
+            pitch: cameraView.pitch,
+            bearing: cameraView.bearing
+          });
+        }
+      }
 
       if (animationProgress < 1) {
         simulationFrameRef.current = window.requestAnimationFrame(tick);
@@ -760,6 +803,7 @@ export const RouteArtwork = ({
     simulation?.durationSeconds,
     simulationBounds,
     simulationProgressTarget,
+    routeId,
     variant,
     view.marker
   ]);

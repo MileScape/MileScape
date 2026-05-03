@@ -16,7 +16,7 @@ export const routeMapViews: Record<string, RouteMapView> = {
   },
   "tokyo-city-route": {
     center: [139.7442, 35.6585],
-    zoom: 14.5,
+    zoom: 15,
     pitch: 72,
     bearing: -18,
     marker: [139.7454, 35.6581]
