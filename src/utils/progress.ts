@@ -19,7 +19,7 @@ import type {
 } from "../types";
 import { getAchievementTier } from "./achievement";
 import { getMissionCompletionStampReward } from "./missionRewards";
-import { createMembership, paceCrewMembershipUnlockRouteIds, reconcilePaceCrewMembershipUnlockRouteIds, syncExpiredMissionStates } from "./paceCrew";
+import { reconcilePaceCrewMembershipUnlockRouteIds, syncExpiredMissionStates } from "./paceCrew";
 import { calculateEarnedStamps } from "./stamps";
 
 const defaultPurchasedRouteIds = ["tokyo-city-route", "central-park-loop", "barcelona-coast-route"];
@@ -46,11 +46,11 @@ export const createInitialState = (): AppState =>
     currentStamps: 0,
     totalStampsEarned: 0,
     purchasedRouteIds: defaultPurchasedRouteIds,
-    unlockedCrewDestinationIds: paceCrewMembershipUnlockRouteIds,
+    unlockedCrewDestinationIds: [],
     sliderMaxDistanceKm: 20,
     userPaceCrewState: {
       organizedCrewId: null,
-      memberships: [createMembership("sunrise-collective", "member")]
+      memberships: []
     },
     paceCrews: initialPaceCrews,
     paceCrewMissions: initialPaceCrewMissions,

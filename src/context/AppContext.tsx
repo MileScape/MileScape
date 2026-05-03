@@ -44,6 +44,34 @@ const areMissionStatesEqual = (left: AppState["userMissionStates"], right: AppSt
     );
   });
 
+const areStringArraysEqual = (left: string[], right: string[]) =>
+  left.length === right.length && left.every((entry, index) => entry === right[index]);
+
+const reconcilePaceCrewRouteAccess = (current: AppState): AppState => {
+  const unlockedCrewDestinationIds = reconcilePaceCrewMembershipUnlockRouteIds(
+    current.unlockedCrewDestinationIds,
+    current.userPaceCrewState.memberships.length,
+  );
+  const ownedRouteIds = new Set([...current.purchasedRouteIds, ...unlockedCrewDestinationIds]);
+  const selectedRouteId =
+    current.selectedRouteId && ownedRouteIds.has(current.selectedRouteId)
+      ? current.selectedRouteId
+      : current.purchasedRouteIds[0] ?? null;
+
+  if (
+    selectedRouteId === current.selectedRouteId &&
+    areStringArraysEqual(unlockedCrewDestinationIds, current.unlockedCrewDestinationIds)
+  ) {
+    return current;
+  }
+
+  return {
+    ...current,
+    selectedRouteId,
+    unlockedCrewDestinationIds
+  };
+};
+
 const buildWearableHistoryFromState = (current: AppState): WearableSyncRecord[] => {
   const routeNameById = new Map(routes.map((route) => [route.id, route.name]));
   const syncedRuns = current.runHistory
@@ -178,6 +206,10 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   }, [state.paceCrewMissions, state.userMissionStates]);
 
   useEffect(() => {
+    setState((current) => reconcilePaceCrewRouteAccess(current));
+  }, [state.purchasedRouteIds, state.selectedRouteId, state.unlockedCrewDestinationIds, state.userPaceCrewState.memberships]);
+
+  useEffect(() => {
     const saveTimer = window.setTimeout(() => {
       saveState(state);
     }, 120);
@@ -188,17 +220,19 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   }, [state]);
 
   const effectiveState = useMemo<AppState>(() => {
+    const routeAccessState = reconcilePaceCrewRouteAccess(state);
+
     if (!debugModeEnabled) {
-      return state;
+      return routeAccessState;
     }
 
     const unlockedPersonalRouteIds = routes.filter((route) => route.sourceType === "personal").map((route) => route.id);
     const unlockedCrewRouteIds = routes.filter((route) => route.sourceType === "pacecrew").map((route) => route.id);
 
     return {
-      ...state,
+      ...routeAccessState,
       routeProgress: routes.map((route) => {
-        const existingProgress = state.routeProgress.find((entry) => entry.routeId === route.id);
+        const existingProgress = routeAccessState.routeProgress.find((entry) => entry.routeId === route.id);
         return {
           routeId: route.id,
           completedDistanceKm: existingProgress?.completedDistanceKm ?? 0,
@@ -216,7 +250,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       }),
       purchasedRouteIds: unlockedPersonalRouteIds,
       unlockedCrewDestinationIds: unlockedCrewRouteIds,
-      selectedRouteId: state.selectedRouteId ?? unlockedPersonalRouteIds[0] ?? null,
+      selectedRouteId: routeAccessState.selectedRouteId ?? unlockedPersonalRouteIds[0] ?? null,
     };
   }, [debugModeEnabled, state]);
 
@@ -234,17 +268,18 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       state: effectiveState,
       t: (key, params) => translate(state.language, key, params),
       selectRoute: (routeId) => {
-        setState((current) =>
-          routes.some((route) => route.id === routeId && ((current.debugModeEnabled ?? false) || isRouteOwnedInPaceport(route.id, current)))
-            ? { ...current, selectedRouteId: routeId }
-            : current,
-        );
+        setState((current) => {
+          const routeAccessState = reconcilePaceCrewRouteAccess(current);
+          return routes.some((route) => route.id === routeId && ((routeAccessState.debugModeEnabled ?? false) || isRouteOwnedInPaceport(route.id, routeAccessState)))
+            ? { ...routeAccessState, selectedRouteId: routeId }
+            : routeAccessState;
+        });
       },
       completeRun: (input) => {
         let summary = null as ReturnType<typeof applyPersonalRunToState>["summary"] | null;
 
         setState((current) => {
-          const synced = syncExpiredMissionStates(current);
+          const synced = syncExpiredMissionStates(reconcilePaceCrewRouteAccess(current));
           const measurement = resolveRunMeasurement(synced, input.distanceKm);
 
           if (input.targetType === "personal") {

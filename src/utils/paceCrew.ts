@@ -21,8 +21,13 @@ export const reconcilePaceCrewMembershipUnlockRouteIds = (routeIds: string[], me
     ? Array.from(new Set([...routeIds, ...paceCrewMembershipUnlockRouteIds]))
     : routeIds.filter((routeId) => !paceCrewMembershipUnlockRouteIds.includes(routeId));
 
-export const getOwnedRouteIds = (state: AppState) =>
-  Array.from(new Set([...state.purchasedRouteIds, ...state.unlockedCrewDestinationIds]));
+export const getOwnedRouteIds = (state: AppState) => {
+  const membershipUnlockIds = getPaceCrewMembershipUnlockRouteIds(state);
+  const filteredCrewDestinationIds = state.unlockedCrewDestinationIds.filter(
+    (id) => !paceCrewMembershipUnlockRouteIds.includes(id),
+  );
+  return Array.from(new Set([...state.purchasedRouteIds, ...filteredCrewDestinationIds, ...membershipUnlockIds]));
+};
 
 export const isRouteOwnedInPaceport = (routeId: string, state: AppState) =>
   getOwnedRouteIds(state).includes(routeId);
