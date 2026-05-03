@@ -1,5 +1,5 @@
 import { motion, useSpring, useTransform } from "framer-motion";
-import { ChevronsLeftRight, Flag, Route as RouteIcon, Users, Watch } from "lucide-react";
+import { ChevronsLeftRight, Watch } from "lucide-react";
 import { type PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import runnerIcon from "../assets/runner-slider.svg";
@@ -9,8 +9,8 @@ import { Button } from "../components/ui/Button";
 import { useAppState } from "../hooks/useAppState";
 import { formatCountryName } from "../utils/location";
 import { getRunSimulationDurationSeconds } from "../utils/routeSimulation";
-import { getAcceptedMissionStatesForUser, getMissionProgress } from "../utils/paceCrew";
 import { hasSeenJourneySwipeGuide, markJourneySwipeGuideSeen, markOnboardingSeen } from "../utils/storage";
+import { DistanceSlider } from "../components/run/DistanceSlider";
 
 const getRouteTitleSizeClassName = (routeName: string, variant: "compact" | "hero") => {
   if (variant === "compact") {
@@ -59,37 +59,18 @@ export const RunSetupPage = () => {
   const welcomeLandscapeProgress = useTransform(welcomeDrawProgress, [0.04, 0.44], [0, 1]);
   const welcomeRouteProgress = useTransform(welcomeDrawProgress, [0.16, 0.76], [0, 1]);
   const welcomeCityProgress = useTransform(welcomeDrawProgress, [0.44, 0.96], [0, 1]);
-  const acceptedMissionStates = getAcceptedMissionStatesForUser(state);
-  const acceptedMissions = acceptedMissionStates
-    .map((missionState) => {
-      const mission = state.paceCrewMissions.find((entry) => entry.id === missionState.missionId && entry.status === "open");
-      if (!mission) {
-        return null;
-      }
-      const crew = state.paceCrews.find((entry) => entry.id === mission.crewId);
-      return mission && crew ? { mission, missionState, crew } : null;
-    })
-    .filter(Boolean) as Array<{
-    mission: (typeof state.paceCrewMissions)[number];
-    missionState: (typeof state.userMissionStates)[number];
-    crew: (typeof state.paceCrews)[number];
-  }>;
-
-  const [targetType, setTargetType] = useState<"personal" | "pacecrew_mission">(
-    acceptedMissions.length > 0 ? "personal" : "personal",
-  );
   const [selectedDistance, setSelectedDistance] = useState(() =>
     initialDistanceRatio === null
       ? Math.min(5, state.sliderMaxDistanceKm)
       : Math.min(state.sliderMaxDistanceKm, Math.max(0, state.sliderMaxDistanceKm * initialDistanceRatio)),
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [missionPickerOpen, setMissionPickerOpen] = useState(false);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const journeyGuideCardRef = useRef<HTMLDivElement | null>(null);
   const carouselScrollTimeoutRef = useRef<number | null>(null);
   const carouselJumpingRef = useRef(false);
   const carouselInitializedRef = useRef(false);
+  const carouselScrollSelectionRef = useRef(false);
   const initialRouteIdRef = useRef<string | null>(null);
   const welcomeRevealThreshold = 100;
   const welcomeDistanceRatio = 0.86;
@@ -103,12 +84,6 @@ export const RunSetupPage = () => {
     setSelectedDistance((current) => Math.min(current, state.sliderMaxDistanceKm));
   }, [state.sliderMaxDistanceKm]);
 
-  useEffect(() => {
-    if (acceptedMissions.length === 0) {
-      setTargetType("personal");
-    }
-  }, [acceptedMissions.length]);
-
   const routeCatalog = routes;
   const runnableRouteIds = useMemo(() => new Set(playableRoutes.map((entry) => entry.id)), [playableRoutes]);
   const [selectedCatalogRouteId, setSelectedCatalogRouteId] = useState(
@@ -116,31 +91,18 @@ export const RunSetupPage = () => {
   );
   const route = routeCatalog.find((entry) => entry.id === selectedCatalogRouteId) ?? playableRoutes[0] ?? routeCatalog[0];
   const routeIndex = route ? routeCatalog.findIndex((entry) => entry.id === route.id) : -1;
-  const [selectedMissionId, setSelectedMissionId] = useState<string | null>(acceptedMissions[0]?.mission.id ?? null);
   const canStartPersonalRun = Boolean(route && runnableRouteIds.has(route.id));
 
   useEffect(() => {
-    if (state.selectedRouteId) {
+    if (state.selectedRouteId && !selectedCatalogRouteId) {
       setSelectedCatalogRouteId(state.selectedRouteId);
     }
-  }, [state.selectedRouteId]);
+  }, [selectedCatalogRouteId, state.selectedRouteId]);
 
-  useEffect(() => {
-    setSelectedMissionId((current) => {
-      if (current && acceptedMissions.some((item) => item.mission.id === current)) {
-        return current;
-      }
-      return acceptedMissions[0]?.mission.id ?? null;
-    });
-  }, [acceptedMissions]);
-
-  if (!route && acceptedMissions.length === 0) {
+  if (!route) {
     return <Navigate to="/paceport" replace />;
   }
 
-  const selectedMissionBundle = acceptedMissions.find((item) => item.mission.id === selectedMissionId) ?? acceptedMissions[0];
-  const activeTargetType =
-    targetType === "pacecrew_mission" && selectedMissionBundle ? "pacecrew_mission" : "personal";
   const effectiveDistance = selectedDistance;
   const runSimulationDurationSeconds = useMemo(
     () => getRunSimulationDurationSeconds(effectiveDistance, route?.id),
@@ -148,23 +110,6 @@ export const RunSetupPage = () => {
   );
 
   const preview = useMemo(() => {
-    if (activeTargetType === "pacecrew_mission" && selectedMissionBundle) {
-      const { mission, missionState } = selectedMissionBundle;
-      const missionProgress = getMissionProgress(mission, missionState);
-      const rawPreviewDistance = missionProgress.completedDistanceKm + effectiveDistance;
-      const hasOverflowPreview = rawPreviewDistance > mission.targetDistanceKm;
-
-      return {
-        label: "Mission Progress",
-        value: hasOverflowPreview ? mission.targetDistanceKm : rawPreviewDistance,
-        total: mission.targetDistanceKm,
-        cycleCount: 1,
-        hasOverflowPreview,
-        targetTitle: mission.title,
-        targetMeta: `${selectedMissionBundle.crew.name} · PaceCrew Mission`
-      };
-    }
-
     if (!route) {
       return null;
     }
@@ -191,7 +136,7 @@ export const RunSetupPage = () => {
       targetTitle: route.name,
       targetMeta: `${route.city}, ${formatCountryName(route.country)}`
     };
-  }, [activeTargetType, effectiveDistance, route, selectedMissionBundle, state.routeProgress]);
+  }, [effectiveDistance, route, state.routeProgress]);
 
   const routeProgress = route
     ? state.routeProgress.find((entry) => entry.routeId === route.id)
@@ -199,26 +144,9 @@ export const RunSetupPage = () => {
   const routeExploredPercent = route
     ? Math.round(((routeProgress?.completedDistanceKm ?? 0) / route.totalDistanceKm) * 100)
     : 0;
-  const missionProgressPercent =
-    activeTargetType === "pacecrew_mission" && selectedMissionBundle
-      ? Math.round(
-          (getMissionProgress(selectedMissionBundle.mission, selectedMissionBundle.missionState).completedDistanceKm /
-            selectedMissionBundle.mission.targetDistanceKm) *
-            100,
-        )
-      : 0;
-  const locationLabel =
-    activeTargetType === "pacecrew_mission" && selectedMissionBundle
-      ? "PACECREW MISSION"
-      : route
-        ? `${route.city.toUpperCase()} · ${formatCountryName(route.country, { uppercase: true })}`
-        : "";
-  const metadataLabel =
-    activeTargetType === "pacecrew_mission" && selectedMissionBundle
-      ? `${effectiveDistance.toFixed(1)} km selected / ${selectedMissionBundle.mission.targetDistanceKm.toFixed(1)} km · ${missionProgressPercent}% complete`
-      : route
-        ? `${effectiveDistance.toFixed(1)} km selected / ${route.totalDistanceKm.toFixed(1)} km · ${routeExploredPercent}% explored`
-        : `${effectiveDistance.toFixed(1)} km selected`;
+  const metadataLabel = route
+    ? `${effectiveDistance.toFixed(1)} km selected / ${route.totalDistanceKm.toFixed(1)} km · ${routeExploredPercent}% explored`
+    : `${effectiveDistance.toFixed(1)} km selected`;
   const hasWearablePriority = Boolean(state.wearableConnection && state.wearableConnection.autoSyncEnabled);
   const carouselRoutes = useMemo(() => {
     if (routeCatalog.length <= 1) {
@@ -252,14 +180,14 @@ export const RunSetupPage = () => {
   }, [routeCatalog]);
 
   useEffect(() => {
-    if (showWelcomeIntro || activeTargetType !== "personal" || !route || hasSeenJourneySwipeGuide()) {
+    if (showWelcomeIntro || !route || hasSeenJourneySwipeGuide()) {
       setShowSwipeGuide(false);
       return;
     }
 
     initialRouteIdRef.current = route.id;
     setShowSwipeGuide(true);
-  }, [activeTargetType, route?.id, showWelcomeIntro]);
+  }, [route?.id, showWelcomeIntro]);
 
   useEffect(() => {
     if (!showSwipeGuide || !route) {
@@ -276,13 +204,7 @@ export const RunSetupPage = () => {
     setIsSubmitting(true);
 
     window.setTimeout(() => {
-      if (activeTargetType === "pacecrew_mission" && selectedMissionBundle) {
-        completeRun({
-          targetType: "pacecrew_mission",
-          missionId: selectedMissionBundle.mission.id,
-          distanceKm: effectiveDistance
-        });
-      } else if (route && canStartPersonalRun) {
+      if (route && canStartPersonalRun) {
         completeRun({ targetType: "personal", routeId: route.id, distanceKm: effectiveDistance });
       }
       navigate("/run/result");
@@ -366,8 +288,6 @@ export const RunSetupPage = () => {
     }
   };
 
-  const showModeSwitcher = acceptedMissions.length > 0;
-
   useEffect(() => {
     return () => {
       if (carouselScrollTimeoutRef.current) {
@@ -377,7 +297,12 @@ export const RunSetupPage = () => {
   }, []);
 
   useEffect(() => {
-    if (!carouselRef.current || activeTargetType !== "personal" || !route) {
+    if (!carouselRef.current || !route) {
+      return;
+    }
+
+    if (carouselScrollSelectionRef.current) {
+      carouselScrollSelectionRef.current = false;
       return;
     }
 
@@ -399,7 +324,7 @@ export const RunSetupPage = () => {
       block: "nearest",
     });
     carouselInitializedRef.current = true;
-  }, [activeTargetType, routeCatalog.length, routeIndex, route?.id]);
+  }, [routeCatalog.length, routeIndex, route?.id]);
 
   const handleRouteCarouselScroll = () => {
     if (!carouselRef.current || carouselJumpingRef.current) {
@@ -451,6 +376,7 @@ export const RunSetupPage = () => {
       }
 
       if (nextRouteId && nextRouteId !== route?.id) {
+        carouselScrollSelectionRef.current = true;
         setSelectedCatalogRouteId(nextRouteId);
         if (runnableRouteIds.has(nextRouteId)) {
           selectRoute(nextRouteId);
@@ -467,57 +393,31 @@ export const RunSetupPage = () => {
   return (
     <>
       <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-canvas">
-        {activeTargetType === "personal" && route ? (
-          <motion.div
-            className="relative shrink-0 overflow-hidden"
-            animate={{ height: isSubmitting ? "calc(100vh - 104px)" : "62vh" }}
-            transition={{ duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
+        <motion.div
+          className="relative shrink-0 overflow-hidden"
+          animate={{ height: isSubmitting ? "calc(100vh - 104px)" : "62vh" }}
+          transition={{ duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <MapHeroShell
+            className="h-full"
+            topFadeClassName="h-28 bg-gradient-to-b from-[#0d1711]/24 via-[#0d1711]/10 to-transparent"
+            bottomFadeClassName="h-28 bg-gradient-to-t from-[#f5f3ee] via-[#f5f3ee]/82 to-transparent"
           >
-            <MapHeroShell
-              className="h-full"
-              topFadeClassName="h-28 bg-gradient-to-b from-[#0d1711]/24 via-[#0d1711]/10 to-transparent"
-              bottomFadeClassName="h-28 bg-gradient-to-t from-[#f5f3ee] via-[#f5f3ee]/82 to-transparent"
-            >
-              <div className="block h-full w-full text-left">
-                <RouteArtwork
-                  routeId={route.id}
-                  variant="hero"
-                  className="h-full w-full"
-                  simulation={{
-                    active: isSubmitting,
-                    durationSeconds: runSimulationDurationSeconds,
-                    distanceKm: effectiveDistance,
-                    routeDistanceKm: route.totalDistanceKm
-                  }}
-                />
-              </div>
-            </MapHeroShell>
-          </motion.div>
-        ) : (
-          <div className="relative flex h-[62vh] items-end overflow-hidden bg-[linear-gradient(180deg,#d9e8dd_0%,#eef4ee_38%,#f5f3ee_100%)] px-6 pb-10">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#ffffff7a,transparent_42%)]" />
-            <button
-              type="button"
-              onClick={() => setMissionPickerOpen(true)}
-              className="relative w-full rounded-[30px] border border-white/70 bg-white/62 px-6 py-6 text-left shadow-[0_18px_40px_rgba(24,43,29,0.08)] backdrop-blur-xl"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sky-700">
-                    PACECREW MISSION
-                  </p>
-                  <h2 className="mt-3 text-[2rem] leading-[0.98] tracking-[-0.04em] text-ink">
-                    {selectedMissionBundle?.mission.title ?? "Choose a mission"}
-                  </h2>
-                  <p className="mt-2 text-sm text-sage-700">{selectedMissionBundle?.crew.name ?? "Accepted mission"}</p>
-                </div>
-                <div className="rounded-full bg-sky-100/80 p-3 text-sky-700">
-                  <Flag className="h-5 w-5" />
-                </div>
-              </div>
-            </button>
-          </div>
-        )}
+            <div className="block h-full w-full text-left">
+              <RouteArtwork
+                routeId={route.id}
+                variant="hero"
+                className="h-full"
+                simulation={{
+                  active: isSubmitting,
+                  durationSeconds: runSimulationDurationSeconds,
+                  distanceKm: effectiveDistance,
+                  routeDistanceKm: route.totalDistanceKm
+                }}
+              />
+            </div>
+          </MapHeroShell>
+        </motion.div>
 
         <motion.section
           initial={false}
@@ -529,43 +429,14 @@ export const RunSetupPage = () => {
             isSubmitting ? "flex items-center overflow-hidden py-4" : "pb-6 pt-5"
           }`}
         >
-          {showSwipeGuide && activeTargetType === "personal" && !isSubmitting ? (
+          {showSwipeGuide && !isSubmitting ? (
             <>
               <div className="pointer-events-none absolute inset-0 z-10 rounded-t-[34px] bg-[rgba(246,244,238,0.52)] backdrop-blur-[10px]" />
               <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-24 bg-[linear-gradient(180deg,rgba(255,255,255,0.42),rgba(255,255,255,0))]" />
             </>
           ) : null}
 
-          {showModeSwitcher && !isSubmitting ? (
-            <div className="mb-6 inline-flex rounded-full bg-sage-900/6 p-1 ring-1 ring-sage-900/8">
-              <button
-                type="button"
-                onClick={() => setTargetType("personal")}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  activeTargetType === "personal" ? "bg-white text-ink shadow-sm" : "text-sage-600"
-                }`}
-              >
-                <span className="inline-flex items-center gap-2">
-                  <RouteIcon className="h-4 w-4" />
-                  {t("run.personalRun")}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setTargetType("pacecrew_mission")}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  activeTargetType === "pacecrew_mission" ? "bg-white text-ink shadow-sm" : "text-sage-600"
-                }`}
-              >
-                <span className="inline-flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  {t("run.pacecrewMission")}
-                </span>
-              </button>
-            </div>
-          ) : null}
-
-          {isSubmitting && activeTargetType === "personal" && route ? (
+          {isSubmitting ? (
             <motion.div
               key="running-status"
               initial={{ opacity: 0 }}
@@ -612,7 +483,7 @@ export const RunSetupPage = () => {
                 </div>
               </div>
             </motion.div>
-          ) : activeTargetType === "personal" && route ? (
+          ) : (
             <div className={`relative ${showSwipeGuide ? "z-30" : ""}`}>
               {showSwipeGuide ? (
                 <div className="pointer-events-none absolute inset-x-0 -top-2 bottom-0 rounded-[28px] bg-white/18 ring-1 ring-white/70 shadow-[0_24px_40px_rgba(33,49,38,0.12)]" />
@@ -731,63 +602,11 @@ export const RunSetupPage = () => {
                 </motion.div>
               ) : null}
             </div>
-          ) : (
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-sage-500">{locationLabel}</p>
-              <div className="mt-3 flex items-start justify-between gap-3">
-                <h2
-                  className={`overflow-hidden text-ellipsis whitespace-nowrap font-destination-display leading-[0.94] tracking-[0.01em] text-ink ${getRouteTitleSizeClassName(preview?.targetTitle ?? "", "hero")}`}
-                  title={preview?.targetTitle}
-                >
-                  {preview?.targetTitle}
-                </h2>
-                {hasWearablePriority ? (
-                  <div
-                    className="mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sage-900/4 text-sage-500"
-                    aria-label={`${state.wearableConnection?.name ?? "Wearable"} data source`}
-                    title={state.wearableConnection?.name ?? "Wearable"}
-                  >
-                    <Watch className="h-4 w-4" />
-                  </div>
-                ) : null}
-              </div>
-              <div className="mt-3 flex items-center gap-2 text-sm text-sage-600">
-                <span>{metadataLabel}</span>
-                {preview && preview.cycleCount > 1 ? (
-                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sage-700 px-1.5 text-[10px] font-semibold text-white">
-                    {preview.cycleCount}
-                  </span>
-                ) : null}
-              </div>
-            </div>
           )}
 
-          {!isSubmitting ? <div className="mt-8">
-            <div className="flex items-end justify-between gap-4">
-              <p className="text-[11px] font-medium uppercase tracking-[0.26em] text-sage-500">
-                Run Distance
-              </p>
-              <p className="text-[1.9rem] font-semibold tracking-[-0.04em] text-ink">
-                {effectiveDistance.toFixed(1)} km
-              </p>
-            </div>
-
-            <div className="mt-5">
-              <input
-                type="range"
-                min="0"
-                max={state.sliderMaxDistanceKm}
-                step="0.1"
-                value={selectedDistance}
-                onChange={(event) => setSelectedDistance(Number(event.target.value))}
-                className="ios-slider h-1.5 w-full cursor-pointer appearance-none rounded-full bg-sage-200/90"
-              />
-              <div className="mt-3 flex items-center justify-between text-xs text-sage-400">
-                <span>0 km</span>
-                <span>{state.sliderMaxDistanceKm} km</span>
-              </div>
-            </div>
-          </div> : null}
+          {!isSubmitting ? (
+            <DistanceSlider value={selectedDistance} onChange={setSelectedDistance} max={state.sliderMaxDistanceKm} />
+          ) : null}
 
           {!isSubmitting ? <div className="mt-8">
             <Button
@@ -797,16 +616,13 @@ export const RunSetupPage = () => {
               disabled={
                 isSubmitting ||
                 effectiveDistance <= 0 ||
-                (activeTargetType === "personal" && !canStartPersonalRun) ||
-                (activeTargetType === "pacecrew_mission" && !selectedMissionBundle)
+                !canStartPersonalRun
               }
             >
               {isSubmitting
                 ? t("run.simulating")
-                : activeTargetType === "pacecrew_mission"
-                  ? t("run.startMissionRun")
-                  : !canStartPersonalRun
-                    ? "Unlock in Paceport"
+                : !canStartPersonalRun
+                  ? "Unlock in Paceport"
                   : t("run.startRun")}
             </Button>
           </div> : null}
@@ -942,49 +758,6 @@ export const RunSetupPage = () => {
         </motion.div>
       ) : null}
 
-      {missionPickerOpen ? (
-        <div className="fixed inset-0 z-40">
-          <button type="button" onClick={() => setMissionPickerOpen(false)} className="absolute inset-0 bg-black/18" aria-label="Close mission picker" />
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            className="absolute bottom-0 left-0 right-0 rounded-t-[32px] bg-white px-4 pb-8 pt-4 shadow-2xl"
-          >
-            <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-sage-200" />
-            <div className="space-y-3">
-              {acceptedMissions.map((item) => {
-                const active = item.mission.id === selectedMissionId;
-                return (
-                  <button
-                    key={item.mission.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedMissionId(item.mission.id);
-                      setMissionPickerOpen(false);
-                    }}
-                    className={`w-full rounded-[24px] p-4 text-left transition ${
-                      active ? "bg-sage-700 text-white" : "bg-sky-50 text-ink"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold">{item.mission.title}</p>
-                        <p className={`mt-1 text-xs ${active ? "text-white/80" : "text-sage-500"}`}>
-                          {item.crew.name}
-                        </p>
-                      </div>
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${active ? "bg-white/15 text-white" : "bg-white text-sky-700"}`}>
-                        {item.mission.targetDistanceKm} km
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </motion.div>
-        </div>
-      ) : null}
     </>
   );
 };
