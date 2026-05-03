@@ -16,28 +16,28 @@ export const routeMapViews: Record<string, RouteMapView> = {
   },
   "tokyo-city-route": {
     center: [139.7442, 35.6585],
-    zoom: 14.05,
+    zoom: 14.5,
     pitch: 72,
     bearing: -18,
     marker: [139.7454, 35.6581]
   },
   "barcelona-coast-route": {
     center: [2.1708, 41.3994],
-    zoom: 14.55,
+    zoom: 15.5,
     pitch: 66,
     bearing: -28,
     marker: [2.1744, 41.4036]
   },
   "london-landmark-route": {
     center: [-0.1015, 51.506],
-    zoom: 13.55,
+    zoom: 15,
     pitch: 68,
     bearing: 64,
     marker: [-0.1246, 51.5007]
   },
   "paris-eiffel-route": {
     center: [2.2922, 48.8589],
-    zoom: 14.55,
+    zoom: 15,
     pitch: 64,
     bearing: 34,
     marker: [2.2945, 48.8584]

@@ -275,7 +275,7 @@ export const RouteArtwork = ({
     }
 
     if (routeId === "tokyo-city-route") {
-      return 0.65;
+      return 0.6;
     }
 
     if (routeId === "central-park-loop") {
@@ -680,10 +680,10 @@ export const RouteArtwork = ({
       .addTo(map);
 
     const totalDurationMs = simulation.durationSeconds * 1000;
-    const followStrength = variant === "hero" ? 0.13 : 0.08;
+    const followStrength = variant === "hero" ? 0.45 : 0.08;
     const lookAheadOffset = 0.022;
-    const lngPadding = simulationBounds ? (simulationBounds.maxLng - simulationBounds.minLng) * 0.18 : 0;
-    const latPadding = simulationBounds ? (simulationBounds.maxLat - simulationBounds.minLat) * 0.18 : 0;
+    const lngPadding = simulationBounds ? (simulationBounds.maxLng - simulationBounds.minLng) * 0.5 : 0;
+    const latPadding = simulationBounds ? (simulationBounds.maxLat - simulationBounds.minLat) * 0.5 : 0;
 
     const tick = (timestamp: number) => {
       if (mapRef.current !== map) {
@@ -728,8 +728,8 @@ export const RouteArtwork = ({
       const currentCenter = map.getCenter();
       map.jumpTo({
         center: [
-          currentCenter.lng + (clampedTargetCenter[0] - currentCenter.lng) * 0.12,
-          currentCenter.lat + (clampedTargetCenter[1] - currentCenter.lat) * 0.12
+          currentCenter.lng + (clampedTargetCenter[0] - currentCenter.lng) * 0.16,
+          currentCenter.lat + (clampedTargetCenter[1] - currentCenter.lat) * 0.16
         ],
         zoom: cameraView.zoom,
         pitch: cameraView.pitch,
