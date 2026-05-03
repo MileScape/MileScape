@@ -113,6 +113,18 @@ const TOKYO_SIMULATION_SCREEN_PADDING = {
     bottom: 34
   }
 };
+const LONDON_SIMULATION_SCREEN_PADDING = {
+  hero: {
+    x: 116,
+    top: 96,
+    bottom: 148
+  },
+  card: {
+    x: 34,
+    top: 30,
+    bottom: 42
+  }
+};
 const walkingPathCache = new Map<string, LngLatTuple[] | null>();
 const walkingPathRequestCache = new Map<string, Promise<LngLatTuple[] | null>>();
 type WindowWithIdleCallback = Window &
@@ -307,7 +319,7 @@ export const RouteArtwork = ({
     }
 
     if (routeId === "london-landmark-route") {
-      return 0.42;
+      return -0.35;
     }
 
     if (routeId === "paris-eiffel-route") {
@@ -692,8 +704,15 @@ export const RouteArtwork = ({
       .addTo(map);
 
     const totalDurationMs = simulation.durationSeconds * 1000;
-    const followStrength = variant === "hero" ? 0.45 : 0.08;
-    const lookAheadOffset = 0.022;
+    const followStrength =
+      routeId === "london-landmark-route"
+        ? variant === "hero"
+          ? 0.72
+          : 0.52
+        : variant === "hero"
+          ? 0.45
+          : 0.08;
+    const lookAheadOffset = routeId === "london-landmark-route" ? 0.012 : 0.022;
     const lngPadding = simulationBounds ? (simulationBounds.maxLng - simulationBounds.minLng) * 0.5 : 0;
     const latPadding = simulationBounds ? (simulationBounds.maxLat - simulationBounds.minLat) * 0.5 : 0;
     const screenPadding =
@@ -701,6 +720,10 @@ export const RouteArtwork = ({
         ? variant === "hero"
           ? TOKYO_SIMULATION_SCREEN_PADDING.hero
           : TOKYO_SIMULATION_SCREEN_PADDING.card
+        : routeId === "london-landmark-route"
+          ? variant === "hero"
+            ? LONDON_SIMULATION_SCREEN_PADDING.hero
+            : LONDON_SIMULATION_SCREEN_PADDING.card
         : null;
 
     const tick = (timestamp: number) => {
