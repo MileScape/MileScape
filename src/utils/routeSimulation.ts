@@ -151,14 +151,12 @@ export const routeWalkingWaypoints: Record<string, LngLatTuple[]> = {
   ],
   "taipei-skyline-route": [
     [121.5654, 25.0339],
-    [121.5672, 25.0323],
-    [121.5688, 25.0304],
-    [121.5706, 25.0277],
-    [121.5731, 25.0257],
-    [121.5754, 25.0239],
-    [121.573, 25.0228],
-    [121.5701, 25.0246],
-    [121.5675, 25.0275],
+    [121.5669, 25.0346],
+    [121.5683, 25.0337],
+    [121.5685, 25.0322],
+    [121.5669, 25.0313],
+    [121.5651, 25.0315],
+    [121.5641, 25.0327],
     [121.5654, 25.0339]
   ],
   "sydney-harbor-route": [
@@ -195,7 +193,7 @@ const routeDurationMultipliers: Record<string, number> = {
   "california-discovery-route": 1.4,
   "london-landmark-route": 1.65,
   "seoul-heritage-route": 1.35,
-  "sydney-harbor-route": 1.3
+  "sydney-harbor-route": 1.7
 };
 
 export const getRunSimulationDurationSeconds = (distanceKm: number, routeId?: string) => {
