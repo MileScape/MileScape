@@ -58,7 +58,7 @@ export const routeMapViews: Record<string, RouteMapView> = {
   },
   "sydney-harbor-route": {
     center: [151.2141, -33.8574],
-    zoom: 14.9,
+    zoom: 15,
     pitch: 64,
     bearing: -38,
     marker: [151.2153, -33.8568]
@@ -78,10 +78,10 @@ export const routeMapViews: Record<string, RouteMapView> = {
     marker: [-122.009, 37.3349]
   },
   "taipei-skyline-route": {
-    center: [121.568, 25.0308],
-    zoom: 13.75,
-    pitch: 64,
-    bearing: -28,
+    center: [121.5654, 25.0339],
+    zoom: 15,
+    pitch: 66,
+    bearing: -24,
     marker: [121.5654, 25.0339]
   },
   "bangkok-floating-route": {

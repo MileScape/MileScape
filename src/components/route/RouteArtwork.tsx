@@ -125,6 +125,30 @@ const LONDON_SIMULATION_SCREEN_PADDING = {
     bottom: 42
   }
 };
+const SYDNEY_SIMULATION_SCREEN_PADDING = {
+  hero: {
+    x: 92,
+    top: 88,
+    bottom: 132
+  },
+  card: {
+    x: 28,
+    top: 26,
+    bottom: 34
+  }
+};
+const TAIPEI_SIMULATION_SCREEN_PADDING = {
+  hero: {
+    x: 92,
+    top: 88,
+    bottom: 132
+  },
+  card: {
+    x: 28,
+    top: 26,
+    bottom: 34
+  }
+};
 const walkingPathCache = new Map<string, LngLatTuple[] | null>();
 const walkingPathRequestCache = new Map<string, Promise<LngLatTuple[] | null>>();
 type WindowWithIdleCallback = Window &
@@ -320,6 +344,14 @@ export const RouteArtwork = ({
 
     if (routeId === "london-landmark-route") {
       return -0.35;
+    }
+
+    if (routeId === "sydney-harbor-route") {
+      return 0;
+    }
+
+    if (routeId === "taipei-skyline-route") {
+      return 0;
     }
 
     if (routeId === "paris-eiffel-route") {
@@ -724,6 +756,14 @@ export const RouteArtwork = ({
           ? variant === "hero"
             ? LONDON_SIMULATION_SCREEN_PADDING.hero
             : LONDON_SIMULATION_SCREEN_PADDING.card
+          : routeId === "sydney-harbor-route"
+            ? variant === "hero"
+              ? SYDNEY_SIMULATION_SCREEN_PADDING.hero
+              : SYDNEY_SIMULATION_SCREEN_PADDING.card
+            : routeId === "taipei-skyline-route"
+              ? variant === "hero"
+                ? TAIPEI_SIMULATION_SCREEN_PADDING.hero
+                : TAIPEI_SIMULATION_SCREEN_PADDING.card
         : null;
 
     const tick = (timestamp: number) => {
