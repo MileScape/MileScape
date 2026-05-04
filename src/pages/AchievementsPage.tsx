@@ -1,24 +1,66 @@
-import { CheckCircle2, Lock, X } from "lucide-react";
-import { useState } from "react";
-import { SectionHeader } from "../components/ui/SectionHeader";
+import { CheckCircle2, ListChecks, Lock, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import { useAppState } from "../hooks/useAppState";
+import type { Route, RouteProgress, RunHistoryItem } from "../types";
 import { cn } from "../utils/cn";
 
-type MedalTier = "locked" | "bronze" | "silver" | "gold" | "prism";
-
-interface AchievementItem {
+type BadgeAsset = {
   id: string;
+  name: string;
+  description: string;
+  image: string;
+  unlocked: boolean;
+  unlockedAt: string | null;
+  unlockCount?: number;
+};
+
+type BadgeMedalTier = "locked" | "bronze" | "silver" | "gold" | "prism";
+type DecorationAchievementCount = { unlocked: number; total: number; unlockCount: number };
+
+type CountryAchievementSet = {
+  country: string;
+  routes: Route[];
+  countryImage: string;
+  assets: BadgeAsset[];
+  unlockedCount: number;
+  completedRoutes: number;
+  totalRoutes: number;
+  unlockedLandmarks: number;
+  totalLandmarks: number;
+  unlockedDecorations: number;
+  totalDecorations: number;
+  unlocked: boolean;
+  unlockedAt: string | null;
+};
+
+type AchievementCopy = {
+  eyebrow: string;
   title: string;
   description: string;
-  detail: string;
-  current: number;
-  baseTarget: number;
-  unit?: string;
-  image: string;
-}
+  completeOn: string;
+  locked: string;
+  unlocked: string;
+  badgeList: string;
+  details: string;
+  badge: string;
+  countryPrize: string;
+  close: string;
+  progress: string;
+  routes: string;
+  landmarks: string;
+  decorations: string;
+  unlockTime: string;
+  notUnlocked: string;
+  descriptionText: string;
+};
 
 const achievementImages = {
+  archaeologist: "/models/achievement/Archaeologist.png",
+  art: "/models/achievement/art.png",
+  building: "/models/achievement/building.png",
   calendar: "/models/achievement/calendar.png",
+  closet: "/models/achievement/closet.png",
+  collection: "/models/achievement/collection.png",
   finalline: "/models/achievement/finalline.png",
   food: "/models/achievement/food.png",
   journey: "/models/achievement/journey.png",
@@ -39,22 +81,76 @@ const countryAchievementImages: Record<string, string> = {
   "United States": "/models/achievement/USA.png"
 };
 
-const countryDisplayNames: Record<string, { en: string; zh: string }> = {
-  Australia: { en: "Australia", zh: "澳大利亚" },
-  China: { en: "China", zh: "中国" },
-  Egypt: { en: "Egypt", zh: "埃及" },
-  France: { en: "France", zh: "法国" },
-  Italy: { en: "Italy", zh: "意大利" },
-  Japan: { en: "Japan", zh: "日本" },
-  "South Korea": { en: "South Korea", zh: "韩国" },
-  Spain: { en: "Spain", zh: "西班牙" },
-  Thailand: { en: "Thailand", zh: "泰国" },
-  "United Kingdom": { en: "United Kingdom", zh: "英国" },
-  "United States": { en: "United States", zh: "美国" }
+const fallbackBadgeImage = achievementImages.journey;
+
+const countryCopy: Record<string, { zh: string; en: string }> = {
+  Australia: { zh: "澳大利亚", en: "Australia" },
+  China: { zh: "中国", en: "China" },
+  Egypt: { zh: "埃及", en: "Egypt" },
+  France: { zh: "法国", en: "France" },
+  Italy: { zh: "意大利", en: "Italy" },
+  Japan: { zh: "日本", en: "Japan" },
+  Spain: { zh: "西班牙", en: "Spain" },
+  Thailand: { zh: "泰国", en: "Thailand" },
+  "South Korea": { zh: "韩国", en: "South Korea" },
+  "United Kingdom": { zh: "英国", en: "United Kingdom" },
+  "United States": { zh: "美国", en: "United States" }
 };
 
-const normalizeAchievementCountry = (country: string) =>
-  country === "Taiwan" ? "China" : country;
+const palette = [
+  "from-[#f2eee2] via-white to-[#d7e2d0]",
+  "from-[#eee3d1] via-white to-[#d6dde8]",
+  "from-[#e9efe6] via-white to-[#ead9cb]",
+  "from-[#e5e2d8] via-white to-[#d8e5e2]"
+];
+
+const badgeMedalStyles: Record<BadgeMedalTier, { base: string; inner: string; shine: string }> = {
+  locked: {
+    base: "from-white via-sage-50 to-sage-200",
+    inner: "bg-[#f8f7f1]",
+    shine: "opacity-0"
+  },
+  bronze: {
+    base: "from-[#f6d2aa] via-[#a86533] to-[#4b2b1c]",
+    inner: "bg-[linear-gradient(135deg,rgba(255,246,231,0.9),rgba(180,105,55,0.24),rgba(93,50,28,0.2))]",
+    shine: "opacity-45"
+  },
+  silver: {
+    base: "from-[#ffffff] via-[#aeb7bf] to-[#46505a]",
+    inner: "bg-[linear-gradient(135deg,rgba(255,255,255,0.94),rgba(190,199,207,0.28),rgba(77,87,96,0.18))]",
+    shine: "opacity-55"
+  },
+  gold: {
+    base: "from-[#fff7bd] via-[#d49a18] to-[#67470a]",
+    inner: "bg-[linear-gradient(135deg,rgba(255,248,198,0.95),rgba(218,161,31,0.28),rgba(107,72,11,0.2))]",
+    shine: "opacity-6"
+  },
+  prism: {
+    base: "from-[#83fff0] via-[#ffe38a] to-[#c47dff]",
+    inner: "bg-[linear-gradient(135deg,rgba(238,255,252,0.9),rgba(255,219,116,0.22),rgba(191,125,255,0.2))]",
+    shine: "opacity-70"
+  }
+};
+
+const getBadgeMedalTier = (unlockCount = 0): BadgeMedalTier => {
+  if (unlockCount >= 9) {
+    return "prism";
+  }
+
+  if (unlockCount >= 6) {
+    return "gold";
+  }
+
+  if (unlockCount >= 3) {
+    return "silver";
+  }
+
+  if (unlockCount >= 1) {
+    return "bronze";
+  }
+
+  return "locked";
+};
 
 const animalDecorationIds = new Set([
   "maneki-neko",
@@ -64,6 +160,33 @@ const animalDecorationIds = new Set([
   "platypus",
   "wallaby",
   "taiwan-blue-magpie"
+]);
+
+const artDecorationIds = new Set([
+  "guernica",
+  "roman-mosaic-floor",
+  "gramophone",
+  "award-statue"
+]);
+
+const buildingDecorationIds = new Set([
+  "bethesda-fountain",
+  "empire-state-building",
+  "one-vanderbilt-building",
+  "torii-gate-decoration",
+  "red-telephone-box",
+  "catacombs-kom-el-shoqafa",
+  "hollywood"
+]);
+
+const clothingDecorationIds = new Set([
+  "newsboy-cap",
+  "luxury-bag",
+  "pharaoh-nemes",
+  "korean-hanbok",
+  "roman-laurel-wreath",
+  "roman-gladiator-helmet",
+  "cowboy-hat"
 ]);
 
 const foodDecorationIds = new Set([
@@ -97,6 +220,39 @@ const foodDecorationIds = new Set([
   "banh-lot-noodles"
 ]);
 
+const historicalDecorationIds = new Set([
+  "anubis",
+  "egyptian-mummy",
+  "egyptian-sun-barge",
+  "catacombs-kom-el-shoqafa",
+  "pharaoh-crook-flail",
+  "pharaoh-nemes",
+  "roman-laurel-wreath",
+  "roman-gladiator-helmet",
+  "roman-mosaic-floor"
+]);
+
+const normalizeAchievementCountry = (country: string) =>
+  country === "Taiwan" ? "China" : country;
+
+const getDisplayCountry = (country: string, language: "en" | "zh") =>
+  countryCopy[country]?.[language] ?? country;
+
+const getRouteProgress = (progressList: RouteProgress[], routeId: string) =>
+  progressList.find((progress) => progress.routeId === routeId);
+
+const formatDate = (value: string, language: "en" | "zh") => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value.slice(0, 10);
+  }
+
+  return language === "zh"
+    ? `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`
+    : date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
 const countRunDays = (completedAtValues: string[]) =>
   new Set(
     completedAtValues
@@ -105,459 +261,777 @@ const countRunDays = (completedAtValues: string[]) =>
       .map((date) => date.toISOString().slice(0, 10)),
   ).size;
 
-const getTierTarget = (baseTarget: number, tier: Exclude<MedalTier, "locked">) => {
-  const multipliers: Record<Exclude<MedalTier, "locked">, number> = {
-    bronze: 1,
-    silver: 3,
-    gold: 9,
-    prism: 27
-  };
-
-  return baseTarget * multipliers[tier];
+const getCountryRunDates = (routes: Route[], runHistory: RunHistoryItem[]) => {
+  const routeIds = new Set(routes.map((route) => route.id));
+  return runHistory
+    .filter((run) => run.routeId && routeIds.has(run.routeId))
+    .map((run) => run.completedAt)
+    .sort();
 };
 
-const getMedalTier = (current: number, baseTarget: number): MedalTier => {
-  if (baseTarget <= 0 || current < baseTarget) {
-    return "locked";
-  }
-
-  if (current >= getTierTarget(baseTarget, "prism")) {
-    return "prism";
-  }
-
-  if (current >= getTierTarget(baseTarget, "gold")) {
-    return "gold";
-  }
-
-  if (current >= getTierTarget(baseTarget, "silver")) {
-    return "silver";
-  }
-
-  return "bronze";
+const getLatestCountryRunAt = (routes: Route[], runHistory: RunHistoryItem[]) => {
+  const routeRuns = getCountryRunDates(routes, runHistory);
+  return routeRuns.length > 0 ? routeRuns[routeRuns.length - 1] : null;
 };
 
-const getNextTarget = (current: number, baseTarget: number) => {
-  const nextTier = (["bronze", "silver", "gold", "prism"] as const).find(
-    (tier) => current < getTierTarget(baseTarget, tier),
+const countCountryDecorationsInSet = (
+  routes: Route[],
+  progressList: RouteProgress[],
+  decorationIds: Set<string>
+) => {
+  const decorations = routes.flatMap((route) =>
+    (route.decorations ?? []).map((decoration) => ({
+      routeId: route.id,
+      decorationId: decoration.id
+    }))
+  ).filter((decoration) => decorationIds.has(decoration.decorationId));
+
+  const unlocked = decorations.filter((decoration) => {
+    const progress = getRouteProgress(progressList, decoration.routeId);
+    return (progress?.decorations[decoration.decorationId] ?? 0) > 0;
+  }).length;
+
+  const unlockCount = decorations.length > 0
+    ? Math.min(
+        ...decorations.map((decoration) => {
+          const progress = getRouteProgress(progressList, decoration.routeId);
+          return progress?.decorations[decoration.decorationId] ?? 0;
+        }),
+      )
+    : 0;
+
+  return { unlocked, total: decorations.length, unlockCount };
+};
+
+const countCountryAllDecorationUnlocks = (
+  routes: Route[],
+  progressList: RouteProgress[],
+) => {
+  const decorations = routes.flatMap((route) =>
+    (route.decorations ?? []).map((decoration) => ({
+      routeId: route.id,
+      decorationId: decoration.id
+    }))
   );
 
-  return nextTier ? getTierTarget(baseTarget, nextTier) : getTierTarget(baseTarget, "prism");
+  return decorations.length > 0
+    ? Math.min(
+        ...decorations.map((decoration) => {
+          const progress = getRouteProgress(progressList, decoration.routeId);
+          return progress?.decorations[decoration.decorationId] ?? 0;
+        }),
+      )
+    : 0;
 };
 
-const formatProgress = (current: number, target: number, unit?: string) =>
-  `${current}/${target}${unit ? ` ${unit}` : ""}`;
+const countCountryRouteLaps = (
+  routes: Route[],
+  progressList: RouteProgress[],
+) =>
+  routes.length > 0
+    ? Math.min(
+        ...routes.map((route) => getRouteProgress(progressList, route.id)?.runCount ?? 0),
+      )
+    : 0;
 
-const medalStyles: Record<MedalTier, { shell: string; core: string; dot: string; text: string; bar: string }> = {
-  locked: {
-    shell: "bg-sage-100 text-sage-400 shadow-[inset_0_0_0_1px_rgba(93,108,82,0.08)]",
-    core: "bg-white/80 text-sage-400 ring-sage-200",
-    dot: "bg-sage-100 text-sage-400",
-    text: "text-sage-500",
-    bar: "bg-sage-300"
-  },
-  bronze: {
-    shell: "bg-gradient-to-br from-stone-400 via-yellow-700 to-stone-700 shadow-[0_14px_32px_rgba(120,96,55,0.22)]",
-    core: "bg-white/18 text-white ring-white/24",
-    dot: "bg-yellow-100 text-yellow-800",
-    text: "text-yellow-800",
-    bar: "bg-yellow-700"
-  },
-  silver: {
-    shell: "bg-gradient-to-br from-slate-100 to-slate-500 shadow-[0_14px_32px_rgba(100,116,139,0.26)]",
-    core: "bg-white/22 text-white ring-white/30",
-    dot: "bg-slate-100 text-slate-700",
-    text: "text-slate-700",
-    bar: "bg-slate-500"
-  },
-  gold: {
-    shell: "bg-gradient-to-br from-amber-200 to-yellow-600 shadow-[0_14px_32px_rgba(202,138,4,0.3)]",
-    core: "bg-white/22 text-white ring-white/32",
-    dot: "bg-amber-100 text-amber-700",
-    text: "text-amber-700",
-    bar: "bg-amber-500"
-  },
-  prism: {
-    shell: "bg-gradient-to-br from-fuchsia-400 via-sky-400 to-emerald-300 shadow-[0_14px_34px_rgba(14,165,233,0.3)]",
-    core: "bg-white/24 text-white ring-white/34",
-    dot: "bg-fuchsia-100 text-fuchsia-700",
-    text: "text-fuchsia-700",
-    bar: "bg-gradient-to-r from-fuchsia-400 via-sky-400 to-emerald-300"
+const makeAvailableCountryAchievementAssets = (
+  country: string,
+  language: "en" | "zh",
+  latestRunAt: string | null,
+  animalDecorations: DecorationAchievementCount,
+  artDecorations: DecorationAchievementCount,
+  buildingDecorations: DecorationAchievementCount,
+  clothingDecorations: DecorationAchievementCount,
+  foodDecorations: DecorationAchievementCount,
+  historicalDecorations: DecorationAchievementCount,
+  unlockedDecorations: number,
+  totalDecorations: number,
+  decorationUnlockCount: number,
+  routeLapCount: number,
+  unlockedAllLandmarks: boolean,
+  completedAllRoutes: boolean,
+): BadgeAsset[] => {
+  const assets: BadgeAsset[] = [];
+
+  if (animalDecorations.total > 0) {
+    const unlocked = animalDecorations.unlocked >= animalDecorations.total;
+    assets.push({
+      id: `${country}-animals`,
+      name: language === "zh" ? "解锁所有动物装饰" : "All Animal Decorations",
+      description: language === "zh" ? "收集这个国家路线中的全部动物类装饰。" : "Collect every animal decoration available in this country.",
+      image: achievementImages.zoo,
+      unlocked,
+      unlockedAt: unlocked ? latestRunAt : null,
+      unlockCount: animalDecorations.unlockCount
+    });
   }
+
+  if (artDecorations.total > 0) {
+    const unlocked = artDecorations.unlocked >= artDecorations.total;
+    assets.push({
+      id: `${country}-art`,
+      name: language === "zh" ? "解锁所有艺术装饰" : "All Art Decorations",
+      description: language === "zh" ? "收集这个国家路线中的全部艺术品类装饰。" : "Collect every art decoration available in this country.",
+      image: achievementImages.art,
+      unlocked,
+      unlockedAt: unlocked ? latestRunAt : null,
+      unlockCount: artDecorations.unlockCount
+    });
+  }
+
+  if (buildingDecorations.total > 0) {
+    const unlocked = buildingDecorations.unlocked >= buildingDecorations.total;
+    assets.push({
+      id: `${country}-buildings`,
+      name: language === "zh" ? "解锁所有建筑装饰" : "All Building Decorations",
+      description: language === "zh" ? "收集这个国家路线中的全部建筑类装饰。" : "Collect every building decoration available in this country.",
+      image: achievementImages.building,
+      unlocked,
+      unlockedAt: unlocked ? latestRunAt : null,
+      unlockCount: buildingDecorations.unlockCount
+    });
+  }
+
+  if (clothingDecorations.total > 0) {
+    const unlocked = clothingDecorations.unlocked >= clothingDecorations.total;
+    assets.push({
+      id: `${country}-clothing`,
+      name: language === "zh" ? "解锁所有服饰装饰" : "All Clothing Decorations",
+      description: language === "zh" ? "收集这个国家路线中的全部服饰类装饰。" : "Collect every clothing decoration available in this country.",
+      image: achievementImages.closet,
+      unlocked,
+      unlockedAt: unlocked ? latestRunAt : null,
+      unlockCount: clothingDecorations.unlockCount
+    });
+  }
+
+  if (foodDecorations.total > 0) {
+    const unlocked = foodDecorations.unlocked >= foodDecorations.total;
+    assets.push({
+      id: `${country}-food`,
+      name: language === "zh" ? "解锁所有食物装饰" : "All Food Decorations",
+      description: language === "zh" ? "收集这个国家路线中的全部食物类装饰。" : "Collect every food decoration available in this country.",
+      image: achievementImages.food,
+      unlocked,
+      unlockedAt: unlocked ? latestRunAt : null,
+      unlockCount: foodDecorations.unlockCount
+    });
+  }
+
+  if (historicalDecorations.total > 0) {
+    const unlocked = historicalDecorations.unlocked >= historicalDecorations.total;
+    assets.push({
+      id: `${country}-historical`,
+      name: language === "zh" ? "解锁所有历史文物" : "All Historical Artifacts",
+      description: language === "zh" ? "收集这个国家路线中的全部历史文物类装饰。" : "Collect every historical artifact decoration available in this country.",
+      image: achievementImages.archaeologist,
+      unlocked,
+      unlockedAt: unlocked ? latestRunAt : null,
+      unlockCount: historicalDecorations.unlockCount
+    });
+  }
+
+  return [
+    ...assets,
+    {
+      id: `${country}-decorations`,
+      name: language === "zh" ? "解锁所有装饰" : "All Decorations",
+      description: language === "zh" ? "收集这个国家路线中的全部装饰。" : "Collect every decoration available in this country.",
+      image: achievementImages.collection,
+      unlocked: totalDecorations > 0 && unlockedDecorations >= totalDecorations,
+      unlockedAt: totalDecorations > 0 && unlockedDecorations >= totalDecorations ? latestRunAt : null,
+      unlockCount: decorationUnlockCount
+    },
+    {
+      id: `${country}-landmarks`,
+      name: language === "zh" ? "解锁所有地标" : "All Landmarks",
+      description: language === "zh" ? "点亮这个国家路线中的全部地标。" : "Unlock every landmark across this country's routes.",
+      image: achievementImages.journey,
+      unlocked: unlockedAllLandmarks,
+      unlockedAt: unlockedAllLandmarks ? latestRunAt : null,
+      unlockCount: unlockedAllLandmarks ? 9 : 0
+    },
+    {
+      id: `${country}-finish`,
+      name: language === "zh" ? "完成所有路线" : "All Routes Complete",
+      description: language === "zh" ? "把这个国家的全部路线推进到 100%。" : "Reach 100% progress on every route in this country.",
+      image: achievementImages.finalline,
+      unlocked: completedAllRoutes,
+      unlockedAt: completedAllRoutes ? latestRunAt : null,
+      unlockCount: completedAllRoutes ? routeLapCount : 0
+    }
+  ];
 };
 
-const getMedalLabel = (tier: MedalTier, language: "en" | "zh") => {
-  const labels: Record<MedalTier, { en: string; zh: string }> = {
-    locked: { en: "Locked", zh: "未解锁" },
-    bronze: { en: "Bronze", zh: "铜牌" },
-    silver: { en: "Silver", zh: "银牌" },
-    gold: { en: "Gold", zh: "金牌" },
-    prism: { en: "Prism", zh: "棱镜" }
-  };
+const buildCountrySet = (
+  country: string,
+  routes: Route[],
+  progressList: RouteProgress[],
+  runHistory: RunHistoryItem[],
+  language: "en" | "zh",
+): CountryAchievementSet => {
+  const latestRunAt = getLatestCountryRunAt(routes, runHistory);
+  const completedRoutes = routes.filter((route) => getRouteProgress(progressList, route.id)?.completed).length;
+  const totalRoutes = routes.length;
+  const totalLandmarks = routes.reduce((sum, route) => sum + route.landmarks.length, 0);
+  const unlockedLandmarks = routes.reduce((sum, route) => {
+    const progress = getRouteProgress(progressList, route.id);
+    return sum + route.landmarks.filter((landmark) => progress?.unlockedLandmarkIds.includes(landmark.id)).length;
+  }, 0);
+  const totalDecorations = routes.reduce((sum, route) => sum + (route.decorations?.length ?? 0), 0);
+  const unlockedDecorations = routes.reduce((sum, route) => {
+    const progress = getRouteProgress(progressList, route.id);
+    return sum + (route.decorations ?? []).filter((decoration) => (progress?.decorations[decoration.id] ?? 0) > 0).length;
+  }, 0);
+  const decorationUnlockCount = countCountryAllDecorationUnlocks(routes, progressList);
+  const routeLapCount = countCountryRouteLaps(routes, progressList);
+  const animalDecorations = countCountryDecorationsInSet(routes, progressList, animalDecorationIds);
+  const artDecorations = countCountryDecorationsInSet(routes, progressList, artDecorationIds);
+  const buildingDecorations = countCountryDecorationsInSet(routes, progressList, buildingDecorationIds);
+  const clothingDecorations = countCountryDecorationsInSet(routes, progressList, clothingDecorationIds);
+  const foodDecorations = countCountryDecorationsInSet(routes, progressList, foodDecorationIds);
+  const historicalDecorations = countCountryDecorationsInSet(routes, progressList, historicalDecorationIds);
+  const unlockedAllLandmarks = totalLandmarks > 0 && unlockedLandmarks >= totalLandmarks;
+  const completedAllRoutes = totalRoutes > 0 && completedRoutes >= totalRoutes;
+  const unlocked = completedAllRoutes && unlockedAllLandmarks && totalDecorations > 0 && unlockedDecorations >= totalDecorations;
 
-  return labels[tier][language];
+  const assets = makeAvailableCountryAchievementAssets(
+    country,
+    language,
+    latestRunAt,
+    animalDecorations,
+    artDecorations,
+    buildingDecorations,
+    clothingDecorations,
+    foodDecorations,
+    historicalDecorations,
+    unlockedDecorations,
+    totalDecorations,
+    decorationUnlockCount,
+    routeLapCount,
+    unlockedAllLandmarks,
+    completedAllRoutes,
+  );
+
+  return {
+    country,
+    routes,
+    countryImage: countryAchievementImages[country] ?? fallbackBadgeImage,
+    assets,
+    unlockedCount: assets.filter((asset) => asset.unlocked).length,
+    completedRoutes,
+    totalRoutes,
+    unlockedLandmarks,
+    totalLandmarks,
+    unlockedDecorations,
+    totalDecorations,
+    unlocked,
+    unlockedAt: unlocked ? latestRunAt : null
+  };
+};
+
+const BadgeHex = ({
+  asset,
+  index,
+  featured = false
+}: {
+  asset: BadgeAsset;
+  index: number;
+  featured?: boolean;
+}) => {
+  const medalTier = getBadgeMedalTier(asset.unlockCount);
+  const medalStyle = badgeMedalStyles[medalTier];
+
+  return (
+    <div
+      className={cn(
+        "relative flex items-center justify-center overflow-hidden bg-gradient-to-br p-[4px] shadow-[inset_0_1px_0_rgba(255,255,255,0.85),inset_0_0_0_1px_rgba(255,255,255,0.5),inset_0_-3px_8px_rgba(17,31,22,0.28),0_12px_22px_rgba(17,31,22,0.2)]",
+        medalStyle.base,
+        featured ? "h-24 w-24" : "h-16 w-16",
+        asset.unlocked ? "opacity-100" : "opacity-45 grayscale",
+      )}
+      style={{
+        clipPath: "polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%)",
+        transform: `rotate(${index % 2 === 0 ? "-4deg" : "5deg"})`
+      }}
+    >
+      <div
+        className="pointer-events-none absolute inset-[2px] border border-white/55 shadow-[inset_0_0_0_1px_rgba(17,31,22,0.14)]"
+        style={{ clipPath: "polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%)" }}
+      />
+      <div
+        className={cn("pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.82)_28%,transparent_48%,rgba(255,255,255,0.36)_68%,transparent_100%)]", medalStyle.shine)}
+      />
+      <div
+        className={cn(
+          "relative flex h-full w-full items-center justify-center p-2 shadow-[inset_0_1px_4px_rgba(255,255,255,0.7),inset_0_-5px_10px_rgba(17,31,22,0.1)]",
+          medalStyle.inner
+        )}
+        style={{ clipPath: "polygon(25% 6%, 75% 6%, 98% 50%, 75% 94%, 25% 94%, 2% 50%)" }}
+      >
+        <img
+          src={asset.image}
+          alt=""
+          className={cn("object-contain drop-shadow-[0_8px_10px_rgba(17,31,22,0.18)]", featured ? "h-16 w-16" : "h-10 w-10")}
+          onError={(event) => {
+            event.currentTarget.src = fallbackBadgeImage;
+          }}
+        />
+      </div>
+      {!asset.unlocked ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-ink/18">
+          <Lock className="h-4 w-4 text-white drop-shadow" />
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+const BadgeCluster = ({ assets }: { assets: BadgeAsset[] }) => {
+  const featured = assets[0];
+  const surrounding = assets.slice(1);
+
+  return (
+    <div className="relative min-h-[184px] w-full max-w-[360px]">
+      <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+        {featured ? <BadgeHex asset={featured} index={0} featured /> : null}
+      </div>
+      <div className="absolute left-[18%] top-[24%]">
+        {surrounding[0] ? <BadgeHex asset={surrounding[0]} index={1} /> : null}
+      </div>
+      <div className="absolute right-[20%] top-[10%]">
+        {surrounding[1] ? <BadgeHex asset={surrounding[1]} index={2} /> : null}
+      </div>
+      <div className="absolute right-[10%] top-[43%]">
+        {surrounding[2] ? <BadgeHex asset={surrounding[2]} index={3} /> : null}
+      </div>
+      <div className="absolute bottom-[8%] right-[26%]">
+        {surrounding[3] ? <BadgeHex asset={surrounding[3]} index={4} /> : null}
+      </div>
+    </div>
+  );
+};
+
+const CalendarMedalIcon = ({ asset }: { asset: BadgeAsset }) => {
+  const medalTier = getBadgeMedalTier(asset.unlockCount);
+  const medalStyle = badgeMedalStyles[medalTier];
+
+  return (
+    <div
+      className={cn(
+        "relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br p-[4px] shadow-[inset_0_1px_0_rgba(255,255,255,0.85),inset_0_-3px_8px_rgba(17,31,22,0.28),0_12px_22px_rgba(17,31,22,0.18)]",
+        medalStyle.base,
+        asset.unlocked ? "opacity-100" : "opacity-45 grayscale"
+      )}
+    >
+      <div
+        className={cn("pointer-events-none absolute inset-0 rounded-full bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.82)_28%,transparent_48%,rgba(255,255,255,0.36)_68%,transparent_100%)]", medalStyle.shine)}
+      />
+      <div className={cn("relative flex h-full w-full items-center justify-center rounded-full shadow-[inset_0_1px_4px_rgba(255,255,255,0.7),inset_0_-5px_10px_rgba(17,31,22,0.1)]", medalStyle.inner)}>
+        <img
+          src={asset.image}
+          alt=""
+          className="h-20 w-20 object-contain drop-shadow-[0_8px_10px_rgba(17,31,22,0.16)]"
+          onError={(event) => {
+            event.currentTarget.src = fallbackBadgeImage;
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
+const CountryPrizeBadge = ({ set }: { set: CountryAchievementSet }) => (
+  <div
+    className={cn(
+      "relative flex h-24 w-24 items-center justify-center bg-gradient-to-br from-white via-sage-50 to-sage-200 p-1 shadow-[0_14px_26px_rgba(17,31,22,0.18)]",
+      set.unlocked ? "opacity-100" : "opacity-45 grayscale",
+    )}
+    style={{ clipPath: "polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%)" }}
+  >
+    <div
+      className="flex h-full w-full items-center justify-center bg-[#f8f7f1] p-3"
+      style={{ clipPath: "polygon(25% 6%, 75% 6%, 98% 50%, 75% 94%, 25% 94%, 2% 50%)" }}
+    >
+      <img src={set.countryImage} alt="" className="h-16 w-16 object-contain" />
+    </div>
+    {!set.unlocked ? (
+      <div className="absolute inset-0 flex items-center justify-center bg-ink/18">
+        <Lock className="h-4 w-4 text-white drop-shadow" />
+      </div>
+    ) : null}
+  </div>
+);
+
+const CountryAchievementCard = ({
+  set,
+  index,
+  copy,
+  language,
+  active,
+  onOpen,
+  setCardRef
+}: {
+  set: CountryAchievementSet;
+  index: number;
+  copy: AchievementCopy;
+  language: "en" | "zh";
+  active: boolean;
+  onOpen: (set: CountryAchievementSet) => void;
+  setCardRef: (element: HTMLElement | null) => void;
+}) => {
+  const collapsed = !active;
+  const progressPercent = Math.round((set.unlockedCount / set.assets.length) * 100);
+
+  return (
+    <article
+      ref={setCardRef}
+      className={cn(
+        "relative transition-all duration-300",
+        collapsed ? "min-h-[68px]" : "min-h-[330px]"
+      )}
+      style={{ zIndex: active ? 50 : index }}
+    >
+      <div
+        className={cn(
+          "overflow-hidden rounded-[8px] bg-white/96 shadow-[0_18px_42px_rgba(17,31,22,0.13)] ring-1 ring-sage-100 transition-all duration-300",
+          collapsed ? "min-h-[64px]" : "min-h-[310px]",
+          active ? "scale-[1.01] shadow-[0_24px_58px_rgba(17,31,22,0.2)]" : "scale-[0.985]",
+          set.unlocked ? "opacity-100" : "opacity-90"
+        )}
+      >
+        <div
+          className={cn(
+            "grid bg-gradient-to-r transition-all duration-300",
+            collapsed ? "min-h-[64px] grid-cols-[1fr_auto] items-center" : "min-h-[310px] grid-cols-1 md:grid-cols-[0.75fr_1.1fr_0.95fr]",
+            palette[index % palette.length]
+          )}
+        >
+          <div
+            className={cn(
+              "relative flex flex-col overflow-hidden p-5 transition-all duration-300",
+              collapsed ? "min-h-[64px] justify-center py-3" : "min-h-[190px] justify-end"
+            )}
+          >
+            <p className={cn("font-semibold uppercase tracking-[0.18em] text-sage-500", collapsed ? "text-[9px]" : "text-xs")}>
+              {set.routes.length} {copy.routes}
+            </p>
+            <h2 className={cn("font-semibold leading-tight text-ink transition-all duration-300", collapsed ? "mt-0.5 text-2xl" : "mt-2 text-3xl")}>
+              {getDisplayCountry(set.country, language)}
+            </h2>
+            {!collapsed ? (
+              <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-sage-500">
+                {copy.countryPrize}
+              </p>
+            ) : null}
+          </div>
+
+          {collapsed ? (
+            <div className="flex items-center gap-3 px-5">
+              <span className="text-xs font-semibold text-sage-600">{set.unlockedCount}/{set.assets.length}</span>
+              {set.unlocked ? <CheckCircle2 className="h-5 w-5 text-sage-600" /> : <Lock className="h-5 w-5 text-sage-400" />}
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-center px-4 py-7">
+                <BadgeCluster assets={set.assets} />
+              </div>
+
+              <div className="flex h-full flex-col justify-center bg-white/80 px-6 py-7 backdrop-blur">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sage-500">{copy.details}</p>
+                    <h3 className="mt-2 text-2xl font-semibold leading-tight text-ink">
+                      {getDisplayCountry(set.country, language)} {language === "zh" ? "成就套组" : "Achievement Set"}
+                    </h3>
+                  </div>
+                  <CountryPrizeBadge set={set} />
+                </div>
+                <p className="mt-3 text-sm leading-6 text-sage-700">{copy.descriptionText}</p>
+
+                <div className="mt-5">
+                  <div className="flex items-center justify-between text-xs font-semibold text-sage-600">
+                    <span>{copy.progress}</span>
+                    <span>{set.unlockedCount}/{set.assets.length}</span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-sage-100">
+                    <div className="h-full rounded-full bg-sage-600" style={{ width: `${progressPercent}%` }} />
+                  </div>
+                </div>
+
+                <div className="mt-auto flex justify-end pt-6">
+                  <button
+                    type="button"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onPointerMove={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpen(set);
+                    }}
+                    className="inline-flex w-fit items-center gap-2 rounded-full bg-[#f2a51a] px-5 py-3 text-sm font-semibold text-ink shadow-[0_10px_20px_rgba(242,165,26,0.24)] transition active:scale-[0.98]"
+                  >
+                    <ListChecks className="h-5 w-5" />
+                    {copy.badgeList}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+      </div>
+    </article>
+  );
 };
 
 export const AchievementsPage = () => {
   const { language, routes, state } = useAppState();
-  const [selectedAchievementId, setSelectedAchievementId] = useState<string | null>(null);
-  const runDays = countRunDays(state.runHistory.map((run) => run.completedAt));
-  const totalDistanceKm = Math.floor(state.runHistory.reduce((sum, run) => sum + run.distanceKm, 0));
-  const completedRoutes = state.routeProgress.filter((progress) => progress.completed).length;
-  const unlockedDecorationIds = new Set(
-    state.routeProgress.flatMap((progress) =>
-      Object.entries(progress.decorations)
-        .filter(([, count]) => count > 0)
-        .map(([decorationId]) => decorationId),
-    ),
-  );
-  const routeDecorationIds = new Set(
-    routes.flatMap((route) => route.decorations?.map((decoration) => decoration.id) ?? []),
-  );
-  const totalAnimalWidgets = [...animalDecorationIds].filter((id) => routeDecorationIds.has(id)).length;
-  const totalFoodWidgets = [...foodDecorationIds].filter((id) => routeDecorationIds.has(id)).length;
-  const unlockedAnimalWidgets = [...animalDecorationIds].filter((id) => unlockedDecorationIds.has(id)).length;
-  const unlockedFoodWidgets = [...foodDecorationIds].filter((id) => unlockedDecorationIds.has(id)).length;
-  const countryAchievementItems: AchievementItem[] = Object.entries(countryAchievementImages).map(([country, image]) => {
-    const countryRoutes = routes.filter((route) => normalizeAchievementCountry(route.country) === country);
-    const totals = countryRoutes.reduce(
-      (summary, route) => ({
-        target: summary.target + 1 + route.landmarks.length + (route.decorations?.length ?? 0),
-        current:
-          summary.current +
-          (() => {
-      const progress = state.routeProgress.find((entry) => entry.routeId === route.id);
-      const routeDecorationIds = route.decorations?.map((decoration) => decoration.id) ?? [];
-            const unlockedLandmarkCount = route.landmarks.filter((landmark) =>
-        progress?.unlockedLandmarkIds.includes(landmark.id),
-            ).length;
-            const unlockedDecorationCount = routeDecorationIds.filter((decorationId) =>
-        unlockedDecorationIds.has(decorationId),
-            ).length;
-
-            return (progress?.completed ? 1 : 0) + unlockedLandmarkCount + unlockedDecorationCount;
-          })()
-      }),
-      { current: 0, target: 0 },
-    );
-    const displayName = countryDisplayNames[country]?.[language] ?? country;
-
-    return language === "zh"
-      ? {
-          id: `country-${country}`,
-          title: `${displayName}全解锁`,
-          description: `解锁${displayName}的全部内容`,
-          detail: `完成${displayName}下的所有路线，解锁全部地标，并收集该国家路线里的全部装饰物。`,
-          current: totals.current,
-          baseTarget: Math.max(1, totals.target),
-          unit: "项",
-          image
-        }
-      : {
-          id: `country-${country}`,
-          title: `${displayName} Complete`,
-          description: `Unlock everything in ${displayName}`,
-          detail: `Complete every ${displayName} route, unlock every landmark, and collect every decoration from that country's routes.`,
-          current: totals.current,
-          baseTarget: Math.max(1, totals.target),
-          unit: "items",
-          image
-        };
-  });
-
-  const items: AchievementItem[] = language === "zh"
-    ? [
-        {
-          id: "calendar",
-          title: "时间记录者",
-          description: "在不同日期完成跑步",
-          detail: "日历奖牌记录你的跑步习惯。每个自然日只计算一次，持续在不同日期完成跑步会提升品质。",
-          current: runDays,
-          baseTarget: 1,
-          unit: "天",
-          image: achievementImages.calendar
-        },
-        {
-          id: "journey",
-          title: "旅程开拓者",
-          description: "累计更多跑步公里",
-          detail: "旅程奖牌记录你在所有路线和任务中的累计距离，是最稳定的长期成长目标。",
-          current: totalDistanceKm,
-          baseTarget: 20,
-          unit: "km",
-          image: achievementImages.journey
-        },
-        {
-          id: "finalline",
-          title: "冲线完成者",
-          description: "完整解锁路线目的地",
-          detail: "终点线奖牌记录已完成的路线。每条路线进度达到 100% 后，都会计入这里。",
-          current: completedRoutes,
-          baseTarget: 1,
-          unit: "条",
-          image: achievementImages.finalline
-        },
-        ...countryAchievementItems,
-        {
-          id: "food",
-          title: "美食收藏家",
-          description: "解锁所有美食小组件",
-          detail: "美食奖牌统计已经获得的食物类装饰物。完成不同路线跑步，有机会收集更多地区美食。",
-          current: unlockedFoodWidgets,
-          baseTarget: Math.max(1, totalFoodWidgets),
-          unit: "个",
-          image: achievementImages.food
-        },
-        {
-          id: "zoo",
-          title: "动物园馆长",
-          description: "解锁所有动物小组件",
-          detail: "动物园奖牌统计已经获得的动物类装饰物，例如猫、考拉、鸭嘴兽、沙袋鼠和蓝鹊等。",
-          current: unlockedAnimalWidgets,
-          baseTarget: Math.max(1, totalAnimalWidgets),
-          unit: "个",
-          image: achievementImages.zoo
-        }
-      ]
-    : [
-        {
-          id: "calendar",
-          title: "Time Keeper",
-          description: "Run on different dates",
-          detail: "The calendar medal tracks your running habit. Each calendar date counts once, and more active dates upgrade the medal.",
-          current: runDays,
-          baseTarget: 1,
-          unit: "days",
-          image: achievementImages.calendar
-        },
-        {
-          id: "journey",
-          title: "Journey Maker",
-          description: "Build your total running distance",
-          detail: "The journey medal tracks total distance across routes and missions. It is the steady long-term progress medal.",
-          current: totalDistanceKm,
-          baseTarget: 20,
-          unit: "km",
-          image: achievementImages.journey
-        },
-        {
-          id: "finalline",
-          title: "Finish Line Finisher",
-          description: "Fully unlock route destinations",
-          detail: "The finish line medal tracks completed routes. A route counts once its progress reaches 100%.",
-          current: completedRoutes,
-          baseTarget: 1,
-          unit: "routes",
-          image: achievementImages.finalline
-        },
-        ...countryAchievementItems,
-        {
-          id: "food",
-          title: "Food Collector",
-          description: "Unlock every food widget",
-          detail: "The food medal tracks food-themed decorations collected from route rewards across different cities.",
-          current: unlockedFoodWidgets,
-          baseTarget: Math.max(1, totalFoodWidgets),
-          unit: "widgets",
-          image: achievementImages.food
-        },
-        {
-          id: "zoo",
-          title: "Zoo Curator",
-          description: "Unlock every animal widget",
-          detail: "The zoo medal tracks animal-themed decorations such as cats, koalas, platypus, wallaby, and blue magpie.",
-          current: unlockedAnimalWidgets,
-          baseTarget: Math.max(1, totalAnimalWidgets),
-          unit: "widgets",
-          image: achievementImages.zoo
-        }
-      ];
+  const [selectedSet, setSelectedSet] = useState<CountryAchievementSet | null>(null);
+  const [activeCountryIndex, setActiveCountryIndex] = useState(0);
+  const cardFolderRef = useRef<HTMLDivElement | null>(null);
+  const countryCardRefs = useRef<Array<HTMLElement | null>>([]);
   const copy = language === "zh"
     ? {
         eyebrow: "Achievements",
-        title: "成就",
-        description: "成就内容已按现有奖牌图片重做。点击奖牌查看详情。",
-        completed: "已达成",
-        locked: "未达成",
-        summary: "已解锁奖牌",
-        total: "全部奖牌",
-        detailTitle: "成就详情",
-        baseTarget: "基础目标",
-        nextTarget: "下一目标",
-        current: "当前进度",
-        close: "关闭"
+        title: "国家成就徽章套组",
+        description: "每个国家一套成就，套组内保留跑步、动物、食物、地标和路线完成成就。全部完成后获得国家徽章。",
+        completeOn: "完成于",
+        locked: "未完成",
+        unlocked: "已解锁",
+        badgeList: "徽章列表",
+        details: "国家成就详情",
+        badge: "成就徽章",
+        countryPrize: "国家大奖章",
+        close: "关闭",
+        progress: "成就进度",
+        routes: "路线",
+        landmarks: "地标",
+        decorations: "装饰",
+        unlockTime: "解锁时间",
+        notUnlocked: "未解锁",
+        descriptionText: "完成套组内全部成就后，点亮对应国家徽章。"
       }
     : {
         eyebrow: "Achievements",
-        title: "Achievements",
-        description: "Achievements now match the available medal artwork. Tap a medal to view details.",
-        completed: "Completed",
+        title: "Country Achievement Badge Sets",
+        description: "Each country has one set with the same run, animal, food, landmark, and route completion achievements. Complete all to earn the country badge.",
+        completeOn: "Completed on",
         locked: "Locked",
-        summary: "Unlocked medals",
-        total: "Total medals",
-        detailTitle: "Achievement detail",
-        baseTarget: "Base target",
-        nextTarget: "Next target",
-        current: "Current",
-        close: "Close"
+        unlocked: "Unlocked",
+        badgeList: "Badge list",
+        details: "Country achievement detail",
+        badge: "Achievement badge",
+        countryPrize: "Country prize badge",
+        close: "Close",
+        progress: "Achievement progress",
+        routes: "Routes",
+        landmarks: "Landmarks",
+        decorations: "Decorations",
+        unlockTime: "Unlocked",
+        notUnlocked: "Locked",
+        descriptionText: "Complete every achievement in the set to light up the country badge."
       };
-  const unlockedCount = items.filter((item) => getMedalTier(item.current, item.baseTarget) !== "locked").length;
-  const selectedAchievement = items.find((item) => item.id === selectedAchievementId) ?? null;
 
-  const renderBadgeIcon = (item: AchievementItem) => (
-    <img
-      src={item.image}
-      alt=""
-      className="h-24 w-24 object-contain drop-shadow-[0_10px_14px_rgba(17,31,22,0.2)]"
-      onError={(event) => {
-        event.currentTarget.src = achievementImages.journey;
-      }}
-    />
-  );
+  const countrySets = useMemo<CountryAchievementSet[]>(() => {
+    const groupedRoutes = routes.reduce<Record<string, Route[]>>((groups, route) => {
+      const country = normalizeAchievementCountry(route.country);
+      return {
+        ...groups,
+        [country]: [...(groups[country] ?? []), route]
+      };
+    }, {});
+
+    return Object.entries(groupedRoutes)
+      .map(([country, countryRoutes]) => buildCountrySet(country, countryRoutes, state.routeProgress, state.runHistory, language))
+      .sort((a, b) => getDisplayCountry(a.country, language).localeCompare(getDisplayCountry(b.country, language)));
+  }, [language, routes, state.routeProgress, state.runHistory]);
+
+  const unlockedCount = countrySets.filter((set) => set.unlocked).length;
+  const totalRunDays = countRunDays(state.runHistory.map((run) => run.completedAt));
+  const calendarAchievement: BadgeAsset = {
+    id: "general-run-days",
+    name: language === "zh" ? "累计跑步天数" : "Total Running Days",
+    description: language === "zh" ? "记录你在不同日期完成跑步的天数。" : "Tracks how many different dates you have completed a run.",
+    image: achievementImages.calendar,
+    unlocked: totalRunDays > 0,
+    unlockedAt: null,
+    unlockCount: totalRunDays
+  };
+  const firstRunAt = state.runHistory
+    .map((run) => run.completedAt)
+    .sort()[0] ?? null;
+
+  const updateActiveCountryFromPointer = (clientY: number) => {
+    const folderRect = cardFolderRef.current?.getBoundingClientRect();
+
+    if (!folderRect || clientY < folderRect.top || clientY > folderRect.bottom) {
+      return;
+    }
+
+    const nextIndex = countryCardRefs.current.reduce((closestIndex, element, index) => {
+      if (!element) {
+        return closestIndex;
+      }
+
+      const rect = element.getBoundingClientRect();
+      const currentDistance = Math.abs(rect.top + rect.height / 2 - clientY);
+      const closestElement = countryCardRefs.current[closestIndex];
+      const closestRect = closestElement?.getBoundingClientRect();
+      const closestDistance = closestRect
+        ? Math.abs(closestRect.top + closestRect.height / 2 - clientY)
+        : Number.POSITIVE_INFINITY;
+
+      return currentDistance < closestDistance ? index : closestIndex;
+    }, 0);
+
+    setActiveCountryIndex(nextIndex);
+  };
 
   return (
-    <div className="space-y-6">
-      <SectionHeader
-        eyebrow={copy.eyebrow}
-        title={copy.title}
-        description={copy.description}
-      />
-
+    <div className="space-y-5">
       <section className="grid grid-cols-2 gap-3">
-        <div className="rounded-[26px] bg-white p-4 shadow-card ring-1 ring-sage-100">
+        <div className="rounded-[22px] bg-white p-4 shadow-card ring-1 ring-sage-100">
           <p className="text-2xl font-semibold text-ink">{unlockedCount}</p>
-          <p className="mt-1 text-xs font-medium text-sage-600">{copy.summary}</p>
+          <p className="mt-1 text-xs font-medium text-sage-600">{copy.unlocked}</p>
         </div>
-        <div className="rounded-[26px] bg-white p-4 shadow-card ring-1 ring-sage-100">
-          <p className="text-2xl font-semibold text-ink">{items.length}</p>
-          <p className="mt-1 text-xs font-medium text-sage-600">{copy.total}</p>
-        </div>
-      </section>
-
-      <section className="-mx-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex snap-x snap-mandatory gap-4">
-          {items.map((item) => {
-            const { id, title, description, current, baseTarget, unit } = item;
-            const medalTier = getMedalTier(current, baseTarget);
-            const medalStyle = medalStyles[medalTier];
-            const unlocked = medalTier !== "locked";
-            const nextTarget = getNextTarget(current, baseTarget);
-
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setSelectedAchievementId(id)}
-                className={cn(
-                  "flex min-h-[330px] w-[76%] max-w-[280px] shrink-0 snap-center flex-col rounded-[28px] bg-white p-4 text-left shadow-card ring-1 transition active:scale-[0.99]",
-                  unlocked ? "ring-sage-100" : "ring-sage-100/80",
-                )}
-              >
-                <div className="flex w-full justify-center">
-                  <div className="relative flex aspect-square w-full max-w-[190px] items-center justify-center rounded-[26px] bg-sage-50/70 ring-1 ring-sage-100">
-                    <div className={cn("flex h-[132px] w-[132px] items-center justify-center rounded-full p-1.5", medalStyle.shell)}>
-                      <div className={cn("flex h-full w-full items-center justify-center rounded-full ring-1", medalStyle.core)}>
-                        {renderBadgeIcon(item)}
-                      </div>
-                    </div>
-                    <div
-                      className={cn(
-                        "absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-full ring-[3px] ring-white",
-                        medalStyle.dot,
-                      )}
-                    >
-                      {unlocked ? <CheckCircle2 className="h-[18px] w-[18px]" /> : <Lock className="h-[18px] w-[18px]" />}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex min-w-0 flex-1 flex-col self-stretch">
-                  <div className="flex flex-wrap items-center justify-center gap-2 text-center">
-                    <h3 className="text-sm font-semibold text-ink">{title}</h3>
-                    <span
-                      className={cn(
-                        "rounded-full bg-sage-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]",
-                        medalStyle.text,
-                      )}
-                    >
-                      {getMedalLabel(medalTier, language)}
-                    </span>
-                  </div>
-                  <p className="mt-2 line-clamp-2 text-center text-xs leading-5 text-sage-600">{description}</p>
-
-                  <div className="mt-auto pt-4">
-                    <div className="flex items-center justify-between text-[11px] font-semibold text-sage-500">
-                      <span>{unlocked ? copy.completed : copy.locked}</span>
-                      <span>{formatProgress(current, nextTarget, unit)}</span>
-                    </div>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-sage-100">
-                      <div
-                        className={cn("h-full rounded-full", medalStyle.bar)}
-                        style={{ width: `${Math.min(100, Math.round((current / nextTarget) * 100))}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+        <div className="rounded-[22px] bg-white p-4 shadow-card ring-1 ring-sage-100">
+          <p className="text-2xl font-semibold text-ink">{countrySets.length}</p>
+          <p className="mt-1 text-xs font-medium text-sage-600">{copy.details}</p>
         </div>
       </section>
 
-      {selectedAchievement ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/36 px-5 backdrop-blur-sm">
-          <div className="w-full max-w-[360px] rounded-[30px] bg-[#f7f5f0] p-5 shadow-[0_24px_70px_rgba(17,31,22,0.24)] ring-1 ring-white/80">
-            <div className="flex items-start justify-between gap-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sage-500">{copy.detailTitle}</p>
+      <section className="flex justify-center">
+        <div className="w-full max-w-[360px] rounded-[8px] bg-white p-5 text-center shadow-[0_18px_42px_rgba(17,31,22,0.13)] ring-1 ring-sage-100">
+          <div className="mx-auto flex h-28 w-28 items-center justify-center">
+            <CalendarMedalIcon asset={calendarAchievement} />
+          </div>
+          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-sage-500">
+            {language === "zh" ? "通用成就" : "General achievement"}
+          </p>
+          <h2 className="mt-1 text-2xl font-semibold text-ink">
+            {language === "zh" ? "累计跑步天数" : "Total Running Days"}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-sage-700">
+            {language === "zh" ? "记录你在不同日期完成跑步的天数。" : "Tracks how many different dates you have completed a run."}
+          </p>
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <span className="text-3xl font-semibold text-ink">{totalRunDays}</span>
+            <span className="text-sm font-semibold text-sage-500">{language === "zh" ? "天" : "days"}</span>
+          </div>
+          <p className="mt-2 text-xs font-semibold text-sage-500">
+            {firstRunAt ? `${language === "zh" ? "首次解锁" : "Unlocked"} ${formatDate(firstRunAt, language)}` : copy.notUnlocked}
+          </p>
+        </div>
+      </section>
+
+      <section className="relative">
+        <div className="p-1">
+          <div
+            ref={cardFolderRef}
+            className="px-1 pr-2"
+            onPointerDown={(event) => updateActiveCountryFromPointer(event.clientY)}
+            onPointerMove={(event) => updateActiveCountryFromPointer(event.clientY)}
+          >
+            <div className="space-y-[-10px] pb-8">
+            {countrySets.map((set, index) => (
+              <CountryAchievementCard
+                key={set.country}
+                set={set}
+                index={index}
+                copy={copy}
+                language={language}
+                active={index === activeCountryIndex}
+                onOpen={setSelectedSet}
+                setCardRef={(element) => {
+                  countryCardRefs.current[index] = element;
+                }}
+              />
+            ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {selectedSet ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/42 px-4 backdrop-blur-sm">
+          <div className="max-h-[86vh] w-full max-w-[760px] overflow-hidden rounded-[8px] bg-[#f7f5ef] shadow-[0_26px_80px_rgba(17,31,22,0.32)] ring-1 ring-white/80">
+            <div className="flex items-start justify-between gap-4 border-b border-sage-100 bg-white px-5 py-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sage-500">{copy.details}</p>
+                <h3 className="mt-1 text-xl font-semibold text-ink">
+                  {getDisplayCountry(selectedSet.country, language)} {language === "zh" ? "成就套组" : "Achievement Set"}
+                </h3>
+              </div>
               <button
                 type="button"
-                onClick={() => setSelectedAchievementId(null)}
-                className="rounded-full bg-white/80 p-2 text-sage-700 ring-1 ring-sage-100"
+                onClick={() => setSelectedSet(null)}
+                className="rounded-full bg-sage-50 p-2 text-sage-700 ring-1 ring-sage-100"
                 aria-label={copy.close}
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            {(() => {
-              const medalTier = getMedalTier(selectedAchievement.current, selectedAchievement.baseTarget);
-              const medalStyle = medalStyles[medalTier];
-              const nextTarget = getNextTarget(selectedAchievement.current, selectedAchievement.baseTarget);
+            <div className="max-h-[68vh] overflow-y-auto p-5">
+              <div className="mb-4 flex items-center justify-between rounded-[8px] bg-white p-4 ring-1 ring-sage-100">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sage-500">{copy.countryPrize}</p>
+                  <p className="mt-1 text-sm font-semibold text-ink">{getDisplayCountry(selectedSet.country, language)}</p>
+                </div>
+                <CountryPrizeBadge set={selectedSet} />
+              </div>
 
-              return (
-                <div className="mt-4">
-                  <div className="flex items-center gap-4">
-                    <div className={cn("flex h-24 w-24 shrink-0 items-center justify-center rounded-full p-1", medalStyle.shell)}>
-                      <div className={cn("flex h-full w-full items-center justify-center rounded-full ring-1", medalStyle.core)}>
-                        {renderBadgeIcon(selectedAchievement)}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {selectedSet.assets.map((asset, index) => (
+                  <div
+                    key={asset.id}
+                    className={cn(
+                      "relative rounded-[8px] bg-white p-3 shadow-sm ring-1 ring-sage-100",
+                      asset.unlocked ? "opacity-100" : "opacity-55 grayscale"
+                    )}
+                  >
+                    <div className="absolute right-3 top-3 rounded-full bg-sage-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-sage-600">
+                      {asset.unlockedAt ? formatDate(asset.unlockedAt, language) : copy.notUnlocked}
+                    </div>
+                    <div className="flex gap-3 pr-20">
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center">
+                        <BadgeHex asset={asset} index={index} featured />
+                      </div>
+                      <div className="min-w-0 pt-1">
+                        <p className="text-xs font-semibold text-ink">{asset.name}</p>
+                        <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-sage-500">
+                          {copy.badge}
+                        </p>
+                        <p className="mt-2 line-clamp-2 text-xs leading-5 text-sage-700">{asset.description}</p>
+                        <div className="mt-2 flex items-center gap-1 text-[10px] font-semibold text-sage-500">
+                          {asset.unlocked ? (
+                            <CheckCircle2 className="h-4 w-4 text-sage-600" />
+                          ) : (
+                            <Lock className="h-4 w-4 text-sage-400" />
+                          )}
+                          <span>{asset.unlocked ? copy.unlockTime : copy.notUnlocked}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="text-xl font-semibold text-ink">{selectedAchievement.title}</h3>
-                      <p className={cn("mt-1 text-xs font-semibold uppercase tracking-[0.14em]", medalStyle.text)}>
-                        {getMedalLabel(medalTier, language)}
-                      </p>
-                    </div>
                   </div>
+                ))}
+              </div>
 
-                  <p className="mt-4 text-sm leading-6 text-sage-700">{selectedAchievement.detail}</p>
-
-                  <div className="mt-5 grid grid-cols-3 gap-2">
-                    <div className="rounded-[18px] bg-white p-3 ring-1 ring-sage-100">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sage-500">{copy.current}</p>
-                      <p className="mt-1 text-sm font-semibold text-ink">{selectedAchievement.current}</p>
-                    </div>
-                    <div className="rounded-[18px] bg-white p-3 ring-1 ring-sage-100">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sage-500">{copy.baseTarget}</p>
-                      <p className="mt-1 text-sm font-semibold text-ink">{selectedAchievement.baseTarget}</p>
-                    </div>
-                    <div className="rounded-[18px] bg-white p-3 ring-1 ring-sage-100">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sage-500">{copy.nextTarget}</p>
-                      <p className="mt-1 text-sm font-semibold text-ink">{nextTarget}</p>
-                    </div>
-                  </div>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="rounded-[8px] bg-white p-3 ring-1 ring-sage-100">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sage-500">{copy.routes}</p>
+                  <p className="mt-1 text-sm font-semibold text-ink">{selectedSet.completedRoutes}/{selectedSet.totalRoutes}</p>
                 </div>
-              );
-            })()}
+                <div className="rounded-[8px] bg-white p-3 ring-1 ring-sage-100">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sage-500">{copy.landmarks}</p>
+                  <p className="mt-1 text-sm font-semibold text-ink">{selectedSet.unlockedLandmarks}/{selectedSet.totalLandmarks}</p>
+                </div>
+                <div className="rounded-[8px] bg-white p-3 ring-1 ring-sage-100">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sage-500">{copy.decorations}</p>
+                  <p className="mt-1 text-sm font-semibold text-ink">{selectedSet.unlockedDecorations}/{selectedSet.totalDecorations}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       ) : null}

@@ -21,12 +21,10 @@ export const achievementLabel = {
 } as const;
 
 const paceportLandmarkImages: Record<string, string> = {
-  "big-ben": "/models/landmarks/big-ben.png",
+  "big-ben": "/models/landmarks/london-route/BigBen.png",
   "eiffel-tower": "/models/landmarks/paris-route/eiffel-tower.png",
-  "leifeng-pagoda": "/models/landmarks/leifeng-pagoda.png",
   "statue-of-liberty": "/models/landmarks/central-park-route/statue-of-liberty.png",
-  "three-pools": "/models/landmarks/three-pools.png",
-  "tower-bridge": "/models/landmarks/london-bridge.png"
+  "tower-bridge": "/models/landmarks/london-route/TowerBridge.png"
 };
 
 const getPaceportLandmarkImageSrc = (landmark: Landmark) =>

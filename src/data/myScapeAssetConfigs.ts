@@ -393,7 +393,7 @@ export const myScapeAssetConfigs: Record<string, MyScapeAssetConfig> = {
     footprintHeight: 3,
     offsetY: 20,
   },
-  // TODO
+  // Sydney landmark rewards
   "harbour-bridge": {
     defaultScale: 1.06,
     footprintWidth: 2,

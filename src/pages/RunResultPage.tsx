@@ -12,8 +12,8 @@ import { formatDistance } from "../utils/progress";
 import type { Decoration } from "../types";
 import { cn } from "../utils/cn";
 
-const defaultRunPosterImage = "/posters/run-cover.jpg";
-const defaultMissionPosterImage = "/posters/mission-cover.jpg";
+const defaultRunPosterImage = "/posters/centralpark.jpg";
+const defaultMissionPosterImage = "/posters/Seoul.jpg";
 const routePosterImages: Record<string, string> = {
   "central-park-loop": "/posters/centralpark.jpg",
   "tokyo-city-route": "/posters/Tokyo.jpg",

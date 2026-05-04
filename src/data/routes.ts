@@ -49,7 +49,7 @@ export const routes: Route[] = [
       landmark("one-world-trade-center", "One World Trade Center", 10, "The route completion landmark for the New York set.", "/models/landmarks/central-park-route/one-world-trade-center.png")
     ],
     decorations: [
-      decoration("bethesda-fountain", "Bethesda Fountain", "common", "A park keepsake from the Central Park collection.", "/models/decoration/central-park-route/Bethesda-Fountain.png"),
+      decoration("bethesda-fountain", "Bethesda Fountain", "common", "A park keepsake from the Central Park collection.", "/models/decoration/New York-route/Bethesda-Fountain.png"),
       decoration("subway", "Subway", "common", "A daily city token from New York runs.", "/models/decoration/New York-route/subway.png"),
       decoration("jazz-club", "Jazz Club", "rare", "A night-scene collectible from the city rhythm.", "/models/decoration/New York-route/jazz-club.png"),
       decoration("empire-state-building", "Empire State Building", "rare", "A skyline souvenir for repeat route progress.", "/models/decoration/New York-route/Empire-State-Building.png"),
