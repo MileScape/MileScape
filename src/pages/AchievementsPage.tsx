@@ -787,6 +787,7 @@ export const AchievementsPage = () => {
   const [activeCountryIndex, setActiveCountryIndex] = useState(0);
   const cardFolderRef = useRef<HTMLDivElement | null>(null);
   const countryCardRefs = useRef<Array<HTMLElement | null>>([]);
+  const activeCountryIndexRef = useRef(0);
   const copy = language === "zh"
     ? {
         eyebrow: "Achievements",
@@ -866,8 +867,8 @@ export const AchievementsPage = () => {
         return;
       }
 
-      const targetY = Math.min(Math.max(window.innerHeight * 0.46, folderRect.top), folderRect.bottom);
-      const nextIndex = countryCardRefs.current.reduce((closestIndex, element, index) => {
+      const targetY = Math.min(Math.max(window.innerHeight * 0.5, folderRect.top), folderRect.bottom);
+      const candidateIndex = countryCardRefs.current.reduce((closestIndex, element, index) => {
         if (!element) {
           return closestIndex;
         }
@@ -883,7 +884,23 @@ export const AchievementsPage = () => {
         return currentDistance < closestDistance ? index : closestIndex;
       }, 0);
 
-      setActiveCountryIndex(nextIndex);
+      const activeElement = countryCardRefs.current[activeCountryIndexRef.current];
+      const candidateElement = countryCardRefs.current[candidateIndex];
+      const activeRect = activeElement?.getBoundingClientRect();
+      const candidateRect = candidateElement?.getBoundingClientRect();
+      const activeDistance = activeRect
+        ? Math.abs(activeRect.top + activeRect.height / 2 - targetY)
+        : Number.POSITIVE_INFINITY;
+      const candidateDistance = candidateRect
+        ? Math.abs(candidateRect.top + candidateRect.height / 2 - targetY)
+        : Number.POSITIVE_INFINITY;
+
+      if (candidateIndex !== activeCountryIndexRef.current && candidateDistance + 140 >= activeDistance) {
+        return;
+      }
+
+      activeCountryIndexRef.current = candidateIndex;
+      setActiveCountryIndex(candidateIndex);
     };
 
     const scheduleUpdate = () => {
@@ -942,7 +959,7 @@ export const AchievementsPage = () => {
             ref={cardFolderRef}
             className="px-1 pr-2"
           >
-            <div className="space-y-[-10px] pb-8">
+            <div className="space-y-[-10px] pb-[44vh]">
             {countrySets.map((set, index) => (
               <CountryAchievementCard
                 key={set.country}
