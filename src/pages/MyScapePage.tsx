@@ -1,18 +1,24 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { CalendarDays, Download, Share2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrangeInventoryTray } from "../components/myscape/ArrangeInventoryTray";
+import { CapsuleMachineButton } from "../components/myscape/CapsuleMachineButton";
 import { FloatingStatsText } from "../components/myscape/FloatingStatsText";
 import { ItemActionMenu } from "../components/myscape/ItemActionMenu";
 import { ItemMemoryCard } from "../components/myscape/ItemMemoryCard";
+import { MyScapeAtmosphereLayer } from "../components/myscape/MyScapeAtmosphereLayer";
 import { MyScapeDayDateSwitcher } from "../components/myscape/MyScapeDayDateSwitcher";
 import { MyScapeHeaderControls } from "../components/myscape/MyScapeHeaderControls";
+import { MyScapeBoard } from "../components/myscape/MyScapeBoard";
 import { NewUnlockToast } from "../components/myscape/NewUnlockToast";
 import { ScapeBoardStage } from "../components/myscape/ScapeBoardStage";
 import { ScapeBottomTabs, type ScapeSummaryTab } from "../components/myscape/ScapeBottomTabs";
 import { useAppState } from "../hooks/useAppState";
+import { capsuleDecorationCatalog, defaultAtmosphereEffects } from "../hooks/useCapsuleLogic";
 import type { MyScapePlacedLandmark } from "../types";
-import { saveMyScapeLayout, savePlacedAssetIds } from "../utils/storage";
+import { loadMyScapeCapsuleState, saveMyScapeCapsuleState, saveMyScapeLayout, savePlacedAssetIds } from "../utils/storage";
+import type { MyScapeCapsuleState } from "../utils/storage";
 import {
   clampGridPositionForFootprint,
   buildMyScapeUnlockTimeline,
@@ -42,6 +48,9 @@ const formatDate = (value: string) =>
   });
 
 const MY_SCAPE_DEFAULT_ZOOM = 0.76;
+const CAPSULE_ROUTE_NAME = "Capsule Machine";
+const CAPSULE_ROUTE_ID = "capsule-machine";
+const CAPSULE_DRAW_COST_STAMPS = 40;
 
 interface SummaryStats {
   distanceKm: number;
@@ -71,6 +80,17 @@ const getStartOfDay = (value: Date) => {
 };
 
 const isSameDay = (left: Date, right: Date) => getMyScapeDateKey(left) === getMyScapeDateKey(right);
+
+const parseDateKeyAsLocalDate = (dateKey: string) => {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  const parsed = new Date(year, month - 1, day);
+  parsed.setHours(0, 0, 0, 0);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
 
 const formatDaySwitcherDate = (value: Date) =>
   value
@@ -126,7 +146,7 @@ const getMemoryContent = (
 
 export const MyScapePage = () => {
   const navigate = useNavigate();
-  const { routes, state } = useAppState();
+  const { routes, state, spendStamps } = useAppState();
   const todayDate = useMemo(() => getStartOfToday(), []);
   const [summaryTab, setSummaryTab] = useState<ScapeSummaryTab>("day");
   const [selectedDayDate, setSelectedDayDate] = useState<Date>(todayDate);
@@ -140,11 +160,35 @@ export const MyScapePage = () => {
   const [isInventoryDropActive, setIsInventoryDropActive] = useState(false);
   const [entryReady, setEntryReady] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSharePanelOpen, setIsSharePanelOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [datePickerValue, setDatePickerValue] = useState(() => getMyScapeDateKey(todayDate));
+  const [shareActionInProgress, setShareActionInProgress] = useState<"save" | "share" | null>(null);
+  const [capsuleState, setCapsuleState] = useState<MyScapeCapsuleState>(() => {
+    const storedCapsuleState = loadMyScapeCapsuleState();
+
+    return {
+      blueprintFragments: storedCapsuleState?.blueprintFragments ?? 0,
+      capsuleRouteTicketIds: storedCapsuleState?.capsuleRouteTicketIds ?? [],
+      capsuleDecorationItems: storedCapsuleState?.capsuleDecorationItems ?? [],
+      ownedAtmosphereEffectIds: storedCapsuleState?.ownedAtmosphereEffectIds ?? [],
+      activeAtmosphereEffectIds: storedCapsuleState?.activeAtmosphereEffectIds ?? [],
+    };
+  });
+  const {
+    blueprintFragments: currentBlueprintFragments,
+    capsuleRouteTicketIds,
+    capsuleDecorationItems,
+    ownedAtmosphereEffectIds,
+    activeAtmosphereEffectIds,
+  } = capsuleState;
+  const capsuleStateRef = useRef(capsuleState);
   const initialDayScopeKey = `day:${getMyScapeDateKey(todayDate)}`;
   const [placedLandmarks, setPlacedLandmarks] = useState<MyScapePlacedLandmark[]>(() => restoreMyScapeLayout(initialDayScopeKey));
   const [loadedLayoutScopeKey, setLoadedLayoutScopeKey] = useState(initialDayScopeKey);
   const [placedAssetIds, setPlacedAssetIds] = useState<Set<string>>(() => new Set(restorePlacedAssetIds()));
   const boardRef = useRef<HTMLDivElement>(null);
+  const sharePreviewBoardRef = useRef<HTMLDivElement>(null);
   const inventoryTrayRef = useRef<HTMLDivElement>(null);
   const toastTimerRef = useRef<number | null>(null);
   const newToastShownRef = useRef(false);
@@ -174,9 +218,65 @@ export const MyScapePage = () => {
     () => resolveMyScapeCatalogAssets(routes, state.routeProgress),
     [routes, state.routeProgress],
   );
-  const unlockedAssets = useMemo(() => catalogAssets.filter((asset) => (asset.ownedCount ?? 0) > 0), [catalogAssets]);
-  const assetIds = useMemo(() => new Set(catalogAssets.map((asset) => asset.id)), [catalogAssets]);
-  const assetMap = useMemo(() => new Map(catalogAssets.map((asset) => [asset.id, asset])), [catalogAssets]);
+  const capsuleDecorationAssets = useMemo<UnlockedLandmarkAsset[]>(() => {
+    const decorationCounts = capsuleDecorationItems.reduce<Record<string, number>>((accumulator, item) => {
+      accumulator[item.decorationId] = (accumulator[item.decorationId] ?? 0) + 1;
+      return accumulator;
+    }, {});
+
+    return Object.entries(decorationCounts).flatMap(([decorationId, ownedCount], index) => {
+      const decoration = capsuleDecorationCatalog.find((entry) => entry.id === decorationId);
+
+      if (!decoration) {
+        return [];
+      }
+
+      return [
+        {
+          id: decoration.id,
+          name: decoration.name,
+          description: decoration.description ?? "Capsule machine decoration",
+          image: decoration.image ?? decoration.icon ?? "",
+          imageSrc: decoration.image,
+          routeId: CAPSULE_ROUTE_ID,
+          routeName: CAPSULE_ROUTE_NAME,
+          city: "My Scape",
+          country: "Collection",
+          assetType: "decor" as const,
+          defaultScale: decoration.rarity === "legendary" ? 0.88 : decoration.rarity === "epic" ? 0.82 : 0.76,
+          rarity: decoration.rarity,
+          ownedCount,
+          routeOrder: Number.MAX_SAFE_INTEGER,
+          itemOrder: index,
+          footprintWidth: decoration.rarity === "legendary" ? 2 : 1,
+          footprintHeight: decoration.rarity === "legendary" ? 2 : 1,
+          offsetY: 14,
+        },
+      ];
+    });
+  }, [capsuleDecorationItems]);
+  const liveCatalogAssets = useMemo(
+    () => [...catalogAssets, ...capsuleDecorationAssets],
+    [capsuleDecorationAssets, catalogAssets],
+  );
+  const unlockedAssets = useMemo(() => liveCatalogAssets.filter((asset) => (asset.ownedCount ?? 0) > 0), [liveCatalogAssets]);
+  const assetIds = useMemo(() => new Set(liveCatalogAssets.map((asset) => asset.id)), [liveCatalogAssets]);
+  const assetMap = useMemo(() => new Map(liveCatalogAssets.map((asset) => [asset.id, asset])), [liveCatalogAssets]);
+  const capsuleUnlockedRouteIds = useMemo(
+    () => Array.from(new Set([...state.purchasedRouteIds, ...capsuleRouteTicketIds])),
+    [capsuleRouteTicketIds, state.purchasedRouteIds],
+  );
+  const atmosphereEffectItems = useMemo(
+    () =>
+      defaultAtmosphereEffects.map((effect) => ({
+        id: effect.id,
+        name: effect.name,
+        description: effect.description,
+        owned: ownedAtmosphereEffectIds.includes(effect.id),
+        active: activeAtmosphereEffectIds.includes(effect.id),
+      })),
+    [activeAtmosphereEffectIds, ownedAtmosphereEffectIds],
+  );
   const buildPlacementAssetLookup = (assetId: string) => {
     const lookup = new Map(assetMap);
     const asset = assetMap.get(assetId);
@@ -216,6 +316,14 @@ export const MyScapePage = () => {
       next.setDate(current.getDate() + 1);
       return getStartOfDay(next);
     });
+  };
+
+  const jumpToDay = (date: Date) => {
+    const nextDay = getStartOfDay(date);
+    const clampedDay = nextDay.getTime() > todayDate.getTime() ? todayDate : nextDay;
+    setDayTransitionDirection(clampedDay.getTime() >= selectedDayDate.getTime() ? 1 : -1);
+    setSelectedDayDate(clampedDay);
+    setSummaryTab("day");
   };
 
   useEffect(() => {
@@ -313,12 +421,23 @@ export const MyScapePage = () => {
   }, [placedAssetIds]);
 
   useEffect(() => {
+    saveMyScapeCapsuleState(capsuleState);
+    capsuleStateRef.current = capsuleState;
+  }, [capsuleState]);
+
+  useEffect(() => {
     if (summaryTab === "day" && !isSelectedDayToday && isEditMode) {
       setIsEditMode(false);
       setActionMenuItemId(null);
       setInfoItemId(null);
     }
   }, [isEditMode, isSelectedDayToday, summaryTab]);
+
+  useEffect(() => {
+    if (isDatePickerOpen) {
+      setDatePickerValue(selectedDayKey);
+    }
+  }, [isDatePickerOpen, selectedDayKey]);
 
   useEffect(
     () => () => {
@@ -335,6 +454,235 @@ export const MyScapePage = () => {
       window.clearTimeout(toastTimerRef.current);
     }
     toastTimerRef.current = window.setTimeout(() => setToastMessage(null), 2600);
+  };
+
+  const createShareImageBlob = async () => {
+    const canvas = document.createElement("canvas");
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    const width = 900;
+    const height = 1200;
+    canvas.width = width * pixelRatio;
+    canvas.height = height * pixelRatio;
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      showToast("Could not create share image");
+      return null;
+    }
+
+    context.scale(pixelRatio, pixelRatio);
+
+    const roundRect = (x: number, y: number, rectWidth: number, rectHeight: number, radius: number) => {
+      context.beginPath();
+      context.moveTo(x + radius, y);
+      context.arcTo(x + rectWidth, y, x + rectWidth, y + rectHeight, radius);
+      context.arcTo(x + rectWidth, y + rectHeight, x, y + rectHeight, radius);
+      context.arcTo(x, y + rectHeight, x, y, radius);
+      context.arcTo(x, y, x + rectWidth, y, radius);
+      context.closePath();
+    };
+
+    const fillRoundedRect = (x: number, y: number, rectWidth: number, rectHeight: number, radius: number, fillStyle: string | CanvasGradient) => {
+      roundRect(x, y, rectWidth, rectHeight, radius);
+      context.fillStyle = fillStyle;
+      context.fill();
+    };
+
+    const background = context.createLinearGradient(0, 0, 0, height);
+    background.addColorStop(0, "#fbf7ef");
+    background.addColorStop(0.62, "#edf2e8");
+    background.addColorStop(1, "#dfe9dc");
+    context.fillStyle = background;
+    context.fillRect(0, 0, width, height);
+
+    fillRoundedRect(48, 44, width - 96, height - 88, 46, "rgba(255,255,255,0.58)");
+    context.fillStyle = "#6f8177";
+    context.font = "700 28px sans-serif";
+    context.letterSpacing = "5px";
+    context.fillText("MILESCAPE", 92, 112);
+    context.letterSpacing = "0px";
+    context.fillStyle = "#2c3a33";
+    context.font = "700 58px sans-serif";
+    context.fillText(summaryTab === "day" ? formatDaySwitcherDate(selectedDayDate) : "My Scape", 92, 182);
+
+    const boardGradient = context.createLinearGradient(0, 230, 0, 820);
+    boardGradient.addColorStop(0, "#eef5ec");
+    boardGradient.addColorStop(0.58, "#d8e6d5");
+    boardGradient.addColorStop(1, "#adc5b4");
+
+    const centerX = width / 2;
+    const topY = 280;
+    const leftX = 130;
+    const rightX = width - 130;
+    const bottomY = 760;
+    const thickness = 82;
+
+    context.beginPath();
+    context.moveTo(centerX, topY);
+    context.lineTo(rightX, (topY + bottomY) / 2);
+    context.lineTo(centerX, bottomY);
+    context.lineTo(leftX, (topY + bottomY) / 2);
+    context.closePath();
+    context.fillStyle = boardGradient;
+    context.fill();
+
+    context.beginPath();
+    context.moveTo(leftX, (topY + bottomY) / 2);
+    context.lineTo(centerX, bottomY);
+    context.lineTo(centerX, bottomY + thickness);
+    context.lineTo(leftX, (topY + bottomY) / 2 + thickness);
+    context.closePath();
+    context.fillStyle = "#7f957f";
+    context.fill();
+
+    context.beginPath();
+    context.moveTo(rightX, (topY + bottomY) / 2);
+    context.lineTo(centerX, bottomY);
+    context.lineTo(centerX, bottomY + thickness);
+    context.lineTo(rightX, (topY + bottomY) / 2 + thickness);
+    context.closePath();
+    context.fillStyle = "#6f8776";
+    context.fill();
+
+    const placedPreviewAssets = placedLandmarks
+      .map((item) => ({ item, asset: assetMap.get(item.landmarkId) }))
+      .filter((entry): entry is { item: MyScapePlacedLandmark; asset: UnlockedLandmarkAsset } => Boolean(entry.asset))
+      .sort((left, right) => (left.item.zIndex ?? 0) - (right.item.zIndex ?? 0));
+
+    await Promise.all(
+      placedPreviewAssets.slice(0, 16).map(async ({ item, asset }) => {
+        const screen = gridToScreen(item.col, item.row, 620, 380);
+        const x = 140 + screen.x * 0.98 + (asset.offsetX ?? 0) * 0.72;
+        const y = 220 + screen.y * 1.02 + (asset.offsetY ?? 0) * 0.72;
+        const size = Math.max(38, Math.min(124, 76 * item.scale));
+
+        context.beginPath();
+        context.ellipse(x, y + 12, size * 0.42, size * 0.13, 0, 0, Math.PI * 2);
+        context.fillStyle = "rgba(55,72,61,0.12)";
+        context.fill();
+
+        if (!asset.imageSrc) {
+          fillRoundedRect(x - size / 2, y - size, size, size, 18, "rgba(255,255,255,0.78)");
+          context.fillStyle = "#6f8177";
+          context.font = "700 18px sans-serif";
+          context.textAlign = "center";
+          context.fillText(asset.name.slice(0, 2).toUpperCase(), x, y - size * 0.42);
+          context.textAlign = "left";
+          return;
+        }
+
+        await new Promise<void>((resolve) => {
+          const image = new Image();
+          image.crossOrigin = "anonymous";
+          image.onload = () => {
+            const ratio = image.width > 0 ? image.height / image.width : 1;
+            const imageWidth = size;
+            const imageHeight = Math.min(size * 1.35, imageWidth * ratio);
+            context.drawImage(image, x - imageWidth / 2, y - imageHeight, imageWidth, imageHeight);
+            resolve();
+          };
+          image.onerror = () => {
+            fillRoundedRect(x - size / 2, y - size, size, size, 18, "rgba(255,255,255,0.78)");
+            context.fillStyle = "#6f8177";
+            context.font = "700 18px sans-serif";
+            context.textAlign = "center";
+            context.fillText(asset.name.slice(0, 2).toUpperCase(), x, y - size * 0.42);
+            context.textAlign = "left";
+            resolve();
+          };
+          image.src = asset.imageSrc ?? "";
+        });
+      }),
+    );
+
+    const statY = 930;
+    const statCards = [
+      { label: "DISTANCE", value: formatDistance(activeStats.distanceKm) },
+      { label: "RUNS", value: `${activeStats.runCount}` },
+      { label: "UNLOCKS", value: `${activeStats.unlockCount}` },
+    ];
+
+    statCards.forEach((stat, index) => {
+      const cardWidth = 220;
+      const x = 92 + index * 250;
+      fillRoundedRect(x, statY, cardWidth, 116, 24, "rgba(255,255,255,0.76)");
+      context.fillStyle = "#7c8b83";
+      context.font = "700 18px sans-serif";
+      context.fillText(stat.label, x + 24, statY + 38);
+      context.fillStyle = "#2c3a33";
+      context.font = "700 32px sans-serif";
+      context.fillText(stat.value, x + 24, statY + 84);
+    });
+
+    context.fillStyle = "#6f8177";
+    context.font = "500 24px sans-serif";
+    context.fillText(`${placedLandmarks.length} placed on my lawn`, 92, 1108);
+
+    return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png", 0.96));
+  };
+
+  const handleSaveShareImage = async () => {
+    setShareActionInProgress("save");
+    showToast("Generating share image...");
+    try {
+      const blob = await createShareImageBlob();
+      if (!blob) {
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `milescape-${summaryTab}-${selectedDayKey}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 500);
+      showToast("Share image saved");
+    } catch {
+      showToast("Save failed. Try Share instead.");
+    } finally {
+      setShareActionInProgress(null);
+    }
+  };
+
+  const handleNativeShare = async () => {
+    setShareActionInProgress("share");
+    showToast("Preparing share image...");
+    try {
+      const blob = await createShareImageBlob();
+      if (!blob) {
+        return;
+      }
+
+      const file = new File([blob], `milescape-${summaryTab}-${selectedDayKey}.png`, { type: "image/png" });
+      const shareData = {
+        title: shareTitle,
+        text: shareText,
+        files: [file],
+      };
+
+      if (navigator.canShare?.(shareData) && navigator.share) {
+        await navigator.share(shareData);
+        showToast("Share sheet opened");
+        return;
+      }
+
+      if (navigator.share) {
+        await navigator.share({ title: shareTitle, text: shareText });
+        showToast("Share sheet opened");
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(blob);
+      window.open(objectUrl, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
+      showToast("Opened share image");
+    } catch {
+      showToast("Share failed or cancelled");
+    } finally {
+      setShareActionInProgress(null);
+    }
   };
 
   const handleSelectItem = (itemId: string) => {
@@ -592,7 +940,7 @@ export const MyScapePage = () => {
     [selectedDayStart, unlockTimeline],
   );
   const newTodayIds = useMemo(() => new Set(dayUnlocks.map((entry) => entry.id)), [dayUnlocks]);
-  const scopedCatalogAssets = useMemo(() => catalogAssets, [catalogAssets]);
+  const scopedCatalogAssets = useMemo(() => liveCatalogAssets, [liveCatalogAssets]);
 
   const summaryStats = useMemo<Record<ScapeSummaryTab, SummaryStats>>(
     () => ({
@@ -604,13 +952,17 @@ export const MyScapePage = () => {
       overview: {
         distanceKm: state.runHistory.reduce((sum, entry) => sum + entry.distanceKm, 0),
         runCount: state.runHistory.length,
-        unlockCount: catalogAssets.filter((asset) => (asset.ownedCount ?? 0) > 0).length,
+        unlockCount: liveCatalogAssets.filter((asset) => (asset.ownedCount ?? 0) > 0).length,
       },
     }),
-    [catalogAssets, dayRuns, dayUnlocks.length, state.runHistory],
+    [dayRuns, dayUnlocks.length, liveCatalogAssets, state.runHistory],
   );
 
   const activeStats = summaryStats[summaryTab];
+  const shareTitle = summaryTab === "day" ? `My Scape on ${formatDaySwitcherDate(selectedDayDate)}` : "My Scape Overview";
+  const shareText = `${shareTitle}: ${formatDistance(activeStats.distanceKm)}, ${activeStats.runCount} run${
+    activeStats.runCount === 1 ? "" : "s"
+  }, ${activeStats.unlockCount} unlock${activeStats.unlockCount === 1 ? "" : "s"}.`;
   const placedCountsByAssetId = useMemo(
     () =>
       placedLandmarks.reduce<Record<string, number>>((accumulator, item) => {
@@ -646,7 +998,8 @@ export const MyScapePage = () => {
           const placedItem = placedLandmarks.find((item) => item.landmarkId === asset.id);
           const ownedCount = asset.assetType === "landmark" ? Math.min(1, asset.ownedCount ?? 0) : asset.ownedCount ?? 0;
           const isUnlocked = ownedCount > 0;
-          const isCollectedOnly = summaryTab === "day" && isUnlocked && !dayRouteIds.has(asset.routeId);
+          const isCapsuleAsset = asset.routeId === CAPSULE_ROUTE_ID;
+          const isCollectedOnly = summaryTab === "day" && isUnlocked && !isCapsuleAsset && !dayRouteIds.has(asset.routeId);
           const placedCount = placedCountsByAssetId[asset.id] ?? 0;
           const availableCount = Math.max(0, ownedCount - placedCount);
           const isNew = !isCollectedOnly && newTodayIds.has(asset.id) && availableCount > 0 && !placedAssetIds.has(asset.id);
@@ -669,7 +1022,7 @@ export const MyScapePage = () => {
               }
 
               if (availableCount > 1) {
-                return `×${availableCount} LEFT`;
+                return `x${availableCount} LEFT`;
               }
 
               return "AVAILABLE";
@@ -707,7 +1060,7 @@ export const MyScapePage = () => {
   );
 
   const placeAssetOnBoard = (assetId: string) => {
-    const asset = unlockedAssets.find((entry) => entry.id === assetId);
+    const asset = liveCatalogAssets.find((entry) => entry.id === assetId);
     if (!asset) {
       return;
     }
@@ -745,6 +1098,118 @@ export const MyScapePage = () => {
     showToast(asset ? `${asset.name} is already on your lawn` : "Already on your lawn");
   };
 
+  const updateCapsuleState = (updater: (current: MyScapeCapsuleState) => MyScapeCapsuleState) => {
+    const currentCapsuleState = capsuleStateRef.current;
+    const nextCapsuleState = updater(currentCapsuleState);
+
+    if (nextCapsuleState === currentCapsuleState) {
+      return;
+    }
+
+    capsuleStateRef.current = nextCapsuleState;
+    setCapsuleState(nextCapsuleState);
+  };
+
+  const exchangeCapsuleAtmosphereEffect = (effect: { id: string; name: string; costFragments: number }) => {
+    const currentCapsuleState = capsuleStateRef.current;
+
+    if (
+      currentCapsuleState.ownedAtmosphereEffectIds.includes(effect.id) ||
+      currentCapsuleState.blueprintFragments < effect.costFragments
+    ) {
+      return false;
+    }
+
+    const nextCapsuleState = {
+      ...currentCapsuleState,
+      blueprintFragments: currentCapsuleState.blueprintFragments - effect.costFragments,
+      ownedAtmosphereEffectIds: [...currentCapsuleState.ownedAtmosphereEffectIds, effect.id],
+      activeAtmosphereEffectIds: [
+        ...new Set([...(currentCapsuleState.activeAtmosphereEffectIds ?? []), effect.id]),
+      ],
+    };
+
+    capsuleStateRef.current = nextCapsuleState;
+    setCapsuleState(nextCapsuleState);
+    showToast(`${effect.name} unlocked`);
+    return true;
+  };
+
+  const toggleAtmosphereEffect = (effectId: string) => {
+    const effect = defaultAtmosphereEffects.find((entry) => entry.id === effectId);
+    const currentCapsuleState = capsuleStateRef.current;
+
+    if (!effect || !currentCapsuleState.ownedAtmosphereEffectIds.includes(effectId)) {
+      showToast(effect ? "Exchange this effect first" : "Scene effect unavailable");
+      return;
+    }
+
+    const isActive = (currentCapsuleState.activeAtmosphereEffectIds ?? []).includes(effectId);
+    updateCapsuleState((current) => ({
+      ...current,
+      activeAtmosphereEffectIds: isActive
+        ? (current.activeAtmosphereEffectIds ?? []).filter((id) => id !== effectId)
+        : [...(current.activeAtmosphereEffectIds ?? []), effectId],
+    }));
+    showToast(`${effect.name} ${isActive ? "off" : "on"}`);
+  };
+
+  const capsuleButton =
+    summaryTab === "overview" || isSelectedDayToday ? (
+      <CapsuleMachineButton
+        buttonMode="compact"
+        routes={routes}
+        currentFragments={currentBlueprintFragments}
+        currentStamps={state.currentStamps}
+        drawCostLabel={`${CAPSULE_DRAW_COST_STAMPS} Stamps`}
+        isDrawDisabled={state.currentStamps < CAPSULE_DRAW_COST_STAMPS}
+        drawDisabledReason={
+          state.currentStamps < CAPSULE_DRAW_COST_STAMPS
+            ? `Need ${CAPSULE_DRAW_COST_STAMPS - state.currentStamps} more Stamps`
+            : undefined
+        }
+        unlockedRouteIds={capsuleUnlockedRouteIds}
+        ownedAtmosphereEffectIds={ownedAtmosphereEffectIds}
+        onConsumeDrawCost={() => {
+          const result = spendStamps(CAPSULE_DRAW_COST_STAMPS, "Capsule spin");
+          if (!result.success) {
+            showToast(result.message);
+          }
+          return result;
+        }}
+        onRouteTicketWon={(route) => {
+          updateCapsuleState((current) => ({
+            ...current,
+            capsuleRouteTicketIds: current.capsuleRouteTicketIds.includes(route.id)
+              ? current.capsuleRouteTicketIds
+              : [...current.capsuleRouteTicketIds, route.id],
+          }));
+          showToast(`${route.name} ticket added`);
+        }}
+        onDecorationWon={(decoration) => {
+          updateCapsuleState((current) => ({
+            ...current,
+            capsuleDecorationItems: [
+              ...current.capsuleDecorationItems,
+              {
+                instanceId: crypto.randomUUID(),
+                decorationId: decoration.id,
+              },
+            ],
+          }));
+          showToast(`${decoration.name} stored in inventory`);
+        }}
+        onFragmentsGained={(fragments) => {
+          updateCapsuleState((current) => ({
+            ...current,
+            blueprintFragments: current.blueprintFragments + fragments,
+          }));
+          showToast(`+${fragments} blueprint fragment${fragments > 1 ? "s" : ""}`);
+        }}
+        onExchangeAtmosphereEffect={exchangeCapsuleAtmosphereEffect}
+      />
+    ) : null;
+
   const activeInfoAsset = infoItem ? assetMap.get(infoItem.landmarkId) ?? null : null;
   const memoryContent = activeInfoAsset ? getMemoryContent(activeInfoAsset, unlockEventMap.get(activeInfoAsset.id) ?? null) : null;
 
@@ -779,7 +1244,7 @@ export const MyScapePage = () => {
         viewKey={boardViewKey}
         transitionDirection={summaryTab === "day" ? dayTransitionDirection : 0}
         boardRef={boardRef}
-        assets={unlockedAssets}
+        assets={liveCatalogAssets}
         placedLandmarks={placedLandmarks}
         selectedId={selectedId}
         draggingId={draggingId}
@@ -791,6 +1256,8 @@ export const MyScapePage = () => {
         onItemPointerDown={handleItemPointerDown}
         onSelectItem={handleSelectItem}
       />
+
+      <MyScapeAtmosphereLayer activeEffectIds={activeAtmosphereEffectIds} />
 
       <MyScapeHeaderControls
         arrangeActive={isEditMode}
@@ -807,6 +1274,7 @@ export const MyScapePage = () => {
           direction={dayTransitionDirection}
           subtitle={formatDaySwitcherSubtitle(selectedDayDate)}
           emptyLabel={null}
+          onOpenPicker={() => setIsDatePickerOpen(true)}
           onPrevious={goToPreviousDay}
           onNext={goToNextDay}
         />
@@ -861,7 +1329,9 @@ export const MyScapePage = () => {
             key="inventory"
             ref={inventoryTrayRef}
             items={inventoryItems}
+            atmosphereEffects={atmosphereEffectItems}
             isReturnDropActive={isInventoryDropActive}
+            onToggleAtmosphereEffect={toggleAtmosphereEffect}
             onSelectItem={(assetId) => {
               const asset = scopedCatalogAssets.find((entry) => entry.id === assetId);
               const ownedCount = asset?.assetType === "landmark" ? Math.min(1, asset?.ownedCount ?? 0) : asset?.ownedCount ?? 0;
@@ -869,7 +1339,7 @@ export const MyScapePage = () => {
                 showToast(asset ? `Locked: unlock from ${asset.routeName}` : "Locked");
                 return;
               }
-              if (summaryTab === "day" && !dayRouteIds.has(asset.routeId)) {
+              if (summaryTab === "day" && asset.routeId !== CAPSULE_ROUTE_ID && !dayRouteIds.has(asset.routeId)) {
                 showToast(asset ? `${asset.name} was collected earlier` : "Collected earlier");
                 return;
               }
@@ -896,6 +1366,229 @@ export const MyScapePage = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {!isEditMode ? (
+        <button
+          type="button"
+          onClick={() => setIsSharePanelOpen(true)}
+          className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+86px)] right-4 z-40 inline-flex h-[52px] w-[52px] items-center justify-center rounded-[22px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(238,233,224,0.96))] text-[#314238] shadow-[0_16px_34px_rgba(45,62,53,0.2)] ring-1 ring-[#e4ddcf] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(45,62,53,0.24)]"
+          aria-label="Share My Scape"
+        >
+          <Share2 className="h-5 w-5" />
+        </button>
+      ) : null}
+
+      <AnimatePresence>
+        {isDatePickerOpen ? (
+          <motion.div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(31,40,35,0.42)] px-5 backdrop-blur-[6px]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <button
+              type="button"
+              className="absolute inset-0 h-full w-full cursor-default"
+              aria-label="Close date picker"
+              onClick={() => setIsDatePickerOpen(false)}
+            />
+            <motion.section
+              className="relative z-10 w-full max-w-[350px] rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,#fbf7ef,#f0eadf)] p-5 text-ink shadow-[0_26px_70px_rgba(35,52,40,0.22)]"
+              initial={{ y: 18, scale: 0.97 }}
+              animate={{ y: 0, scale: 1 }}
+              exit={{ y: 12, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 190, damping: 22 }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-sage-500">Jump Date</p>
+                  <h2 className="mt-1 text-2xl font-semibold tracking-[-0.06em]">Choose a lawn</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsDatePickerOpen(false)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/76 text-sage-700 ring-1 ring-sage-900/10"
+                  aria-label="Close date picker"
+                >
+                  <X className="h-4.5 w-4.5" />
+                </button>
+              </div>
+
+              <label className="mt-5 block">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sage-500">Date</span>
+                <input
+                  type="date"
+                  value={datePickerValue}
+                  max={getMyScapeDateKey(todayDate)}
+                  onChange={(event) => setDatePickerValue(event.target.value)}
+                  className="mt-2 w-full rounded-[20px] border border-white/70 bg-white/76 px-4 py-3 text-base font-semibold text-[#314238] shadow-[inset_0_1px_0_rgba(255,255,255,0.86)] outline-none ring-1 ring-sage-900/8 focus:ring-2 focus:ring-[#8ea292]"
+                />
+              </label>
+
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                {[
+                  { label: "Today", offset: 0 },
+                  { label: "7 Days", offset: -7 },
+                  { label: "30 Days", offset: -30 },
+                ].map((shortcut) => (
+                  <button
+                    key={shortcut.label}
+                    type="button"
+                    onClick={() => {
+                      const next = new Date(todayDate);
+                      next.setDate(todayDate.getDate() + shortcut.offset);
+                      setDatePickerValue(getMyScapeDateKey(next));
+                    }}
+                    className="rounded-full bg-white/62 px-3 py-2 text-xs font-semibold text-sage-700 ring-1 ring-white/80"
+                  >
+                    {shortcut.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const parsedDate = parseDateKeyAsLocalDate(datePickerValue);
+                  if (!parsedDate) {
+                    showToast("Choose a valid date");
+                    return;
+                  }
+
+                  jumpToDay(parsedDate);
+                  setIsDatePickerOpen(false);
+                }}
+                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#556a5f,#72877b)] px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(77,97,86,0.18)]"
+              >
+                <CalendarDays className="h-4 w-4" />
+                Go to Date
+              </button>
+            </motion.section>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isSharePanelOpen ? (
+          <motion.div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(31,40,35,0.46)] px-5 py-5 backdrop-blur-[7px]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <button
+              type="button"
+              className="absolute inset-0 h-full w-full cursor-default"
+              aria-label="Close share preview"
+              onClick={() => setIsSharePanelOpen(false)}
+            />
+            <motion.section
+              className="relative z-10 flex h-[min(94dvh,760px)] w-full max-w-[390px] flex-col overflow-hidden rounded-[32px] border border-white/70 bg-[linear-gradient(180deg,#fbf7ef,#eee9dc)] text-ink shadow-[0_30px_80px_rgba(35,52,40,0.26)]"
+              initial={{ y: 18, scale: 0.97 }}
+              animate={{ y: 0, scale: 1 }}
+              exit={{ y: 12, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 190, damping: 22 }}
+            >
+              <div className="flex items-start justify-between gap-3 border-b border-sage-900/8 px-5 pb-4 pt-5">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-sage-500">Share Card</p>
+                  <h2 className="mt-1 text-2xl font-semibold tracking-[-0.06em]">{shareTitle}</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSharePanelOpen(false)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/76 text-sage-700 ring-1 ring-sage-900/10"
+                  aria-label="Close share preview"
+                >
+                  <X className="h-4.5 w-4.5" />
+                </button>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+                <div
+                  className="overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,#eef4ec,#dbe7d8)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.74)] ring-1 ring-white/80"
+                >
+                  <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(180deg,#f8f5ee_0%,#edf2e8_70%,#e2eadf_100%)]">
+                    <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between px-4 pt-4">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-sage-500">MileScape</p>
+                        <h3 className="mt-1 max-w-[190px] text-xl font-semibold leading-none tracking-[-0.06em] text-[#2c3a33]">
+                          {summaryTab === "day" ? formatDaySwitcherDate(selectedDayDate) : "My Scape"}
+                        </h3>
+                      </div>
+                      <div className="rounded-full bg-white/72 px-3 py-1.5 text-[11px] font-bold text-sage-700 ring-1 ring-white/80">
+                        {placedLandmarks.length} placed
+                      </div>
+                    </div>
+
+                    <div className="flex h-[430px] justify-center overflow-hidden pt-8">
+                      <div className="pointer-events-none h-[620px] w-[560px] shrink-0 origin-top scale-[0.6]">
+                        <MyScapeBoard
+                          boardRef={sharePreviewBoardRef}
+                          assets={liveCatalogAssets}
+                          placedLandmarks={placedLandmarks}
+                          selectedId={null}
+                          draggingId={null}
+                          entryReady
+                          dragPreview={null}
+                          placementPreview={null}
+                          isEditMode={false}
+                          newTodayIds={new Set()}
+                          expanded
+                          onItemPointerDown={() => undefined}
+                          onSelectItem={() => undefined}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="absolute inset-x-3 bottom-3 z-10 grid grid-cols-3 gap-2">
+                      <div className="rounded-[16px] bg-white/82 px-3 py-2 ring-1 ring-white/80">
+                        <p className="text-[9px] uppercase tracking-[0.16em] text-sage-500">Distance</p>
+                        <p className="mt-1 text-sm font-bold text-[#2c3a33]">{formatDistance(activeStats.distanceKm)}</p>
+                      </div>
+                      <div className="rounded-[16px] bg-white/82 px-3 py-2 ring-1 ring-white/80">
+                        <p className="text-[9px] uppercase tracking-[0.16em] text-sage-500">Runs</p>
+                        <p className="mt-1 text-sm font-bold text-[#2c3a33]">{activeStats.runCount}</p>
+                      </div>
+                      <div className="rounded-[16px] bg-white/82 px-3 py-2 ring-1 ring-white/80">
+                        <p className="text-[9px] uppercase tracking-[0.16em] text-sage-500">Unlocks</p>
+                        <p className="mt-1 text-sm font-bold text-[#2c3a33]">{activeStats.unlockCount}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="mt-3 rounded-[20px] bg-white/62 px-4 py-3 text-sm leading-6 text-sage-700">{shareText}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 border-t border-sage-900/8 p-4">
+                <button
+                  type="button"
+                  onClick={handleSaveShareImage}
+                  disabled={shareActionInProgress !== null}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#556a5f,#72877b)] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(77,97,86,0.18)]"
+                >
+                  <Download className="h-4 w-4" />
+                  {shareActionInProgress === "save" ? "Saving..." : "Save"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNativeShare}
+                  disabled={shareActionInProgress !== null}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#7b8f82,#5f7568)] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(77,97,86,0.16)]"
+                >
+                  <Share2 className="h-4 w-4" />
+                  {shareActionInProgress === "share" ? "Sharing..." : "Share"}
+                </button>
+              </div>
+            </motion.section>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      {!isEditMode && capsuleButton ? (
+        <div className="absolute left-4 top-[calc(env(safe-area-inset-top,0px)+9.25rem)] z-40">{capsuleButton}</div>
+      ) : null}
     </motion.div>
   );
 };

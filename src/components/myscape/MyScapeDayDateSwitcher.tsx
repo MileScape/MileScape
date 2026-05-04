@@ -6,6 +6,7 @@ interface MyScapeDayDateSwitcherProps {
   dateLabel: string;
   direction?: -1 | 0 | 1;
   emptyLabel?: string | null;
+  onOpenPicker?: () => void;
   onNext: () => void;
   onPrevious: () => void;
   subtitle: string;
@@ -16,6 +17,7 @@ export const MyScapeDayDateSwitcher = ({
   dateLabel,
   direction = 0,
   emptyLabel = null,
+  onOpenPicker,
   onNext,
   onPrevious,
   subtitle,
@@ -33,7 +35,9 @@ export const MyScapeDayDateSwitcher = ({
         </button>
 
         <AnimatePresence mode="wait" initial={false}>
-          <motion.div
+          <motion.button
+            type="button"
+            onClick={onOpenPicker}
             key={dateLabel}
             initial={{
               opacity: 0,
@@ -47,13 +51,13 @@ export const MyScapeDayDateSwitcher = ({
               y: -1,
             }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className="text-center"
+            className="pointer-events-auto rounded-[18px] px-2 py-1 text-center transition hover:bg-white/38"
           >
             <p className="font-destination-display text-[1.6rem] font-bold uppercase tracking-[0.08em] text-[#2c3a33] sm:text-[1.08rem]">
               {dateLabel}
             </p>
             <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-[#7c8b83]">{subtitle}</p>
-          </motion.div>
+          </motion.button>
         </AnimatePresence>
 
         <button

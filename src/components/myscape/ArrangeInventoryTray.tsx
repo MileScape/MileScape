@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Lock, MapPin, Sparkles } from "lucide-react";
+import { Check, CloudSun, Lock, MapPin, Sparkles } from "lucide-react";
 import { forwardRef, useMemo, useState } from "react";
 import type { Rarity } from "../../types";
 import type { UnlockedLandmarkAsset } from "../../utils/myScape";
@@ -20,16 +20,25 @@ interface ArrangeInventoryTrayItem {
 
 interface ArrangeInventoryTrayProps {
   items: ArrangeInventoryTrayItem[];
+  atmosphereEffects?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    owned: boolean;
+    active: boolean;
+  }>;
   isReturnDropActive?: boolean;
+  onToggleAtmosphereEffect?: (effectId: string) => void;
   onSelectItem: (assetId: string) => void;
 }
 
-type InventoryCategory = "landmarks" | "decorations";
+type InventoryCategory = "landmarks" | "decorations" | "scene";
 type DecorationRarityFilter = "all" | Rarity;
 
 const categoryTabs: Array<{ key: InventoryCategory; label: string }> = [
   { key: "landmarks", label: "Landmarks" },
   { key: "decorations", label: "Decorations" },
+  { key: "scene", label: "Scene" },
 ];
 
 const rarityCycle: DecorationRarityFilter[] = ["all", "common", "rare", "epic", "legendary"];
@@ -47,7 +56,7 @@ const getInventoryCategory = (asset: UnlockedLandmarkAsset): InventoryCategory =
   asset.assetType === "landmark" ? "landmarks" : "decorations";
 
 export const ArrangeInventoryTray = forwardRef<HTMLDivElement, ArrangeInventoryTrayProps>(function ArrangeInventoryTray(
-  { items, isReturnDropActive = false, onSelectItem },
+  { items, atmosphereEffects = [], isReturnDropActive = false, onSelectItem, onToggleAtmosphereEffect },
   ref,
 ) {
   const [category, setCategory] = useState<InventoryCategory>("landmarks");
@@ -66,16 +75,19 @@ export const ArrangeInventoryTray = forwardRef<HTMLDivElement, ArrangeInventoryT
       (item) => item.asset.assetType === "decor" && item.asset.rarity === activeRarityFilter,
     );
   }, [activeRarityFilter, category, categoryItems]);
-  const categoryOwnedCount = useMemo(
-    () => filteredItems.filter((item) => item.isUnlocked).length,
-    [filteredItems],
-  );
-  const categoryTotalCount = filteredItems.length;
+  const categoryOwnedCount = useMemo(() => {
+    if (category === "scene") {
+      return atmosphereEffects.filter((effect) => effect.owned).length;
+    }
+
+    return filteredItems.filter((item) => item.isUnlocked).length;
+  }, [atmosphereEffects, category, filteredItems]);
+  const categoryTotalCount = category === "scene" ? atmosphereEffects.length : filteredItems.length;
   const showRarityFilter = category === "decorations";
 
   const handleCategoryChange = (nextCategory: InventoryCategory) => {
     setCategory(nextCategory);
-    if (nextCategory === "decorations") {
+    if (nextCategory !== "decorations") {
       setActiveRarityFilter("all");
     }
   };
@@ -88,7 +100,11 @@ export const ArrangeInventoryTray = forwardRef<HTMLDivElement, ArrangeInventoryT
   };
 
   const emptyStateLabel =
-    activeRarityFilter === "all" ? "NO DECORATIONS" : `NO ${rarityFilterLabel[activeRarityFilter]} DECORATIONS`;
+    category === "scene"
+      ? "NO SCENE EFFECTS"
+      : activeRarityFilter === "all"
+        ? "NO DECORATIONS"
+        : `NO ${rarityFilterLabel[activeRarityFilter]} DECORATIONS`;
   const shelfMotionKey = `${category}-${showRarityFilter ? activeRarityFilter : "all"}`;
 
   return (
@@ -150,7 +166,14 @@ export const ArrangeInventoryTray = forwardRef<HTMLDivElement, ArrangeInventoryT
                   {rarityFilterLabel[activeRarityFilter]}
                 </button>
               ) : (
-                <div className="h-[34px]" aria-hidden="true" />
+                <div className="flex h-[34px] items-center gap-1 rounded-full bg-white/36 px-3 text-[10px] font-medium uppercase tracking-[0.12em] text-[#718278]" aria-hidden="true">
+                  {category === "scene" ? (
+                    <>
+                      <CloudSun className="h-3.5 w-3.5" />
+                      Effects
+                    </>
+                  ) : null}
+                </div>
               )}
             </>
           )}
@@ -163,9 +186,72 @@ export const ArrangeInventoryTray = forwardRef<HTMLDivElement, ArrangeInventoryT
               initial={{ opacity: 0 }}
               animate={{ opacity: 1, transition: { staggerChildren: 0.035, delayChildren: 0.02 } }}
               exit={{ opacity: 0, transition: { duration: 0.12 } }}
-              className="grid h-full w-max min-w-full grid-flow-col grid-rows-[repeat(2,108px)] auto-cols-[84px] gap-x-4 gap-y-3"
+              className={`grid h-full w-max min-w-full grid-flow-col grid-rows-[repeat(2,108px)] gap-x-4 gap-y-3 ${
+                category === "scene" ? "auto-cols-[112px]" : "auto-cols-[84px]"
+              }`}
             >
-              {filteredItems.length === 0 ? (
+              {category === "scene" ? (
+                atmosphereEffects.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1, transition: shelfContentTransition }}
+                    exit={{ opacity: 0, y: -4, scale: 0.98, transition: { duration: 0.1 } }}
+                    className="col-span-1 row-span-2 flex h-full w-[calc(100vw-4rem)] min-w-[220px] max-w-[480px] items-center justify-center"
+                  >
+                    <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#7f8d85]">{emptyStateLabel}</p>
+                  </motion.div>
+                ) : (
+                  atmosphereEffects.map((effect, index) => {
+                    const icon = effect.owned ? (
+                      effect.active ? (
+                        <Check className="h-4 w-4 text-[#4b6154]" />
+                      ) : (
+                        <CloudSun className="h-4 w-4 text-[#65776e]" />
+                      )
+                    ) : (
+                      <Lock className="h-4 w-4 text-[#939d97]" />
+                    );
+
+                    return (
+                      <motion.button
+                        key={`${shelfMotionKey}-${effect.id}`}
+                        type="button"
+                        onClick={() => {
+                          if (!effect.owned) {
+                            return;
+                          }
+                          onToggleAtmosphereEffect?.(effect.id);
+                        }}
+                        title={effect.description}
+                        aria-label={`${effect.name}. ${effect.owned ? (effect.active ? "On" : "Off") : "Locked"}.`}
+                        initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                        animate={{
+                          opacity: effect.owned ? 1 : 0.62,
+                          y: 0,
+                          scale: 1,
+                          transition: { ...shelfContentTransition, delay: index * 0.035 },
+                        }}
+                        exit={{ opacity: 0, y: -4, scale: 0.98, transition: { duration: 0.1 } }}
+                        className={`relative flex h-[108px] w-[112px] flex-col items-center justify-center rounded-[24px] border px-3 text-center transition ${
+                          effect.active
+                            ? "border-[#607868]/40 bg-[linear-gradient(180deg,rgba(232,241,232,0.84),rgba(213,228,216,0.66))] text-[#2f3e36] shadow-[0_12px_24px_rgba(47,62,54,0.1)]"
+                            : effect.owned
+                              ? "border-white/62 bg-white/42 text-[#506258]"
+                              : "border-white/42 bg-white/24 text-[#8a978f]"
+                        }`}
+                      >
+                        <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-[16px] bg-white/62 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                          {icon}
+                        </div>
+                        <p className="line-clamp-2 text-[11px] font-semibold leading-[15px]">{effect.name}</p>
+                        <p className="mt-1 text-[9px] font-medium uppercase tracking-[0.16em]">
+                          {!effect.owned ? "LOCKED" : effect.active ? "ON" : "OFF"}
+                        </p>
+                      </motion.button>
+                    );
+                  })
+                )
+              ) : filteredItems.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0, y: 6, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1, transition: shelfContentTransition }}
@@ -226,7 +312,7 @@ export const ArrangeInventoryTray = forwardRef<HTMLDivElement, ArrangeInventoryT
                           ) : null}
                           {isUnlocked && !isCollectedOnly && availableCount > 1 ? (
                             <span className="absolute left-1 top-1 rounded-full bg-[#41584b] px-1.5 py-0.5 text-[9px] font-medium leading-none text-white shadow-[0_6px_12px_rgba(48,64,55,0.18)]">
-                              ×{availableCount}
+                              x{availableCount}
                             </span>
                           ) : null}
                         </div>

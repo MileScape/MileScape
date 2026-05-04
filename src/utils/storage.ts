@@ -5,7 +5,20 @@ const ONBOARDING_KEY = "milescape-onboarding-seen";
 const MY_SCAPE_OVERVIEW_LAYOUT_KEY = "milescape-my-scape-layout";
 const MY_SCAPE_DAY_LAYOUTS_KEY = "milescape-my-scape-day-layouts";
 const MY_SCAPE_PLACED_ASSET_IDS_KEY = "milescape-my-scape-placed-asset-ids";
+export const MY_SCAPE_CAPSULE_STATE_KEY = "milescape-my-scape-capsule-state";
+export const MY_SCAPE_CAPSULE_STATE_UPDATED_EVENT = "milescape:my-scape-capsule-updated";
 const JOURNEY_SWIPE_GUIDE_SEEN_KEY = "milescape-journey-swipe-guide-seen";
+
+export interface MyScapeCapsuleState {
+  blueprintFragments: number;
+  capsuleRouteTicketIds: string[];
+  capsuleDecorationItems: Array<{
+    instanceId: string;
+    decorationId: string;
+  }>;
+  ownedAtmosphereEffectIds: string[];
+  activeAtmosphereEffectIds: string[];
+}
 
 export const loadState = (): AppState | null => {
   if (typeof window === "undefined") {
@@ -110,6 +123,39 @@ export const savePlacedAssetIds = (assetIds: string[]) => {
   }
 
   window.localStorage.setItem(MY_SCAPE_PLACED_ASSET_IDS_KEY, JSON.stringify(assetIds));
+};
+
+export const loadMyScapeCapsuleState = (): MyScapeCapsuleState | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(MY_SCAPE_CAPSULE_STATE_KEY);
+    return raw ? (JSON.parse(raw) as MyScapeCapsuleState) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const saveMyScapeCapsuleState = (state: MyScapeCapsuleState) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(MY_SCAPE_CAPSULE_STATE_KEY, JSON.stringify(state));
+  window.dispatchEvent(new CustomEvent(MY_SCAPE_CAPSULE_STATE_UPDATED_EVENT, { detail: state }));
+};
+
+export const loadMyScapeCapsuleRouteTicketIds = () => loadMyScapeCapsuleState()?.capsuleRouteTicketIds ?? [];
+
+export const clearMyScapeCapsuleState = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(MY_SCAPE_CAPSULE_STATE_KEY);
+  window.dispatchEvent(new CustomEvent(MY_SCAPE_CAPSULE_STATE_UPDATED_EVENT));
 };
 
 export const hasSeenJourneySwipeGuide = () => {
