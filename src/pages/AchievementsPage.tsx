@@ -1,5 +1,5 @@
-import { ChevronUp, CheckCircle2, ListChecks, Lock, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, ListChecks, Lock, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import { useAppState } from "../hooks/useAppState";
 import type { Route, RouteProgress, RunHistoryItem } from "../types";
 import { cn } from "../utils/cn";
@@ -292,11 +292,11 @@ const countCountryDecorationsInSet = (
 
   const unlockCount = decorations.length > 0
     ? Math.min(
-        ...decorations.map((decoration) => {
-          const progress = getRouteProgress(progressList, decoration.routeId);
-          return progress?.decorations[decoration.decorationId] ?? 0;
-        }),
-      )
+      ...decorations.map((decoration) => {
+        const progress = getRouteProgress(progressList, decoration.routeId);
+        return progress?.decorations[decoration.decorationId] ?? 0;
+      }),
+    )
     : 0;
 
   return { unlocked, total: decorations.length, unlockCount };
@@ -315,11 +315,11 @@ const countCountryAllDecorationUnlocks = (
 
   return decorations.length > 0
     ? Math.min(
-        ...decorations.map((decoration) => {
-          const progress = getRouteProgress(progressList, decoration.routeId);
-          return progress?.decorations[decoration.decorationId] ?? 0;
-        }),
-      )
+      ...decorations.map((decoration) => {
+        const progress = getRouteProgress(progressList, decoration.routeId);
+        return progress?.decorations[decoration.decorationId] ?? 0;
+      }),
+    )
     : 0;
 };
 
@@ -329,8 +329,8 @@ const countCountryRouteLaps = (
 ) =>
   routes.length > 0
     ? Math.min(
-        ...routes.map((route) => getRouteProgress(progressList, route.id)?.runCount ?? 0),
-      )
+      ...routes.map((route) => getRouteProgress(progressList, route.id)?.runCount ?? 0),
+    )
     : 0;
 
 const makeAvailableCountryAchievementAssets = (
@@ -670,9 +670,7 @@ const CountryAchievementCard = ({
   active,
   expanded,
   onOpen,
-  onExpand,
-  onCollapse,
-  setCardRef
+  onSelect
 }: {
   set: CountryAchievementSet;
   index: number;
@@ -681,19 +679,16 @@ const CountryAchievementCard = ({
   active: boolean;
   expanded: boolean;
   onOpen: (set: CountryAchievementSet) => void;
-  onExpand: () => void;
-  onCollapse: () => void;
-  setCardRef: (element: HTMLElement | null) => void;
+  onSelect: () => void;
 }) => {
   const collapsed = !expanded;
   const progressPercent = Math.round((set.unlockedCount / set.assets.length) * 100);
 
   return (
     <article
-      ref={setCardRef}
       onClick={() => {
-        if (!expanded) {
-          onExpand();
+        if (!active) {
+          onSelect();
         }
       }}
       onContextMenu={(event) => event.preventDefault()}
@@ -701,28 +696,21 @@ const CountryAchievementCard = ({
         "relative transition-all duration-300",
         collapsed ? "min-h-[68px]" : "min-h-[330px]"
       )}
-      style={{ zIndex: expanded ? 60 : active ? 50 : index }}
+      style={{
+        zIndex: expanded ? 30 : active ? 20 : 10
+      }}
     >
-      {expanded ? (
-        <button
-          type="button"
-          onPointerDown={(event) => event.stopPropagation()}
-          onPointerMove={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            onCollapse();
-          }}
-          className="absolute left-3 top-3 z-[70] flex h-9 w-9 items-center justify-center rounded-full bg-white/88 text-sage-700 shadow-[0_8px_18px_rgba(17,31,22,0.16)] ring-1 ring-sage-100 backdrop-blur transition active:scale-95"
-          aria-label={language === "zh" ? "收起详情" : "Collapse details"}
-        >
-          <ChevronUp className="h-5 w-5" />
-        </button>
-      ) : null}
       <div
         className={cn(
-          "overflow-hidden rounded-[8px] bg-white/96 shadow-[0_18px_42px_rgba(17,31,22,0.13)] ring-1 ring-sage-100 transition-all duration-300",
+          "overflow-hidden rounded-[8px] bg-white/96 ring-1 ring-sage-100 transition-all duration-300",
           collapsed ? "min-h-[64px]" : "min-h-[310px]",
-          expanded ? "scale-[1.01] shadow-[0_24px_58px_rgba(17,31,22,0.2)]" : active ? "scale-[1.01] shadow-[0_18px_38px_rgba(17,31,22,0.17)]" : "scale-[0.985]",
+
+          expanded
+            ? "scale-[1.01] shadow-[0_24px_58px_rgba(17,31,22,0.2)]"
+            : active
+              ? "scale-[1.005] shadow-[0_18px_38px_rgba(17,31,22,0.17)] ring-sage-200"
+              : "scale-[0.985] shadow-[0_18px_42px_rgba(17,31,22,0.13)]",
+
           set.unlocked ? "opacity-100" : "opacity-90"
         )}
       >
@@ -788,6 +776,9 @@ const CountryAchievementCard = ({
                     type="button"
                     onPointerDown={(event) => event.stopPropagation()}
                     onPointerMove={(event) => event.stopPropagation()}
+                    onPointerUp={(event) => event.stopPropagation()}
+                    onTouchStart={(event) => event.stopPropagation()}
+                    onTouchEnd={(event) => event.stopPropagation()}
                     onClick={(event) => {
                       event.stopPropagation();
                       onOpen(set);
@@ -812,49 +803,46 @@ export const AchievementsPage = () => {
   const { language, routes, state } = useAppState();
   const [selectedSet, setSelectedSet] = useState<CountryAchievementSet | null>(null);
   const [activeCountryIndex, setActiveCountryIndex] = useState(0);
-  const [expandedCountryIndex, setExpandedCountryIndex] = useState<number | null>(null);
-  const cardFolderRef = useRef<HTMLDivElement | null>(null);
-  const countryCardRefs = useRef<Array<HTMLElement | null>>([]);
-  const activeCountryIndexRef = useRef(0);
+  const deckInteractionRef = useRef({ ignoreNextSwipe: false, lastWheelAt: 0, pointerStartY: 0, touchStartY: 0 });
   const copy = language === "zh"
     ? {
-        eyebrow: "Achievements",
-        title: "国家成就徽章套组",
-        description: "每个国家一套成就，套组内保留跑步、动物、食物、地标和路线完成成就。全部完成后获得国家徽章。",
-        completeOn: "完成于",
-        locked: "未完成",
-        unlocked: "已解锁",
-        badgeList: "徽章列表",
-        details: "国家成就详情",
-        badge: "成就徽章",
-        countryPrize: "国家大奖章",
-        close: "关闭",
-        progress: "成就进度",
-        routes: "路线",
-        landmarks: "地标",
-        decorations: "装饰",
-        unlockTime: "解锁时间",
-        notUnlocked: "未解锁",
-      }
+      eyebrow: "Achievements",
+      title: "国家成就徽章套组",
+      description: "每个国家一套成就，套组内保留跑步、动物、食物、地标和路线完成成就。全部完成后获得国家徽章。",
+      completeOn: "完成于",
+      locked: "未完成",
+      unlocked: "已解锁",
+      badgeList: "徽章列表",
+      details: "国家成就详情",
+      badge: "成就徽章",
+      countryPrize: "国家大奖章",
+      close: "关闭",
+      progress: "成就进度",
+      routes: "路线",
+      landmarks: "地标",
+      decorations: "装饰",
+      unlockTime: "解锁时间",
+      notUnlocked: "未解锁",
+    }
     : {
-        eyebrow: "Achievements",
-        title: "Country Achievement Badge Sets",
-        description: "Each country has one set with the same run, animal, food, landmark, and route completion achievements. Complete all to earn the country badge.",
-        completeOn: "Completed on",
-        locked: "Locked",
-        unlocked: "Unlocked",
-        badgeList: "Badge list",
-        details: "Country achievement detail",
-        badge: "Achievement badge",
-        countryPrize: "Country prize badge",
-        close: "Close",
-        progress: "Achievement progress",
-        routes: "Routes",
-        landmarks: "Landmarks",
-        decorations: "Decorations",
-        unlockTime: "Unlocked",
-        notUnlocked: "Locked",
-      };
+      eyebrow: "Achievements",
+      title: "Country Achievement Badge Sets",
+      description: "Each country has one set with the same run, animal, food, landmark, and route completion achievements. Complete all to earn the country badge.",
+      completeOn: "Completed on",
+      locked: "Locked",
+      unlocked: "Unlocked",
+      badgeList: "Badge list",
+      details: "Country achievement detail",
+      badge: "Achievement badge",
+      countryPrize: "Country prize badge",
+      close: "Close",
+      progress: "Achievement progress",
+      routes: "Routes",
+      landmarks: "Landmarks",
+      decorations: "Decorations",
+      unlockTime: "Unlocked",
+      notUnlocked: "Locked",
+    };
 
   const countrySets = useMemo<CountryAchievementSet[]>(() => {
     const groupedRoutes = routes.reduce<Record<string, Route[]>>((groups, route) => {
@@ -885,65 +873,28 @@ export const AchievementsPage = () => {
     .map((run) => run.completedAt)
     .sort()[0] ?? null;
 
-  useEffect(() => {
-    let animationFrame = 0;
+  const moveActiveCountry = (direction: number) => {
+    setActiveCountryIndex((currentIndex) =>
+      Math.min(Math.max(currentIndex + direction, 0), Math.max(countrySets.length - 1, 0))
+    );
+  };
 
-    const updateActiveCountryFromScroll = () => {
-      const folderRect = cardFolderRef.current?.getBoundingClientRect();
+  const moveActiveCountryFromDelta = (deltaY: number, threshold = 42) => {
+    if (deckInteractionRef.current.ignoreNextSwipe) {
+      deckInteractionRef.current.ignoreNextSwipe = false;
+      return;
+    }
 
-      if (!folderRect || folderRect.bottom < 0 || folderRect.top > window.innerHeight) {
-        return;
-      }
+    if (Math.abs(deltaY) < threshold) {
+      return;
+    }
 
-      const targetY = Math.min(Math.max(window.innerHeight * 0.5, folderRect.top), folderRect.bottom);
-      const candidateIndex = countryCardRefs.current.reduce((closestIndex, element, index) => {
-        if (!element) {
-          return closestIndex;
-        }
+    moveActiveCountry(deltaY < 0 ? 1 : -1);
+  };
 
-        const rect = element.getBoundingClientRect();
-        const currentDistance = Math.abs(rect.top + rect.height / 2 - targetY);
-        const closestElement = countryCardRefs.current[closestIndex];
-        const closestRect = closestElement?.getBoundingClientRect();
-        const closestDistance = closestRect
-          ? Math.abs(closestRect.top + closestRect.height / 2 - targetY)
-          : Number.POSITIVE_INFINITY;
-
-        return currentDistance < closestDistance ? index : closestIndex;
-      }, 0);
-
-      const candidateElement = countryCardRefs.current[candidateIndex];
-      const candidateRect = candidateElement?.getBoundingClientRect();
-      const candidateDistance = candidateRect
-        ? Math.abs(candidateRect.top + candidateRect.height / 2 - targetY)
-        : Number.POSITIVE_INFINITY;
-
-      if (candidateIndex !== activeCountryIndexRef.current && candidateDistance > 96) {
-        return;
-      }
-
-      activeCountryIndexRef.current = candidateIndex;
-      setActiveCountryIndex(candidateIndex);
-    };
-
-    const scheduleUpdate = () => {
-      window.cancelAnimationFrame(animationFrame);
-      animationFrame = window.requestAnimationFrame(updateActiveCountryFromScroll);
-    };
-    const handleScroll = () => {
-      scheduleUpdate();
-    };
-
-    scheduleUpdate();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", scheduleUpdate);
-
-    return () => {
-      window.cancelAnimationFrame(animationFrame);
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", scheduleUpdate);
-    };
-  }, [countrySets.length]);
+  const visibleCountrySets = countrySets
+    .map((set, index) => ({ set, index }))
+    .filter(({ index }) => Math.abs(index - activeCountryIndex) <= 1);
 
   return (
     <div className="space-y-5">
@@ -982,38 +933,61 @@ export const AchievementsPage = () => {
       <section className="relative">
         <div className="p-1">
           <div
-            ref={cardFolderRef}
-            className="px-1 pr-2"
+            className="touch-pan-y px-1 pr-2"
+            onWheel={(event) => {
+              if (Math.abs(event.deltaY) < 22) {
+                return;
+              }
+
+              const now = Date.now();
+              if (now - deckInteractionRef.current.lastWheelAt < 360) {
+                return;
+              }
+
+              deckInteractionRef.current.lastWheelAt = now;
+              moveActiveCountry(event.deltaY > 0 ? 1 : -1);
+            }}
+            onPointerDown={(event) => {
+              deckInteractionRef.current.pointerStartY = event.clientY;
+            }}
+            onPointerUp={(event) => {
+              const deltaY = event.clientY - deckInteractionRef.current.pointerStartY;
+              moveActiveCountryFromDelta(deltaY);
+            }}
+            onTouchStart={(event) => {
+              deckInteractionRef.current.touchStartY = event.touches[0]?.clientY ?? 0;
+            }}
+            onTouchEnd={(event) => {
+              const endY = event.changedTouches[0]?.clientY ?? deckInteractionRef.current.touchStartY;
+              moveActiveCountryFromDelta(endY - deckInteractionRef.current.touchStartY, 34);
+            }}
           >
-            <div className={cn("space-y-[-10px]", expandedCountryIndex === null ? "pb-8" : "pb-[44vh]")}>
-            {countrySets.map((set, index) => (
-              <CountryAchievementCard
-                key={set.country}
-                set={set}
-                index={index}
-                copy={copy}
-                language={language}
-                active={index === activeCountryIndex}
-                expanded={index === expandedCountryIndex}
-                onOpen={setSelectedSet}
-                onExpand={() => {
-                  activeCountryIndexRef.current = index;
-                  setActiveCountryIndex(index);
-                  setExpandedCountryIndex(index);
-                }}
-                onCollapse={() => setExpandedCountryIndex(null)}
-                setCardRef={(element) => {
-                  countryCardRefs.current[index] = element;
-                }}
-              />
-            ))}
+            <div className="space-y-3 pb-8 transition-all duration-300">
+              {visibleCountrySets.map(({ set, index }) => (
+                <CountryAchievementCard
+                  key={set.country}
+                  set={set}
+                  index={index}
+                  copy={copy}
+                  language={language}
+                  active={index === activeCountryIndex}
+                  expanded={!selectedSet && index === activeCountryIndex}
+                  onOpen={(set) => {
+                    deckInteractionRef.current.ignoreNextSwipe = true;
+                    setSelectedSet(set);
+                  }}
+                  onSelect={() => {
+                    setActiveCountryIndex(index);
+                  }}
+                />
+              ))}
             </div>
           </div>
         </div>
       </section>
 
       {selectedSet ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/42 px-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-ink/42 px-4 backdrop-blur-sm">
           <div className="max-h-[86vh] w-full max-w-[760px] overflow-hidden rounded-[8px] bg-[#f7f5ef] shadow-[0_26px_80px_rgba(17,31,22,0.32)] ring-1 ring-white/80">
             <div className="flex items-start justify-between gap-4 border-b border-sage-100 bg-white px-5 py-4">
               <div>
