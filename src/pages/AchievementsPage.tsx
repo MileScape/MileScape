@@ -1,4 +1,4 @@
-import { CheckCircle2, ListChecks, Lock, X } from "lucide-react";
+import { ChevronUp, CheckCircle2, ListChecks, Lock, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppState } from "../hooks/useAppState";
 import type { Route, RouteProgress, RunHistoryItem } from "../types";
@@ -668,7 +668,10 @@ const CountryAchievementCard = ({
   copy,
   language,
   active,
+  expanded,
   onOpen,
+  onExpand,
+  onCollapse,
   setCardRef
 }: {
   set: CountryAchievementSet;
@@ -676,26 +679,50 @@ const CountryAchievementCard = ({
   copy: AchievementCopy;
   language: "en" | "zh";
   active: boolean;
+  expanded: boolean;
   onOpen: (set: CountryAchievementSet) => void;
+  onExpand: () => void;
+  onCollapse: () => void;
   setCardRef: (element: HTMLElement | null) => void;
 }) => {
-  const collapsed = !active;
+  const collapsed = !expanded;
   const progressPercent = Math.round((set.unlockedCount / set.assets.length) * 100);
 
   return (
     <article
       ref={setCardRef}
+      onClick={() => {
+        if (!expanded) {
+          onExpand();
+        }
+      }}
+      onContextMenu={(event) => event.preventDefault()}
       className={cn(
         "relative transition-all duration-300",
         collapsed ? "min-h-[68px]" : "min-h-[330px]"
       )}
-      style={{ zIndex: active ? 50 : index }}
+      style={{ zIndex: expanded ? 60 : active ? 50 : index }}
     >
+      {expanded ? (
+        <button
+          type="button"
+          onPointerDown={(event) => event.stopPropagation()}
+          onPointerMove={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            onCollapse();
+          }}
+          className="absolute left-3 top-3 z-[70] flex h-9 w-9 items-center justify-center rounded-full bg-white/88 text-sage-700 shadow-[0_8px_18px_rgba(17,31,22,0.16)] ring-1 ring-sage-100 backdrop-blur transition active:scale-95"
+          aria-label={language === "zh" ? "收起详情" : "Collapse details"}
+        >
+          <ChevronUp className="h-5 w-5" />
+        </button>
+      ) : null}
       <div
         className={cn(
           "overflow-hidden rounded-[8px] bg-white/96 shadow-[0_18px_42px_rgba(17,31,22,0.13)] ring-1 ring-sage-100 transition-all duration-300",
           collapsed ? "min-h-[64px]" : "min-h-[310px]",
-          active ? "scale-[1.01] shadow-[0_24px_58px_rgba(17,31,22,0.2)]" : "scale-[0.985]",
+          expanded ? "scale-[1.01] shadow-[0_24px_58px_rgba(17,31,22,0.2)]" : active ? "scale-[1.01] shadow-[0_18px_38px_rgba(17,31,22,0.17)]" : "scale-[0.985]",
           set.unlocked ? "opacity-100" : "opacity-90"
         )}
       >
@@ -785,6 +812,7 @@ export const AchievementsPage = () => {
   const { language, routes, state } = useAppState();
   const [selectedSet, setSelectedSet] = useState<CountryAchievementSet | null>(null);
   const [activeCountryIndex, setActiveCountryIndex] = useState(0);
+  const [expandedCountryIndex, setExpandedCountryIndex] = useState<number | null>(null);
   const cardFolderRef = useRef<HTMLDivElement | null>(null);
   const countryCardRefs = useRef<Array<HTMLElement | null>>([]);
   const activeCountryIndexRef = useRef(0);
@@ -884,18 +912,13 @@ export const AchievementsPage = () => {
         return currentDistance < closestDistance ? index : closestIndex;
       }, 0);
 
-      const activeElement = countryCardRefs.current[activeCountryIndexRef.current];
       const candidateElement = countryCardRefs.current[candidateIndex];
-      const activeRect = activeElement?.getBoundingClientRect();
       const candidateRect = candidateElement?.getBoundingClientRect();
-      const activeDistance = activeRect
-        ? Math.abs(activeRect.top + activeRect.height / 2 - targetY)
-        : Number.POSITIVE_INFINITY;
       const candidateDistance = candidateRect
         ? Math.abs(candidateRect.top + candidateRect.height / 2 - targetY)
         : Number.POSITIVE_INFINITY;
 
-      if (candidateIndex !== activeCountryIndexRef.current && candidateDistance + 140 >= activeDistance) {
+      if (candidateIndex !== activeCountryIndexRef.current && candidateDistance > 96) {
         return;
       }
 
@@ -907,14 +930,17 @@ export const AchievementsPage = () => {
       window.cancelAnimationFrame(animationFrame);
       animationFrame = window.requestAnimationFrame(updateActiveCountryFromScroll);
     };
+    const handleScroll = () => {
+      scheduleUpdate();
+    };
 
     scheduleUpdate();
-    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("resize", scheduleUpdate);
 
     return () => {
       window.cancelAnimationFrame(animationFrame);
-      window.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", scheduleUpdate);
     };
   }, [countrySets.length]);
@@ -959,7 +985,7 @@ export const AchievementsPage = () => {
             ref={cardFolderRef}
             className="px-1 pr-2"
           >
-            <div className="space-y-[-10px] pb-[44vh]">
+            <div className={cn("space-y-[-10px]", expandedCountryIndex === null ? "pb-8" : "pb-[44vh]")}>
             {countrySets.map((set, index) => (
               <CountryAchievementCard
                 key={set.country}
@@ -968,7 +994,14 @@ export const AchievementsPage = () => {
                 copy={copy}
                 language={language}
                 active={index === activeCountryIndex}
+                expanded={index === expandedCountryIndex}
                 onOpen={setSelectedSet}
+                onExpand={() => {
+                  activeCountryIndexRef.current = index;
+                  setActiveCountryIndex(index);
+                  setExpandedCountryIndex(index);
+                }}
+                onCollapse={() => setExpandedCountryIndex(null)}
                 setCardRef={(element) => {
                   countryCardRefs.current[index] = element;
                 }}
