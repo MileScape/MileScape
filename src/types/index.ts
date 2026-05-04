@@ -215,6 +215,7 @@ export interface AppContextValue {
       | { targetType: "pacecrew_mission"; missionId: string; distanceKm: number },
   ) => RunResultSummary;
   purchaseRoute: (routeId: string) => { success: boolean; message: string };
+  spendStamps: (amount: number, reason?: string) => { success: boolean; message: string; updatedStamps: number };
   t: (key: string, params?: Record<string, string | number>) => string;
   setDebugModeEnabled: (enabled: boolean) => void;
   setLanguage: (language: AppLanguage) => void;

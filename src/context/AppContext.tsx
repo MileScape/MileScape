@@ -4,7 +4,15 @@ import { routes } from "../data/routes";
 import { currentUserId, users } from "../data/users";
 import type { AppContextValue, AppState, PaceCrewMission, WearableSyncRecord } from "../types";
 import { translate } from "../utils/i18n";
-import { clearState, loadState, saveState } from "../utils/storage";
+import {
+  clearMyScapeCapsuleState,
+  clearState,
+  loadMyScapeCapsuleRouteTicketIds,
+  loadState,
+  MY_SCAPE_CAPSULE_STATE_KEY,
+  MY_SCAPE_CAPSULE_STATE_UPDATED_EVENT,
+  saveState,
+} from "../utils/storage";
 import { applyMissionRunToState, applyPersonalRunToState, createInitialState, normalizeState } from "../utils/progress";
 import {
   createMembership,
@@ -14,7 +22,6 @@ import {
   reconcilePaceCrewMembershipUnlockRouteIds,
   syncExpiredMissionStates
 } from "../utils/paceCrew";
-import { isRouteOwned } from "../utils/shop";
 
 export const AppContext = createContext<AppContextValue | null>(null);
 
@@ -47,16 +54,41 @@ const areMissionStatesEqual = (left: AppState["userMissionStates"], right: AppSt
 const areStringArraysEqual = (left: string[], right: string[]) =>
   left.length === right.length && left.every((entry, index) => entry === right[index]);
 
-const reconcilePaceCrewRouteAccess = (current: AppState): AppState => {
+const getSafeCapsuleRouteTicketIds = (routeIds: string[]) => {
+  const personalRouteIds = new Set(
+    routes.filter((route) => route.sourceType === "personal" && route.crewOnly !== true).map((route) => route.id),
+  );
+  return routeIds.filter((routeId) => personalRouteIds.has(routeId));
+};
+
+const mergeCapsuleRouteTicketsIntoState = (current: AppState, capsuleRouteTicketIds: string[]): AppState => {
+  const safeTicketIds = getSafeCapsuleRouteTicketIds(capsuleRouteTicketIds);
+  if (safeTicketIds.length === 0) {
+    return current;
+  }
+
+  const purchasedRouteIds = Array.from(new Set([...current.purchasedRouteIds, ...safeTicketIds]));
+  if (areStringArraysEqual(purchasedRouteIds, current.purchasedRouteIds)) {
+    return current;
+  }
+
+  return {
+    ...current,
+    purchasedRouteIds,
+  };
+};
+
+const reconcilePaceCrewRouteAccess = (current: AppState, extraOwnedRouteIds: string[] = []): AppState => {
+  const safeExtraOwnedRouteIds = getSafeCapsuleRouteTicketIds(extraOwnedRouteIds);
   const unlockedCrewDestinationIds = reconcilePaceCrewMembershipUnlockRouteIds(
     current.unlockedCrewDestinationIds,
     current.userPaceCrewState.memberships.length,
   );
-  const ownedRouteIds = new Set([...current.purchasedRouteIds, ...unlockedCrewDestinationIds]);
+  const ownedRouteIds = new Set([...current.purchasedRouteIds, ...unlockedCrewDestinationIds, ...safeExtraOwnedRouteIds]);
   const selectedRouteId =
     current.selectedRouteId && ownedRouteIds.has(current.selectedRouteId)
       ? current.selectedRouteId
-      : current.purchasedRouteIds[0] ?? null;
+      : current.purchasedRouteIds[0] ?? safeExtraOwnedRouteIds[0] ?? null;
 
   if (
     selectedRouteId === current.selectedRouteId &&
@@ -196,7 +228,26 @@ const createWearableSyncRecordFromRun = (
 
 export const AppProvider = ({ children }: AppProviderProps) => {
   const [state, setState] = useState<AppState>(() => normalizeState(loadState()));
+  const [capsuleRouteTicketIds, setCapsuleRouteTicketIds] = useState<string[]>(() => loadMyScapeCapsuleRouteTicketIds());
   const debugModeEnabled = state.debugModeEnabled ?? false;
+
+  useEffect(() => {
+    const syncCapsuleTickets = () => {
+      setCapsuleRouteTicketIds(loadMyScapeCapsuleRouteTicketIds());
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === MY_SCAPE_CAPSULE_STATE_KEY) {
+        syncCapsuleTickets();
+      }
+    };
+
+    window.addEventListener(MY_SCAPE_CAPSULE_STATE_UPDATED_EVENT, syncCapsuleTickets);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener(MY_SCAPE_CAPSULE_STATE_UPDATED_EVENT, syncCapsuleTickets);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   useEffect(() => {
     const synced = syncExpiredMissionStates(state);
@@ -206,8 +257,14 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   }, [state.paceCrewMissions, state.userMissionStates]);
 
   useEffect(() => {
-    setState((current) => reconcilePaceCrewRouteAccess(current));
-  }, [state.purchasedRouteIds, state.selectedRouteId, state.unlockedCrewDestinationIds, state.userPaceCrewState.memberships]);
+    setState((current) => reconcilePaceCrewRouteAccess(current, capsuleRouteTicketIds));
+  }, [
+    capsuleRouteTicketIds,
+    state.purchasedRouteIds,
+    state.selectedRouteId,
+    state.unlockedCrewDestinationIds,
+    state.userPaceCrewState.memberships,
+  ]);
 
   useEffect(() => {
     const saveTimer = window.setTimeout(() => {
@@ -220,7 +277,10 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   }, [state]);
 
   const effectiveState = useMemo<AppState>(() => {
-    const routeAccessState = reconcilePaceCrewRouteAccess(state);
+    const routeAccessState = mergeCapsuleRouteTicketsIntoState(
+      reconcilePaceCrewRouteAccess(state, capsuleRouteTicketIds),
+      capsuleRouteTicketIds,
+    );
 
     if (!debugModeEnabled) {
       return routeAccessState;
@@ -252,7 +312,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       unlockedCrewDestinationIds: unlockedCrewRouteIds,
       selectedRouteId: routeAccessState.selectedRouteId ?? unlockedPersonalRouteIds[0] ?? null,
     };
-  }, [debugModeEnabled, state]);
+  }, [capsuleRouteTicketIds, debugModeEnabled, state]);
 
   const playableRoutes = routes.filter((route) => isRouteOwnedInPaceport(route.id, effectiveState));
 
@@ -269,8 +329,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       t: (key, params) => translate(state.language, key, params),
       selectRoute: (routeId) => {
         setState((current) => {
-          const routeAccessState = reconcilePaceCrewRouteAccess(current);
-          return routes.some((route) => route.id === routeId && ((routeAccessState.debugModeEnabled ?? false) || isRouteOwnedInPaceport(route.id, routeAccessState)))
+          const routeAccessState = reconcilePaceCrewRouteAccess(current, capsuleRouteTicketIds);
+          const effectiveRouteAccessState = mergeCapsuleRouteTicketsIntoState(routeAccessState, capsuleRouteTicketIds);
+          return routes.some((route) => route.id === routeId && ((routeAccessState.debugModeEnabled ?? false) || isRouteOwnedInPaceport(route.id, effectiveRouteAccessState)))
             ? { ...routeAccessState, selectedRouteId: routeId }
             : routeAccessState;
         });
@@ -279,13 +340,14 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         let summary = null as ReturnType<typeof applyPersonalRunToState>["summary"] | null;
 
         setState((current) => {
-          const synced = syncExpiredMissionStates(reconcilePaceCrewRouteAccess(current));
+          const synced = syncExpiredMissionStates(reconcilePaceCrewRouteAccess(current, capsuleRouteTicketIds));
+          const effectiveSynced = mergeCapsuleRouteTicketsIntoState(synced, capsuleRouteTicketIds);
           const measurement = resolveRunMeasurement(synced, input.distanceKm);
 
           if (input.targetType === "personal") {
             const route = routes.find((entry) => entry.id === input.routeId);
 
-            if (!route || (!(synced.debugModeEnabled ?? false) && !isRouteOwnedInPaceport(route.id, synced))) {
+            if (!route || (!(synced.debugModeEnabled ?? false) && !isRouteOwnedInPaceport(route.id, effectiveSynced))) {
               throw new Error(`Unknown or locked route: ${input.routeId}`);
             }
 
@@ -361,7 +423,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           return { success: false, message: "This destination is not sold in Shop" };
         }
 
-        if (debugModeEnabled || state.purchasedRouteIds.includes(routeId)) {
+        if (debugModeEnabled || effectiveState.purchasedRouteIds.includes(routeId)) {
           return { success: false, message: "Already owned" };
         }
 
@@ -376,6 +438,25 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         }));
 
         return { success: true, message: `${route.name} unlocked` };
+      },
+      spendStamps: (amount, reason = "Stamps spent") => {
+        const normalizedAmount = Math.max(0, Math.round(amount));
+
+        if (normalizedAmount <= 0) {
+          return { success: true, message: reason, updatedStamps: state.currentStamps };
+        }
+
+        if (state.currentStamps < normalizedAmount) {
+          return { success: false, message: "Insufficient Stamps", updatedStamps: state.currentStamps };
+        }
+
+        const updatedStamps = state.currentStamps - normalizedAmount;
+        setState((current) => ({
+          ...current,
+          currentStamps: Math.max(0, current.currentStamps - normalizedAmount),
+        }));
+
+        return { success: true, message: reason, updatedStamps };
       },
       setDebugModeEnabled: (enabled) => {
         setState((current) => ({
@@ -485,7 +566,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           const selectedRouteStillOwned =
             !current.selectedRouteId ||
             current.purchasedRouteIds.includes(current.selectedRouteId) ||
-            unlockedCrewDestinationIds.includes(current.selectedRouteId);
+            unlockedCrewDestinationIds.includes(current.selectedRouteId) ||
+            capsuleRouteTicketIds.includes(current.selectedRouteId);
 
           return {
             ...current,
@@ -494,7 +576,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                 ? { ...entry, memberIds: entry.memberIds.filter((memberId) => memberId !== currentUserId) }
                 : entry,
             ),
-            selectedRouteId: selectedRouteStillOwned ? current.selectedRouteId : current.purchasedRouteIds[0] ?? null,
+            selectedRouteId: selectedRouteStillOwned ? current.selectedRouteId : current.purchasedRouteIds[0] ?? capsuleRouteTicketIds[0] ?? null,
             userPaceCrewState: {
               ...current.userPaceCrewState,
               memberships
@@ -520,13 +602,14 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           const selectedRouteStillOwned =
             !current.selectedRouteId ||
             current.purchasedRouteIds.includes(current.selectedRouteId) ||
-            unlockedCrewDestinationIds.includes(current.selectedRouteId);
+            unlockedCrewDestinationIds.includes(current.selectedRouteId) ||
+            capsuleRouteTicketIds.includes(current.selectedRouteId);
 
           return {
             ...current,
             paceCrews: current.paceCrews.filter((crew) => crew.id !== crewId),
             paceCrewMissions: current.paceCrewMissions.filter((mission) => mission.crewId !== crewId),
-            selectedRouteId: selectedRouteStillOwned ? current.selectedRouteId : current.purchasedRouteIds[0] ?? null,
+            selectedRouteId: selectedRouteStillOwned ? current.selectedRouteId : current.purchasedRouteIds[0] ?? capsuleRouteTicketIds[0] ?? null,
             unlockedCrewDestinationIds,
             userMissionStates: current.userMissionStates.filter((missionState) => missionState.crewId !== crewId),
             userPaceCrewState: {
@@ -694,11 +777,12 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         return { success: true, message: enabled ? "Auto Sync enabled" : "Auto Sync paused" };
       },
       resetDemo: () => {
+        clearMyScapeCapsuleState();
         clearState();
         setState(createInitialState());
       }
     }),
-    [currentUser, debugModeEnabled, effectiveState, playableRoutes, state],
+    [capsuleRouteTicketIds, currentUser, debugModeEnabled, effectiveState, playableRoutes, state],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
