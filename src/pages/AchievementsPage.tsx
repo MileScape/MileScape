@@ -1,5 +1,5 @@
 import { CheckCircle2, ListChecks, Lock, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppState } from "../hooks/useAppState";
 import type { Route, RouteProgress, RunHistoryItem } from "../types";
 import { cn } from "../utils/cn";
@@ -51,7 +51,6 @@ type AchievementCopy = {
   decorations: string;
   unlockTime: string;
   notUnlocked: string;
-  descriptionText: string;
 };
 
 const achievementImages = {
@@ -747,8 +746,6 @@ const CountryAchievementCard = ({
                   </div>
                   <CountryPrizeBadge set={set} />
                 </div>
-                <p className="mt-3 text-sm leading-6 text-sage-700">{copy.descriptionText}</p>
-
                 <div className="mt-5">
                   <div className="flex items-center justify-between text-xs font-semibold text-sage-600">
                     <span>{copy.progress}</span>
@@ -809,7 +806,6 @@ export const AchievementsPage = () => {
         decorations: "装饰",
         unlockTime: "解锁时间",
         notUnlocked: "未解锁",
-        descriptionText: "完成套组内全部成就后，点亮对应国家徽章。"
       }
     : {
         eyebrow: "Achievements",
@@ -829,7 +825,6 @@ export const AchievementsPage = () => {
         decorations: "Decorations",
         unlockTime: "Unlocked",
         notUnlocked: "Locked",
-        descriptionText: "Complete every achievement in the set to light up the country badge."
       };
 
   const countrySets = useMemo<CountryAchievementSet[]>(() => {
@@ -861,31 +856,51 @@ export const AchievementsPage = () => {
     .map((run) => run.completedAt)
     .sort()[0] ?? null;
 
-  const updateActiveCountryFromPointer = (clientY: number) => {
-    const folderRect = cardFolderRef.current?.getBoundingClientRect();
+  useEffect(() => {
+    let animationFrame = 0;
 
-    if (!folderRect || clientY < folderRect.top || clientY > folderRect.bottom) {
-      return;
-    }
+    const updateActiveCountryFromScroll = () => {
+      const folderRect = cardFolderRef.current?.getBoundingClientRect();
 
-    const nextIndex = countryCardRefs.current.reduce((closestIndex, element, index) => {
-      if (!element) {
-        return closestIndex;
+      if (!folderRect || folderRect.bottom < 0 || folderRect.top > window.innerHeight) {
+        return;
       }
 
-      const rect = element.getBoundingClientRect();
-      const currentDistance = Math.abs(rect.top + rect.height / 2 - clientY);
-      const closestElement = countryCardRefs.current[closestIndex];
-      const closestRect = closestElement?.getBoundingClientRect();
-      const closestDistance = closestRect
-        ? Math.abs(closestRect.top + closestRect.height / 2 - clientY)
-        : Number.POSITIVE_INFINITY;
+      const targetY = Math.min(Math.max(window.innerHeight * 0.46, folderRect.top), folderRect.bottom);
+      const nextIndex = countryCardRefs.current.reduce((closestIndex, element, index) => {
+        if (!element) {
+          return closestIndex;
+        }
 
-      return currentDistance < closestDistance ? index : closestIndex;
-    }, 0);
+        const rect = element.getBoundingClientRect();
+        const currentDistance = Math.abs(rect.top + rect.height / 2 - targetY);
+        const closestElement = countryCardRefs.current[closestIndex];
+        const closestRect = closestElement?.getBoundingClientRect();
+        const closestDistance = closestRect
+          ? Math.abs(closestRect.top + closestRect.height / 2 - targetY)
+          : Number.POSITIVE_INFINITY;
 
-    setActiveCountryIndex(nextIndex);
-  };
+        return currentDistance < closestDistance ? index : closestIndex;
+      }, 0);
+
+      setActiveCountryIndex(nextIndex);
+    };
+
+    const scheduleUpdate = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(updateActiveCountryFromScroll);
+    };
+
+    scheduleUpdate();
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("resize", scheduleUpdate);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+    };
+  }, [countrySets.length]);
 
   return (
     <div className="space-y-5">
@@ -911,9 +926,6 @@ export const AchievementsPage = () => {
           <h2 className="mt-1 text-2xl font-semibold text-ink">
             {language === "zh" ? "累计跑步天数" : "Total Running Days"}
           </h2>
-          <p className="mt-2 text-sm leading-6 text-sage-700">
-            {language === "zh" ? "记录你在不同日期完成跑步的天数。" : "Tracks how many different dates you have completed a run."}
-          </p>
           <div className="mt-4 flex items-center justify-center gap-2">
             <span className="text-3xl font-semibold text-ink">{totalRunDays}</span>
             <span className="text-sm font-semibold text-sage-500">{language === "zh" ? "天" : "days"}</span>
@@ -929,8 +941,6 @@ export const AchievementsPage = () => {
           <div
             ref={cardFolderRef}
             className="px-1 pr-2"
-            onPointerDown={(event) => updateActiveCountryFromPointer(event.clientY)}
-            onPointerMove={(event) => updateActiveCountryFromPointer(event.clientY)}
           >
             <div className="space-y-[-10px] pb-8">
             {countrySets.map((set, index) => (
@@ -1002,7 +1012,6 @@ export const AchievementsPage = () => {
                         <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-sage-500">
                           {copy.badge}
                         </p>
-                        <p className="mt-2 line-clamp-2 text-xs leading-5 text-sage-700">{asset.description}</p>
                         <div className="mt-2 flex items-center gap-1 text-[10px] font-semibold text-sage-500">
                           {asset.unlocked ? (
                             <CheckCircle2 className="h-4 w-4 text-sage-600" />
