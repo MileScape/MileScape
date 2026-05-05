@@ -28,8 +28,11 @@ import {
   getMyScapeDateKey,
   getItemZIndex,
   getPlacementAnchorPoint,
-  gridToScreen,
   isGridCellOccupied,
+  MY_SCAPE_GRID_COLUMNS,
+  MY_SCAPE_GRID_ROWS,
+  MY_SCAPE_TILE_HEIGHT,
+  MY_SCAPE_TILE_WIDTH,
   resolveMyScapeCatalogAssets,
   restoreMyScapeLayout,
   restorePlacedAssetIds,
@@ -515,95 +518,166 @@ export const MyScapePage = () => {
     context.font = "700 58px sans-serif";
     context.fillText(summaryTab === "day" ? formatDaySwitcherDate(selectedDayDate) : "My Scape", 92, 182);
 
-    const boardGradient = context.createLinearGradient(0, 230, 0, 820);
+    const shareStage = {
+      boardHeight: 222,
+      boardLeft: 36,
+      boardTop: 24,
+      boardWidth: 352,
+      scale: 1.12,
+    };
+    const gridHalfWidth = (MY_SCAPE_GRID_COLUMNS * MY_SCAPE_TILE_WIDTH) / 2;
+    const gridHalfDepth = (MY_SCAPE_GRID_ROWS * MY_SCAPE_TILE_WIDTH) / 2;
+    const boardOriginX = shareStage.boardLeft + shareStage.boardWidth / 2;
+    const boardOriginY = shareStage.boardTop + shareStage.boardHeight * 0.12 + 12;
+    const platformThickness = 52;
+    const soilInset = 12;
+    const topPoint = { x: boardOriginX, y: boardOriginY - MY_SCAPE_TILE_HEIGHT / 2 };
+    const rightPoint = {
+      x: boardOriginX + gridHalfWidth,
+      y: boardOriginY + (MY_SCAPE_GRID_COLUMNS * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2,
+    };
+    const bottomPoint = {
+      x: boardOriginX,
+      y: boardOriginY + ((MY_SCAPE_GRID_COLUMNS + MY_SCAPE_GRID_ROWS) * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2,
+    };
+    const leftPoint = {
+      x: boardOriginX - gridHalfDepth,
+      y: boardOriginY + (MY_SCAPE_GRID_ROWS * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2,
+    };
+    const leftBottomPoint = { x: bottomPoint.x, y: bottomPoint.y + platformThickness };
+    const rightBottomPoint = { x: rightPoint.x, y: rightPoint.y + platformThickness };
+    const leftFrontPoint = { x: leftPoint.x, y: leftPoint.y + platformThickness };
+    const innerTopPoint = { x: boardOriginX, y: topPoint.y + soilInset };
+    const innerRightPoint = { x: boardOriginX + gridHalfWidth - soilInset * 1.15, y: rightPoint.y + soilInset * 0.58 };
+    const innerBottomPoint = { x: boardOriginX, y: bottomPoint.y - soilInset };
+    const innerLeftPoint = { x: boardOriginX - gridHalfDepth + soilInset * 1.15, y: leftPoint.y + soilInset * 0.58 };
+    const stageBounds = {
+      maxX: boardOriginX + gridHalfWidth + 26,
+      maxY: leftBottomPoint.y + 28,
+      minX: boardOriginX - gridHalfDepth - 26,
+      minY: 0,
+    };
+    const stageOffsetX =
+      (width - (stageBounds.maxX - stageBounds.minX) * shareStage.scale) / 2 - stageBounds.minX * shareStage.scale;
+    const stageOffsetY = 258 - stageBounds.minY * shareStage.scale;
+    const projectPoint = (point: { x: number; y: number }) => ({
+      x: stageOffsetX + point.x * shareStage.scale,
+      y: stageOffsetY + point.y * shareStage.scale,
+    });
+    const drawPolygon = (points: Array<{ x: number; y: number }>, fillStyle: string | CanvasGradient) => {
+      const [firstPoint, ...restPoints] = points.map(projectPoint);
+      if (!firstPoint) {
+        return;
+      }
+
+      context.beginPath();
+      context.moveTo(firstPoint.x, firstPoint.y);
+      restPoints.forEach((point) => context.lineTo(point.x, point.y));
+      context.closePath();
+      context.fillStyle = fillStyle;
+      context.fill();
+    };
+    const strokePolyline = (points: Array<{ x: number; y: number }>, strokeStyle: string, lineWidth: number) => {
+      const [firstPoint, ...restPoints] = points.map(projectPoint);
+      if (!firstPoint) {
+        return;
+      }
+
+      context.beginPath();
+      context.moveTo(firstPoint.x, firstPoint.y);
+      restPoints.forEach((point) => context.lineTo(point.x, point.y));
+      context.strokeStyle = strokeStyle;
+      context.lineWidth = lineWidth;
+      context.stroke();
+    };
+
+    const boardGradient = context.createLinearGradient(
+      projectPoint(topPoint).x,
+      projectPoint(topPoint).y,
+      projectPoint(bottomPoint).x,
+      projectPoint(bottomPoint).y,
+    );
     boardGradient.addColorStop(0, "#eef5ec");
-    boardGradient.addColorStop(0.58, "#d8e6d5");
-    boardGradient.addColorStop(1, "#adc5b4");
+    boardGradient.addColorStop(0.52, "#d9e6d7");
+    boardGradient.addColorStop(1, "#bdd1c0");
 
-    const centerX = width / 2;
-    const topY = 280;
-    const leftX = 130;
-    const rightX = width - 130;
-    const bottomY = 760;
-    const thickness = 82;
-
-    context.beginPath();
-    context.moveTo(centerX, topY);
-    context.lineTo(rightX, (topY + bottomY) / 2);
-    context.lineTo(centerX, bottomY);
-    context.lineTo(leftX, (topY + bottomY) / 2);
-    context.closePath();
-    context.fillStyle = boardGradient;
-    context.fill();
-
-    context.beginPath();
-    context.moveTo(leftX, (topY + bottomY) / 2);
-    context.lineTo(centerX, bottomY);
-    context.lineTo(centerX, bottomY + thickness);
-    context.lineTo(leftX, (topY + bottomY) / 2 + thickness);
-    context.closePath();
-    context.fillStyle = "#7f957f";
-    context.fill();
-
-    context.beginPath();
-    context.moveTo(rightX, (topY + bottomY) / 2);
-    context.lineTo(centerX, bottomY);
-    context.lineTo(centerX, bottomY + thickness);
-    context.lineTo(rightX, (topY + bottomY) / 2 + thickness);
-    context.closePath();
-    context.fillStyle = "#6f8776";
-    context.fill();
+    drawPolygon([topPoint, rightPoint, bottomPoint, leftPoint], boardGradient);
+    drawPolygon([leftPoint, bottomPoint, leftBottomPoint, leftFrontPoint], "#7f957f");
+    drawPolygon([rightPoint, bottomPoint, leftBottomPoint, rightBottomPoint], "#6f8776");
+    drawPolygon([innerTopPoint, innerRightPoint, innerBottomPoint, innerLeftPoint], "rgba(255,255,255,0.08)");
+    drawPolygon([leftPoint, bottomPoint, leftBottomPoint, leftFrontPoint], "rgba(122,95,66,0.22)");
+    drawPolygon([rightPoint, bottomPoint, leftBottomPoint, rightBottomPoint], "rgba(94,72,51,0.18)");
+    strokePolyline([topPoint, rightPoint], "rgba(255,255,255,0.26)", 2);
+    strokePolyline([topPoint, leftPoint], "rgba(255,255,255,0.2)", 2);
+    strokePolyline([leftPoint, bottomPoint, rightPoint], "rgba(96,121,109,0.24)", 1.5);
+    strokePolyline([leftPoint, leftFrontPoint, leftBottomPoint, rightBottomPoint, rightPoint], "rgba(70,88,52,0.14)", 1.5);
 
     const placedPreviewAssets = placedLandmarks
       .map((item) => ({ item, asset: assetMap.get(item.landmarkId) }))
       .filter((entry): entry is { item: MyScapePlacedLandmark; asset: UnlockedLandmarkAsset } => Boolean(entry.asset))
       .sort((left, right) => (left.item.zIndex ?? 0) - (right.item.zIndex ?? 0));
 
-    await Promise.all(
-      placedPreviewAssets.slice(0, 16).map(async ({ item, asset }) => {
-        const screen = gridToScreen(item.col, item.row, 620, 380);
-        const x = 140 + screen.x * 0.98 + (asset.offsetX ?? 0) * 0.72;
-        const y = 220 + screen.y * 1.02 + (asset.offsetY ?? 0) * 0.72;
-        const size = Math.max(38, Math.min(124, 76 * item.scale));
+    const loadShareImage = (src: string) =>
+      new Promise<HTMLImageElement | null>((resolve) => {
+        const image = new Image();
+        image.crossOrigin = "anonymous";
+        image.onload = () => resolve(image);
+        image.onerror = () => resolve(null);
+        image.src = src;
+      });
 
-        context.beginPath();
-        context.ellipse(x, y + 12, size * 0.42, size * 0.13, 0, 0, Math.PI * 2);
-        context.fillStyle = "rgba(55,72,61,0.12)";
-        context.fill();
+    for (const { item, asset } of placedPreviewAssets) {
+      const footprint = getAssetFootprint(asset);
+      const anchorPoint = getPlacementAnchorPoint(
+        item.col,
+        item.row,
+        footprint.width,
+        footprint.height,
+        shareStage.boardWidth,
+        shareStage.boardHeight,
+      );
+      const anchor = projectPoint({
+        x: shareStage.boardLeft + anchorPoint.x + (asset.offsetX ?? 0),
+        y: shareStage.boardTop + anchorPoint.y + (asset.offsetY ?? 0),
+      });
+      const itemScale = Math.max(0.45, item.scale || 1);
+      const maxImageWidth = 132 * itemScale * shareStage.scale;
+      const maxImageHeight = 112 * itemScale * shareStage.scale;
 
-        if (!asset.imageSrc) {
-          fillRoundedRect(x - size / 2, y - size, size, size, 18, "rgba(255,255,255,0.78)");
-          context.fillStyle = "#6f8177";
-          context.font = "700 18px sans-serif";
-          context.textAlign = "center";
-          context.fillText(asset.name.slice(0, 2).toUpperCase(), x, y - size * 0.42);
-          context.textAlign = "left";
-          return;
+      if (asset.imageSrc) {
+        const image = await loadShareImage(asset.imageSrc);
+
+        if (image) {
+          const imageRatio = image.width > 0 ? image.height / image.width : 1;
+          let imageWidth = maxImageWidth;
+          let imageHeight = imageWidth * imageRatio;
+
+          if (imageHeight > maxImageHeight) {
+            imageHeight = maxImageHeight;
+            imageWidth = imageHeight / imageRatio;
+          }
+
+          context.drawImage(image, anchor.x - imageWidth / 2, anchor.y - imageHeight, imageWidth, imageHeight);
+          continue;
         }
+      }
 
-        await new Promise<void>((resolve) => {
-          const image = new Image();
-          image.crossOrigin = "anonymous";
-          image.onload = () => {
-            const ratio = image.width > 0 ? image.height / image.width : 1;
-            const imageWidth = size;
-            const imageHeight = Math.min(size * 1.35, imageWidth * ratio);
-            context.drawImage(image, x - imageWidth / 2, y - imageHeight, imageWidth, imageHeight);
-            resolve();
-          };
-          image.onerror = () => {
-            fillRoundedRect(x - size / 2, y - size, size, size, 18, "rgba(255,255,255,0.78)");
-            context.fillStyle = "#6f8177";
-            context.font = "700 18px sans-serif";
-            context.textAlign = "center";
-            context.fillText(asset.name.slice(0, 2).toUpperCase(), x, y - size * 0.42);
-            context.textAlign = "left";
-            resolve();
-          };
-          image.src = asset.imageSrc ?? "";
-        });
-      }),
-    );
+      const fallbackWidth = 96 * itemScale * shareStage.scale;
+      const fallbackHeight = 84 * itemScale * shareStage.scale;
+      fillRoundedRect(
+        anchor.x - fallbackWidth / 2,
+        anchor.y - fallbackHeight,
+        fallbackWidth,
+        fallbackHeight,
+        18 * itemScale * shareStage.scale,
+        "rgba(255,255,255,0.78)",
+      );
+      context.fillStyle = "#6f8177";
+      context.font = `700 ${Math.max(14, 18 * itemScale * shareStage.scale)}px sans-serif`;
+      context.textAlign = "center";
+      context.fillText(asset.name.slice(0, 2).toUpperCase(), anchor.x, anchor.y - fallbackHeight * 0.42);
+      context.textAlign = "left";
+    }
 
     const statY = 930;
     const statCards = [
