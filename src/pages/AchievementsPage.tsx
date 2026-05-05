@@ -1,5 +1,5 @@
 import { CheckCircle2, Lock, X } from "lucide-react";
-import type { PointerEvent, TouchEvent, WheelEvent } from "react";
+import type { PointerEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BadgeHex, CalendarMedalIcon, CountryPrizeBadge } from "../components/achievements/AchievementBadges";
 import { CountryAchievementCard } from "../components/achievements/CountryAchievementCard";
@@ -31,6 +31,10 @@ type AchievementCopy = {
 
 const COUNTRY_WHEEL_STEP = 36;
 const COUNTRY_WHEEL_OFFSETS = [-2, -1, 0, 1, 2];
+const COUNTRY_DRAG_SENSITIVITY = 0.95;
+const COUNTRY_INERTIA_FRICTION = 0.92;
+const COUNTRY_MIN_INERTIA_VELOCITY = 0.02;
+const COUNTRY_SNAP_DURATION_MS = 180;
 
 const getAchievementCopy = (language: "en" | "zh"): AchievementCopy =>
   language === "zh"
@@ -66,9 +70,12 @@ const getAchievementCopy = (language: "en" | "zh"): AchievementCopy =>
 const useAchievementDeckNavigation = (count: number) => {
   const interactionRef = useRef({
     ignoreNextSwipe: false,
+    inertiaFrame: 0,
+    isPointerDown: false,
     pointerLastY: 0,
+    pointerLastTime: 0,
     settleTimer: 0,
-    touchLastY: 0,
+    velocity: 0,
     visualOffset: 0,
   });
   const activeIndexRef = useRef(0);
@@ -90,7 +97,15 @@ const useAchievementDeckNavigation = (count: number) => {
 
   useEffect(() => () => {
     window.clearTimeout(interactionRef.current.settleTimer);
+    window.cancelAnimationFrame(interactionRef.current.inertiaFrame);
   }, []);
+
+  const stopMotion = () => {
+    window.clearTimeout(interactionRef.current.settleTimer);
+    window.cancelAnimationFrame(interactionRef.current.inertiaFrame);
+    interactionRef.current.settleTimer = 0;
+    interactionRef.current.inertiaFrame = 0;
+  };
 
   const moveActive = (direction: number) => {
     if (count <= 0) {
@@ -102,6 +117,18 @@ const useAchievementDeckNavigation = (count: number) => {
     if (nextIndex === activeIndexRef.current) {
       return;
     }
+
+    activeIndexRef.current = nextIndex;
+    setActiveIndex(nextIndex);
+  };
+
+  const moveActiveBySteps = (steps: number) => {
+    if (count <= 0 || steps === 0) {
+      return;
+    }
+
+    const normalizedSteps = ((steps % count) + count) % count;
+    const nextIndex = (activeIndexRef.current - normalizedSteps + count) % count;
 
     activeIndexRef.current = nextIndex;
     setActiveIndex(nextIndex);
@@ -124,28 +151,63 @@ const useAchievementDeckNavigation = (count: number) => {
     setVisualOffset(normalizedOffset);
   };
 
-  const settleWheel = () => {
+  const snapToNearest = () => {
     if (interactionRef.current.ignoreNextSwipe) {
       interactionRef.current.ignoreNextSwipe = false;
+      interactionRef.current.velocity = 0;
       setVisualOffset(0);
       interactionRef.current.visualOffset = 0;
       setIsDragging(false);
       return;
     }
 
-    let finalOffset = interactionRef.current.visualOffset;
+    setIsDragging(false);
 
-    if (finalOffset <= -COUNTRY_WHEEL_STEP / 2 && count > 1) {
-      moveActive(1);
-      finalOffset += COUNTRY_WHEEL_STEP;
-    } else if (finalOffset >= COUNTRY_WHEEL_STEP / 2 && count > 1) {
-      moveActive(-1);
-      finalOffset -= COUNTRY_WHEEL_STEP;
+    const snapSteps = Math.round(interactionRef.current.visualOffset / COUNTRY_WHEEL_STEP);
+    const snapOffset = snapSteps * COUNTRY_WHEEL_STEP;
+
+    interactionRef.current.velocity = 0;
+    interactionRef.current.visualOffset = snapOffset;
+    setVisualOffset(snapOffset);
+
+    interactionRef.current.settleTimer = window.setTimeout(() => {
+      if (snapSteps !== 0 && count > 1) {
+        moveActiveBySteps(snapSteps);
+      }
+
+      interactionRef.current.visualOffset = 0;
+      setVisualOffset(0);
+    }, COUNTRY_SNAP_DURATION_MS);
+  };
+
+  const startInertia = () => {
+    if (count <= 1) {
+      snapToNearest();
+      return;
     }
 
-    interactionRef.current.visualOffset = 0;
-    setVisualOffset(0);
-    setIsDragging(false);
+    let previousTime = performance.now();
+
+    const tick = (now: number) => {
+      const elapsed = now - previousTime;
+      previousTime = now;
+
+      const nextOffset =
+        interactionRef.current.visualOffset + interactionRef.current.velocity * elapsed;
+      setContinuousOffset(nextOffset);
+
+      interactionRef.current.velocity *= Math.pow(COUNTRY_INERTIA_FRICTION, elapsed / 16);
+
+      if (Math.abs(interactionRef.current.velocity) <= COUNTRY_MIN_INERTIA_VELOCITY) {
+        interactionRef.current.inertiaFrame = 0;
+        snapToNearest();
+        return;
+      }
+
+      interactionRef.current.inertiaFrame = window.requestAnimationFrame(tick);
+    };
+
+    interactionRef.current.inertiaFrame = window.requestAnimationFrame(tick);
   };
 
   return {
@@ -156,8 +218,9 @@ const useAchievementDeckNavigation = (count: number) => {
       }
 
       const nextIndex = (index + count) % count;
-      window.clearTimeout(interactionRef.current.settleTimer);
+      stopMotion();
       activeIndexRef.current = nextIndex;
+      interactionRef.current.velocity = 0;
       interactionRef.current.visualOffset = 0;
       setVisualOffset(0);
       setIsDragging(false);
@@ -169,67 +232,45 @@ const useAchievementDeckNavigation = (count: number) => {
       interactionRef.current.ignoreNextSwipe = true;
     },
     deckHandlers: {
-      onWheel: (event: WheelEvent<HTMLDivElement>) => {
-        if (Math.abs(event.deltaY) < 2) {
-          return;
-        }
-
-        event.preventDefault();
-        window.clearTimeout(interactionRef.current.settleTimer);
-        setIsDragging(true);
-        setContinuousOffset(interactionRef.current.visualOffset - event.deltaY * 0.16);
-        interactionRef.current.settleTimer = window.setTimeout(settleWheel, 160);
-      },
       onPointerDown: (event: PointerEvent<HTMLDivElement>) => {
-        if (event.pointerType === "touch") {
-          return;
-        }
-
+        stopMotion();
+        interactionRef.current.isPointerDown = true;
         interactionRef.current.pointerLastY = event.clientY;
+        interactionRef.current.pointerLastTime = performance.now();
+        interactionRef.current.velocity = 0;
         event.currentTarget.setPointerCapture(event.pointerId);
-        window.clearTimeout(interactionRef.current.settleTimer);
         setIsDragging(true);
       },
       onPointerMove: (event: PointerEvent<HTMLDivElement>) => {
-        if (event.pointerType === "touch" || !isDragging) {
+        if (!interactionRef.current.isPointerDown) {
           return;
         }
 
+        const now = performance.now();
         const deltaY = event.clientY - interactionRef.current.pointerLastY;
+        const elapsed = Math.max(now - interactionRef.current.pointerLastTime, 1);
         interactionRef.current.pointerLastY = event.clientY;
-        setContinuousOffset(interactionRef.current.visualOffset + deltaY * 0.86);
+        interactionRef.current.pointerLastTime = now;
+        interactionRef.current.velocity =
+          interactionRef.current.velocity * 0.35 + (deltaY / elapsed) * 0.65;
+        setContinuousOffset(
+          interactionRef.current.visualOffset + deltaY * COUNTRY_DRAG_SENSITIVITY
+        );
       },
       onPointerUp: (event: PointerEvent<HTMLDivElement>) => {
-        if (event.pointerType === "touch") {
-          return;
+        interactionRef.current.isPointerDown = false;
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
         }
-
-        settleWheel();
+        startInertia();
       },
       onPointerCancel: (event: PointerEvent<HTMLDivElement>) => {
-        if (event.pointerType === "touch") {
-          return;
+        interactionRef.current.isPointerDown = false;
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
         }
-
-        settleWheel();
+        snapToNearest();
       },
-      onTouchStart: (event: TouchEvent<HTMLDivElement>) => {
-        interactionRef.current.touchLastY = event.touches[0]?.clientY ?? 0;
-        window.clearTimeout(interactionRef.current.settleTimer);
-        setIsDragging(true);
-      },
-      onTouchMove: (event: TouchEvent<HTMLDivElement>) => {
-        const currentY = event.touches[0]?.clientY ?? interactionRef.current.touchLastY;
-        const deltaY = currentY - interactionRef.current.touchLastY;
-        interactionRef.current.touchLastY = currentY;
-        setContinuousOffset(interactionRef.current.visualOffset + deltaY * 0.86);
-      },
-      onTouchEnd: () => {
-        settleWheel();
-      },
-      onTouchCancel: () => {
-        settleWheel();
-      }
     }
   };
 };
@@ -319,12 +360,15 @@ export const AchievementsPage = () => {
 
       <section className="relative">
         <div className="p-1">
-          <div className="touch-none select-none px-1 pr-2" {...deckHandlers}>
+          <div className="px-1 pr-2">
             <div className="relative mx-auto mb-4 h-44 max-w-[360px] overflow-hidden">
-              <div className="pointer-events-none absolute left-0 right-0 top-1/2 z-10 h-10 -translate-y-1/2 rounded-full bg-ink/8 ring-1 ring-white/80" />
-              <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-10 bg-gradient-to-b from-[#f7f5ef] to-transparent" />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-10 bg-gradient-to-t from-[#f7f5ef] to-transparent" />
-              <div className="relative h-full">
+              <div
+                className="relative h-full touch-none select-none"
+                {...deckHandlers}
+              >
+                <div className="pointer-events-none absolute left-0 right-0 top-1/2 z-10 h-10 -translate-y-1/2 rounded-full bg-ink/8 ring-1 ring-white/80" />
+                <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-10 bg-gradient-to-b from-[#f7f5ef] to-transparent" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-10 bg-gradient-to-t from-[#f7f5ef] to-transparent" />
                 {wheelCountrySets.map(({ set, index, offset }) => {
                   const distance = Math.abs(offset);
 

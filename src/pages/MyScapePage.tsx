@@ -1,5 +1,5 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { CalendarDays, Share2, X } from "lucide-react";
+import { motion } from "framer-motion";
+import { CalendarDays, Download, Share2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrangeInventoryTray } from "../components/myscape/ArrangeInventoryTray";
@@ -50,7 +50,6 @@ const formatDate = (value: string) =>
     year: "numeric",
   });
 
-const MY_SCAPE_DEFAULT_ZOOM = 0.76;
 const CAPSULE_ROUTE_NAME = "Capsule Machine";
 const CAPSULE_ROUTE_ID = "capsule-machine";
 const CAPSULE_DRAW_COST_STAMPS = 40;
@@ -112,6 +111,17 @@ const formatDaySwitcherSubtitle = (value: Date) =>
           weekday: "long",
         })
         .toUpperCase();
+
+const getBoardLocalPoint = (board: HTMLDivElement, clientX: number, clientY: number) => {
+  const boardRect = board.getBoundingClientRect();
+  const scaleX = boardRect.width > 0 ? board.clientWidth / boardRect.width : 1;
+  const scaleY = boardRect.height > 0 ? board.clientHeight / boardRect.height : 1;
+
+  return {
+    x: (clientX - boardRect.left) * scaleX,
+    y: (clientY - boardRect.top) * scaleY,
+  };
+};
 
 const isWithinDay = (value: string, dayStart: Date) => {
   const current = new Date(value).getTime();
@@ -368,7 +378,7 @@ export const MyScapePage = () => {
         const asset = assetMap.get(item.landmarkId);
         const footprint = getAssetFootprint(asset);
 
-        if (typeof item.col === "number" && typeof item.row === "number") {
+        if (Number.isFinite(item.col) && Number.isFinite(item.row)) {
           const normalized = clampGridPositionForFootprint(item.col, item.row, footprint.width, footprint.height);
           const hasConflict = isGridCellOccupied(
             normalized.col,
@@ -761,12 +771,12 @@ export const MyScapePage = () => {
     }
 
     event.preventDefault();
+    event.stopPropagation();
     target.setPointerCapture(event.pointerId);
-      const boardRect = board.getBoundingClientRect();
-      const item = placedLandmarks.find((entry) => entry.id === itemId);
-      if (!item) {
-        return;
-      }
+    const item = placedLandmarks.find((entry) => entry.id === itemId);
+    if (!item) {
+      return;
+    }
 
     setSelectedId(itemId);
     setActionMenuItemId(null);
@@ -782,13 +792,12 @@ export const MyScapePage = () => {
       board.clientWidth,
       board.clientHeight,
     );
-    const localPointerX = (event.clientX - boardRect.left) / MY_SCAPE_DEFAULT_ZOOM;
-    const localPointerY = (event.clientY - boardRect.top) / MY_SCAPE_DEFAULT_ZOOM;
+    const localPointer = getBoardLocalPoint(board, event.clientX, event.clientY);
     dragStateRef.current = {
       itemId,
       moved: false,
-      pointerOffsetX: localPointerX - anchorPoint.x,
-      pointerOffsetY: localPointerY - anchorPoint.y,
+      pointerOffsetX: localPointer.x - anchorPoint.x,
+      pointerOffsetY: localPointer.y - anchorPoint.y,
       previousCol: item.col,
       previousRow: item.row,
       startClientX: event.clientX,
@@ -812,13 +821,11 @@ export const MyScapePage = () => {
         dragState.moved = true;
       }
 
-      const boardRect = board.getBoundingClientRect();
-      const localPointerX = (event.clientX - boardRect.left) / MY_SCAPE_DEFAULT_ZOOM;
-      const localPointerY = (event.clientY - boardRect.top) / MY_SCAPE_DEFAULT_ZOOM;
+      const localPointer = getBoardLocalPoint(board, event.clientX, event.clientY);
       setIsInventoryDropActive(isPointerOverInventoryTray(event.clientX, event.clientY));
       setDragPreview({
-        x: localPointerX - dragState.pointerOffsetX,
-        y: localPointerY - dragState.pointerOffsetY,
+        x: localPointer.x - dragState.pointerOffsetX,
+        y: localPointer.y - dragState.pointerOffsetY,
       });
     };
 
@@ -1327,17 +1334,15 @@ export const MyScapePage = () => {
         />
       ) : null}
 
-      <AnimatePresence>
-        {!isEditMode ? (
-          <FloatingStatsText
-            key={`${summaryTab}-${selectedDayKey}`}
-            tab={summaryTab}
-            distanceLabel={formatDistance(activeStats.distanceKm)}
-            runsLabel={`${activeStats.runCount}`}
-            unlocksLabel={`${activeStats.unlockCount}`}
-          />
-        ) : null}
-      </AnimatePresence>
+      {!isEditMode ? (
+        <FloatingStatsText
+          key={`${summaryTab}-${selectedDayKey}`}
+          tab={summaryTab}
+          distanceLabel={formatDistance(activeStats.distanceKm)}
+          runsLabel={`${activeStats.runCount}`}
+          unlocksLabel={`${activeStats.unlockCount}`}
+        />
+      ) : null}
 
       <NewUnlockToast message={toastMessage} />
 
@@ -1345,7 +1350,7 @@ export const MyScapePage = () => {
         <button
           type="button"
           aria-label="Dismiss item actions"
-          className="absolute inset-0 z-20 bg-transparent"
+          className="pointer-events-none absolute inset-0 z-20 bg-transparent"
           onClick={() => setActionMenuItemId(null)}
         />
       ) : null}
@@ -1370,49 +1375,46 @@ export const MyScapePage = () => {
         }}
       />
 
-      <AnimatePresence mode="wait">
-        {isEditMode ? (
-          <ArrangeInventoryTray
-            key="inventory"
-            ref={inventoryTrayRef}
-            items={inventoryItems}
-            atmosphereEffects={atmosphereEffectItems}
-            isReturnDropActive={isInventoryDropActive}
-            onToggleAtmosphereEffect={toggleAtmosphereEffect}
-            onSelectItem={(assetId) => {
-              const asset = scopedCatalogAssets.find((entry) => entry.id === assetId);
-              const ownedCount = asset?.assetType === "landmark" ? Math.min(1, asset?.ownedCount ?? 0) : asset?.ownedCount ?? 0;
-              if (!asset || ownedCount <= 0) {
-                showToast(asset ? `Locked: unlock from ${asset.routeName}` : "Locked");
-                return;
-              }
-              if (summaryTab === "day" && asset.routeId !== CAPSULE_ROUTE_ID && !dayRouteIds.has(asset.routeId)) {
-                showToast(asset ? `${asset.name} was collected earlier` : "Collected earlier");
-                return;
-              }
-              const placedCount = placedCountsByAssetId[assetId] ?? 0;
-              const availableCount = Math.max(0, ownedCount - placedCount);
+      {isEditMode ? (
+        <ArrangeInventoryTray
+          key="inventory"
+          ref={inventoryTrayRef}
+          items={inventoryItems}
+          atmosphereEffects={atmosphereEffectItems}
+          isReturnDropActive={isInventoryDropActive}
+          onToggleAtmosphereEffect={toggleAtmosphereEffect}
+          onSelectItem={(assetId) => {
+            const asset = scopedCatalogAssets.find((entry) => entry.id === assetId);
+            const ownedCount = asset?.assetType === "landmark" ? Math.min(1, asset?.ownedCount ?? 0) : asset?.ownedCount ?? 0;
+            if (!asset || ownedCount <= 0) {
+              showToast(asset ? `Locked: unlock from ${asset.routeName}` : "Locked");
+              return;
+            }
+            if (summaryTab === "day" && asset.routeId !== CAPSULE_ROUTE_ID && !dayRouteIds.has(asset.routeId)) {
+              showToast(asset ? `${asset.name} was collected earlier` : "Collected earlier");
+              return;
+            }
+            const placedCount = placedCountsByAssetId[assetId] ?? 0;
+            const availableCount = Math.max(0, ownedCount - placedCount);
 
-              if (availableCount <= 0) {
-                focusPlacedAsset(assetId);
-                return;
-              }
+            if (availableCount <= 0) {
+              focusPlacedAsset(assetId);
+              return;
+            }
 
-              placeAssetOnBoard(assetId);
-            }}
-          />
-        ) : (
-          <motion.div
-            key="tabs"
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 18 }}
-            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <ScapeBottomTabs activeTab={summaryTab} onChange={setSummaryTab} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+            placeAssetOnBoard(assetId);
+          }}
+        />
+      ) : (
+        <motion.div
+          key="tabs"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <ScapeBottomTabs activeTab={summaryTab} onChange={setSummaryTab} />
+        </motion.div>
+      )}
 
       {!isEditMode ? (
         <button
@@ -1425,9 +1427,8 @@ export const MyScapePage = () => {
         </button>
       ) : null}
 
-      <AnimatePresence>
-        {isDatePickerOpen ? (
-          <motion.div
+      {isDatePickerOpen ? (
+        <motion.div
             className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(31,40,35,0.42)] px-5 backdrop-blur-[6px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1511,13 +1512,11 @@ export const MyScapePage = () => {
                 Go to Date
               </button>
             </motion.section>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+        </motion.div>
+      ) : null}
 
-      <AnimatePresence>
-        {isSharePanelOpen ? (
-          <motion.div
+      {isSharePanelOpen ? (
+        <motion.div
             className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(31,40,35,0.46)] px-5 py-5 backdrop-blur-[7px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1610,9 +1609,8 @@ export const MyScapePage = () => {
                 </button>
               </div>
             </motion.section>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+        </motion.div>
+      ) : null}
 
       {!isEditMode && capsuleButton ? (
         <div className="absolute left-4 top-[calc(env(safe-area-inset-top,0px)+9.25rem)] z-40">{capsuleButton}</div>

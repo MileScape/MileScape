@@ -5,6 +5,7 @@ import {
   getPlacementAnchorPoint,
   getPlacementPreviewCells,
   gridToScreen,
+  getItemZIndex,
   MY_SCAPE_GRID_COLUMNS,
   MY_SCAPE_GRID_ROWS,
   MY_SCAPE_TILE_HEIGHT,
@@ -12,6 +13,8 @@ import {
   type UnlockedLandmarkAsset,
 } from "../../utils/myScape";
 import { PlacedLandmark } from "./PlacedLandmark";
+
+const isFiniteNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 
 interface MyScapeBoardProps {
   boardRef: RefObject<HTMLDivElement>;
@@ -70,14 +73,19 @@ export const MyScapeBoard = ({
   const innerBottomPoint = `${boardOriginX},${boardOriginY + ((MY_SCAPE_GRID_COLUMNS + MY_SCAPE_GRID_ROWS) * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2 - soilInset}`;
   const innerLeftPoint = `${boardOriginX - gridHalfDepth + soilInset * 1.15},${boardOriginY + (MY_SCAPE_GRID_ROWS * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2 + soilInset * 0.58}`;
 
-  const placementPreviewPolygon = placementPreview
+  const safePlacementPreview =
+    placementPreview && isFiniteNumber(placementPreview.col) && isFiniteNumber(placementPreview.row)
+      ? placementPreview
+      : null;
+
+  const placementPreviewPolygon = safePlacementPreview
     ? (() => {
-        const previewAsset = assetMap.get(placementPreview.assetId);
+        const previewAsset = assetMap.get(safePlacementPreview.assetId);
         const footprint = getAssetFootprint(previewAsset);
 
         return getPlacementPreviewCells(
-          placementPreview.col,
-          placementPreview.row,
+          safePlacementPreview.col,
+          safePlacementPreview.row,
           footprint.width,
           footprint.height,
         ).map((cell) => {
@@ -186,20 +194,20 @@ export const MyScapeBoard = ({
           ) : null}
           {isEditMode ? (
             <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
-              {placementPreview && placementPreviewPolygon ? (
+              {safePlacementPreview && placementPreviewPolygon ? (
                 <g>
                   {placementPreviewPolygon.map((points, index) => (
-                    <g key={`${placementPreview.assetId}-${placementPreview.col}-${placementPreview.row}-${index}`}>
+                    <g key={`${safePlacementPreview.assetId}-${safePlacementPreview.col}-${safePlacementPreview.row}-${index}`}>
                       <polygon
                         points={points}
-                        fill={placementPreview.valid ? "rgba(76, 175, 80, 0.28)" : "rgba(231, 76, 60, 0.28)"}
-                        stroke={placementPreview.valid ? "rgba(102, 187, 106, 0.92)" : "rgba(239, 83, 80, 0.94)"}
+                        fill={safePlacementPreview.valid ? "rgba(76, 175, 80, 0.28)" : "rgba(231, 76, 60, 0.28)"}
+                        stroke={safePlacementPreview.valid ? "rgba(102, 187, 106, 0.92)" : "rgba(239, 83, 80, 0.94)"}
                         strokeWidth="2"
                       />
                       <polygon
                         points={points}
                         fill="none"
-                        stroke={placementPreview.valid ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.28)"}
+                        stroke={safePlacementPreview.valid ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.28)"}
                         strokeWidth="0.8"
                       />
                     </g>
@@ -214,23 +222,37 @@ export const MyScapeBoard = ({
               return null;
             }
 
+            const safeCol = isFiniteNumber(item.col) ? item.col : 0;
+            const safeRow = isFiniteNumber(item.row) ? item.row : 0;
+            const safeScale = isFiniteNumber(item.scale) ? item.scale : 1;
+            const safeZIndex = isFiniteNumber(item.zIndex) ? item.zIndex : getItemZIndex(safeCol, safeRow);
             const footprint = getAssetFootprint(asset);
             const snappedPosition = getPlacementAnchorPoint(
-              item.col,
-              item.row,
+              safeCol,
+              safeRow,
               footprint.width,
               footprint.height,
               boardWidth,
               boardHeight,
             );
             const isDragging = draggingId === item.id;
-            const renderedPosition = isDragging && dragPreview ? dragPreview : snappedPosition;
+            const renderedPosition =
+              isDragging && dragPreview && isFiniteNumber(dragPreview.x) && isFiniteNumber(dragPreview.y)
+                ? dragPreview
+                : snappedPosition;
+            const safeItem = {
+              ...item,
+              col: safeCol,
+              row: safeRow,
+              scale: safeScale,
+              zIndex: safeZIndex,
+            };
 
             return (
               <PlacedLandmark
                 key={item.id}
                 asset={asset}
-                item={item}
+                item={safeItem}
                 animateIn={entryReady}
                 editable={isEditMode}
                 index={placedLandmarks.findIndex((entry) => entry.id === item.id)}

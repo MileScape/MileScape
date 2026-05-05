@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { Check, CloudSun, Lock, MapPin, Sparkles } from "lucide-react";
 import { forwardRef, useMemo, useState } from "react";
 import type { Rarity } from "../../types";
@@ -180,16 +180,14 @@ export const ArrangeInventoryTray = forwardRef<HTMLDivElement, ArrangeInventoryT
         </div>
 
         <div className="relative h-[228px] overflow-x-auto overflow-y-hidden overscroll-x-contain overscroll-y-none pb-1 pr-1 [-ms-overflow-style:none] [scrollbar-width:none] touch-pan-x [&::-webkit-scrollbar]:hidden">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={shelfMotionKey}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1, transition: { staggerChildren: 0.035, delayChildren: 0.02 } }}
-              exit={{ opacity: 0, transition: { duration: 0.12 } }}
-              className={`grid h-full w-max min-w-full grid-flow-col grid-rows-[repeat(2,108px)] gap-x-4 gap-y-3 ${
-                category === "scene" ? "auto-cols-[112px]" : "auto-cols-[84px]"
-              }`}
-            >
+          <motion.div
+            key={shelfMotionKey}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { staggerChildren: 0.035, delayChildren: 0.02 } }}
+            className={`grid h-full w-max min-w-full grid-flow-col grid-rows-[repeat(2,108px)] gap-x-4 gap-y-3 ${
+              category === "scene" ? "auto-cols-[112px]" : "auto-cols-[84px]"
+            }`}
+          >
               {category === "scene" ? (
                 atmosphereEffects.length === 0 ? (
                   <motion.div
@@ -334,8 +332,7 @@ export const ArrangeInventoryTray = forwardRef<HTMLDivElement, ArrangeInventoryT
                   },
                 )
               )}
-            </motion.div>
-          </AnimatePresence>
+          </motion.div>
         </div>
       </div>
     </motion.div>

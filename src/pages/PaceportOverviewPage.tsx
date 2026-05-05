@@ -43,7 +43,7 @@ const toRouteSummary = (route: Route, state: ReturnType<typeof useAppState>["sta
 };
 
 export const PaceportOverviewPage = () => {
-  const { routes, state, purchaseRoute, t } = useAppState();
+  const { routes, state, purchaseRoute } = useAppState();
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const countryPillsRef = useRef<HTMLDivElement | null>(null);
@@ -115,10 +115,6 @@ export const PaceportOverviewPage = () => {
       : null;
   const exploredDestinationCount = countryCollections.reduce(
     (sum, country) => sum + country.routes.filter((route) => route.status !== "locked").length,
-    0,
-  );
-  const lockedDestinationCount = countryCollections.reduce(
-    (sum, country) => sum + country.routes.filter((route) => route.status === "locked").length,
     0,
   );
   const completedDestinationCount = countryCollections.reduce(

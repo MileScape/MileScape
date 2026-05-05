@@ -49,14 +49,6 @@ export const clearState = () => {
   window.localStorage.removeItem(STORAGE_KEY);
 };
 
-export const hasSeenOnboarding = () => {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  return window.localStorage.getItem(ONBOARDING_KEY) === "true";
-};
-
 export const markOnboardingSeen = () => {
   if (typeof window === "undefined") {
     return;

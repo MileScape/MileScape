@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface MyScapeDayDateSwitcherProps {
@@ -34,31 +34,24 @@ export const MyScapeDayDateSwitcher = ({
           <ChevronLeft className="h-5 w-5" />
         </button>
 
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.button
-            type="button"
-            onClick={onOpenPicker}
-            key={dateLabel}
-            initial={{
-              opacity: 0,
-              x: direction === 0 ? 0 : direction > 0 ? 8 : -8,
-              y: 3,
-            }}
-            animate={{ opacity: 1, x: 0, y: 0 }}
-            exit={{
-              opacity: 0,
-              x: direction === 0 ? 0 : direction > 0 ? -8 : 8,
-              y: -1,
-            }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className="pointer-events-auto rounded-[18px] px-2 py-1 text-center transition hover:bg-white/38"
-          >
-            <p className="font-destination-display text-[1.6rem] font-bold uppercase tracking-[0.08em] text-[#2c3a33] sm:text-[1.08rem]">
-              {dateLabel}
-            </p>
-            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-[#7c8b83]">{subtitle}</p>
-          </motion.button>
-        </AnimatePresence>
+        <motion.button
+          type="button"
+          onClick={onOpenPicker}
+          key={dateLabel}
+          initial={{
+            opacity: 0,
+            x: direction === 0 ? 0 : direction > 0 ? 8 : -8,
+            y: 3,
+          }}
+          animate={{ opacity: 1, x: 0, y: 0 }}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          className="pointer-events-auto rounded-[18px] px-2 py-1 text-center transition hover:bg-white/38"
+        >
+          <p className="font-destination-display text-[1.6rem] font-bold uppercase tracking-[0.08em] text-[#2c3a33] sm:text-[1.08rem]">
+            {dateLabel}
+          </p>
+          <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-[#7c8b83]">{subtitle}</p>
+        </motion.button>
 
         <button
           type="button"

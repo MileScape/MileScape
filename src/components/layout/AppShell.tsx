@@ -1,12 +1,17 @@
 import { ChevronLeft, Menu } from "lucide-react";
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAppState } from "../../hooks/useAppState";
 import { cn } from "../../utils/cn";
-import { SideDrawer } from "./SideDrawer";
+
+const SideDrawer = lazy(async () => {
+  const module = await import("./SideDrawer");
+  return { default: module.SideDrawer };
+});
 
 export const AppShell = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerLoaded, setDrawerLoaded] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { state, t } = useAppState();
@@ -53,7 +58,11 @@ export const AppShell = () => {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-canvas md:max-w-[430px]">
-      <SideDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      {drawerLoaded ? (
+        <Suspense fallback={null}>
+          <SideDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+        </Suspense>
+      ) : null}
 
       <header
         className={cn(
@@ -74,7 +83,10 @@ export const AppShell = () => {
         {isPrimaryHome ? (
           <button
             type="button"
-            onClick={() => setDrawerOpen(true)}
+            onClick={() => {
+              setDrawerLoaded(true);
+              setDrawerOpen(true);
+            }}
             className="rounded-full bg-white/68 p-3 text-sage-700 shadow-[0_10px_28px_rgba(24,43,29,0.12)] ring-1 ring-white/75 backdrop-blur-xl"
             aria-label="Open menu"
           >
