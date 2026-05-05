@@ -40,12 +40,12 @@ export const DashboardPage = () => {
       />
 
       <div className="grid grid-cols-2 gap-4">
-        <StatCard label={t("dashboard.totalDistance")} value={formatDistance(totalDistance)} hint="" />
-        <StatCard label={t("dashboard.stampBalance")} value={String(state.currentStamps)} hint="" />
-        <StatCard label={t("dashboard.routesInProgress")} value={String(routesInProgress)} hint="" />
-        <StatCard label={t("dashboard.ownedRoutes")} value={String(ownedRoutes)} hint="" />
-        <StatCard label={t("dashboard.completedRoutes")} value={String(completedRoutes)} hint="" />
-        <StatCard label={t("dashboard.landmarksUnlocked")} value={String(unlockedLandmarks)} hint="" />
+        <StatCard label={t("dashboard.totalDistance")} value={formatDistance(totalDistance)} />
+        <StatCard label={t("dashboard.stampBalance")} value={String(state.currentStamps)} />
+        <StatCard label={t("dashboard.routesInProgress")} value={String(routesInProgress)} />
+        <StatCard label={t("dashboard.ownedRoutes")} value={String(ownedRoutes)} />
+        <StatCard label={t("dashboard.completedRoutes")} value={String(completedRoutes)} />
+        <StatCard label={t("dashboard.landmarksUnlocked")} value={String(unlockedLandmarks)} />
       </div>
 
       <section className="space-y-4">

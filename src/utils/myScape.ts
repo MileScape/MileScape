@@ -50,11 +50,18 @@ const MY_SCAPE_ORIGIN_Y_OFFSET = 12;
 const DEFAULT_FOOTPRINT_WIDTH = 1;
 const DEFAULT_FOOTPRINT_HEIGHT = 1;
 
-export const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+const isFiniteNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+const getFiniteNumber = (value: unknown, fallback: number) => (isFiniteNumber(value) ? value : fallback);
+
+export const clamp = (value: number, min: number, max: number) => {
+  const safeMin = getFiniteNumber(min, 0);
+  const safeMax = Math.max(safeMin, getFiniteNumber(max, safeMin));
+  return Math.min(Math.max(getFiniteNumber(value, safeMin), safeMin), safeMax);
+};
 
 export const getMyScapeOrigin = (boardWidth: number, boardHeight: number) => ({
-  originX: boardWidth * MY_SCAPE_ORIGIN_X_RATIO + MY_SCAPE_ORIGIN_X_OFFSET,
-  originY: boardHeight * MY_SCAPE_ORIGIN_Y_RATIO + MY_SCAPE_ORIGIN_Y_OFFSET,
+  originX: getFiniteNumber(boardWidth, 0) * MY_SCAPE_ORIGIN_X_RATIO + MY_SCAPE_ORIGIN_X_OFFSET,
+  originY: getFiniteNumber(boardHeight, 0) * MY_SCAPE_ORIGIN_Y_RATIO + MY_SCAPE_ORIGIN_Y_OFFSET,
 });
 
 export const gridToScreen = (
@@ -64,9 +71,12 @@ export const gridToScreen = (
   boardHeight: number,
 ) => {
   const { originX, originY } = getMyScapeOrigin(boardWidth, boardHeight);
+  const safeCol = getFiniteNumber(col, 0);
+  const safeRow = getFiniteNumber(row, 0);
+
   return {
-    x: originX + ((col - row) * MY_SCAPE_TILE_WIDTH) / 2,
-    y: originY + ((col + row) * MY_SCAPE_TILE_HEIGHT) / 2,
+    x: originX + ((safeCol - safeRow) * MY_SCAPE_TILE_WIDTH) / 2,
+    y: originY + ((safeCol + safeRow) * MY_SCAPE_TILE_HEIGHT) / 2,
   };
 };
 
@@ -77,8 +87,8 @@ export const screenToGrid = (
   boardHeight: number,
 ): { col: number; row: number } => {
   const { originX, originY } = getMyScapeOrigin(boardWidth, boardHeight);
-  const dx = x - originX;
-  const dy = y - originY;
+  const dx = getFiniteNumber(x, originX) - originX;
+  const dy = getFiniteNumber(y, originY) - originY;
 
   return {
     col: Math.round(dx / MY_SCAPE_TILE_WIDTH + dy / MY_SCAPE_TILE_HEIGHT),
@@ -96,11 +106,32 @@ export const getItemZIndex = (col: number, row: number) => col + row + 10;
 export const serializeMyScapeLayout = (
   placedLandmarks: MyScapePlacedLandmark[],
 ): MyScapeLayout => ({
-  placedLandmarks,
+  placedLandmarks: sanitizePlacedLandmarks(placedLandmarks),
   updatedAt: new Date().toISOString(),
 });
 
-export const restoreMyScapeLayout = (scopeKey = "overview") => loadMyScapeLayout(scopeKey)?.placedLandmarks ?? [];
+const sanitizePlacedLandmarks = (placedLandmarks: MyScapePlacedLandmark[] = []): MyScapePlacedLandmark[] =>
+  placedLandmarks
+    .filter((item) => item && typeof item.id === "string" && typeof item.landmarkId === "string")
+    .map((item, index) => {
+      const fallbackCol = index % MY_SCAPE_GRID_COLUMNS;
+      const fallbackRow = Math.floor(index / MY_SCAPE_GRID_COLUMNS) % MY_SCAPE_GRID_ROWS;
+      const col = clamp(Math.round(getFiniteNumber(item.col, fallbackCol)), 0, MY_SCAPE_GRID_COLUMNS - 1);
+      const row = clamp(Math.round(getFiniteNumber(item.row, fallbackRow)), 0, MY_SCAPE_GRID_ROWS - 1);
+      const scale = clamp(getFiniteNumber(item.scale, 1), MY_SCAPE_MIN_SCALE, MY_SCAPE_MAX_SCALE);
+      const zIndex = Math.round(getFiniteNumber(item.zIndex, getItemZIndex(col, row)));
+
+      return {
+        ...item,
+        col,
+        row,
+        scale,
+        zIndex,
+      };
+    });
+
+export const restoreMyScapeLayout = (scopeKey = "overview") =>
+  sanitizePlacedLandmarks(loadMyScapeLayout(scopeKey)?.placedLandmarks ?? []);
 
 export const restorePlacedAssetIds = () => loadPlacedAssetIds();
 

@@ -402,17 +402,17 @@ export const RouteArtwork = ({
       return;
     }
 
-    let active = true;
+    let activeState = true;
     setWalkingSimulationPath(null);
 
     fetchWalkingPath(routeId, mapToken).then((path) => {
-      if (active) {
+      if (activeState) {
         setWalkingSimulationPath(path);
       }
     });
 
     return () => {
-      active = false;
+      activeState = false;
     };
   }, [mapToken, routeId]);
 

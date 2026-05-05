@@ -1,5 +1,4 @@
 import { createContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { paceCrews as seedPaceCrews } from "../data/paceCrews";
 import { routes } from "../data/routes";
 import { currentUserId, users } from "../data/users";
 import type { AppContextValue, AppState, PaceCrewMission, WearableSyncRecord } from "../types";
