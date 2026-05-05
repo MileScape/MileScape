@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { MyScapeBoard } from "./MyScapeBoard";
 import type { PointerEvent as ReactPointerEvent, RefObject } from "react";
 import type { MyScapePlacedLandmark } from "../../types";
-import type { UnlockedLandmarkAsset } from "../../utils/myScape";
+import type { MyScapeGridSize, UnlockedLandmarkAsset } from "../../utils/myScape";
 
 interface ScapeBoardStageProps {
   assets: UnlockedLandmarkAsset[];
@@ -11,9 +11,11 @@ interface ScapeBoardStageProps {
   draggingId: string | null;
   entryReady: boolean;
   isEditMode: boolean;
+  gridSize?: MyScapeGridSize;
   newTodayIds: Set<string>;
   placedLandmarks: MyScapePlacedLandmark[];
   placementPreview: { assetId: string; col: number; row: number; valid: boolean; active: boolean } | null;
+  scrollable?: boolean;
   selectedId: string | null;
   transitionDirection?: -1 | 0 | 1;
   viewKey: string;
@@ -27,10 +29,12 @@ export const ScapeBoardStage = ({
   dragPreview,
   draggingId,
   entryReady,
+  gridSize,
   isEditMode,
   newTodayIds,
   placedLandmarks,
   placementPreview,
+  scrollable = false,
   selectedId,
   transitionDirection = 0,
   viewKey,
@@ -56,9 +60,9 @@ export const ScapeBoardStage = ({
               opacity: 1,
               x: 0,
               scale: isEditMode ? 0.96 : 1,
-              y: isEditMode ? -48 : -18,
+              y: scrollable ? 0 : isEditMode ? -48 : -18,
             }
-          : { opacity: 1, x: 0, scale: 0.96, y: -8 }
+          : { opacity: 1, x: 0, scale: scrollable ? 1 : 0.96, y: scrollable ? 0 : -8 }
       }
       transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
     >
@@ -72,7 +76,9 @@ export const ScapeBoardStage = ({
         dragPreview={dragPreview}
         placementPreview={placementPreview}
         isEditMode={isEditMode}
+        gridSize={gridSize}
         newTodayIds={newTodayIds}
+        scrollable={scrollable}
         onItemPointerDown={onItemPointerDown}
         onSelectItem={onSelectItem}
       />

@@ -22,10 +22,10 @@ import type { MyScapeCapsuleState } from "../utils/storage";
 import {
   clampGridPositionForFootprint,
   buildMyScapeUnlockTimeline,
-  clampGridPosition,
   createPlacedLandmark,
   getAssetFootprint,
   getMyScapeDateKey,
+  getMyScapeGridSizeForScope,
   getItemZIndex,
   getPlacementAnchorPoint,
   isGridCellOccupied,
@@ -307,6 +307,8 @@ export const MyScapePage = () => {
   const selectedDayKey = useMemo(() => getMyScapeDateKey(selectedDayDate), [selectedDayDate]);
   const isSelectedDayToday = useMemo(() => isSameDay(selectedDayDate, todayDate), [selectedDayDate, todayDate]);
   const activeLayoutScopeKey = summaryTab === "overview" ? "overview" : `day:${selectedDayKey}`;
+  const activeGridSize = useMemo(() => getMyScapeGridSizeForScope(activeLayoutScopeKey), [activeLayoutScopeKey]);
+  const isOverviewMap = summaryTab === "overview";
   const boardViewKey = `${summaryTab}-${selectedDayKey}`;
 
   const goToPreviousDay = () => {
@@ -345,7 +347,7 @@ export const MyScapePage = () => {
   }, []);
 
   useEffect(() => {
-    setPlacedLandmarks(restoreMyScapeLayout(activeLayoutScopeKey));
+    setPlacedLandmarks(restoreMyScapeLayout(activeLayoutScopeKey, activeGridSize));
     setLoadedLayoutScopeKey(activeLayoutScopeKey);
     setSelectedId(null);
     setInfoItemId(null);
@@ -353,7 +355,7 @@ export const MyScapePage = () => {
     setDraggingId(null);
     setDragPreview(null);
     setIsInventoryDropActive(false);
-  }, [activeLayoutScopeKey]);
+  }, [activeGridSize, activeLayoutScopeKey]);
 
   useEffect(() => {
     setPlacedLandmarks((current) => {
@@ -379,13 +381,20 @@ export const MyScapePage = () => {
         const footprint = getAssetFootprint(asset);
 
         if (Number.isFinite(item.col) && Number.isFinite(item.row)) {
-          const normalized = clampGridPositionForFootprint(item.col, item.row, footprint.width, footprint.height);
+          const normalized = clampGridPositionForFootprint(
+            item.col,
+            item.row,
+            footprint.width,
+            footprint.height,
+            activeGridSize,
+          );
           const hasConflict = isGridCellOccupied(
             normalized.col,
             normalized.row,
             items,
             buildPlacementAssetLookup(item.landmarkId),
             item.id,
+            activeGridSize,
           );
 
           if (!hasConflict && normalized.col === item.col && normalized.row === item.row) {
@@ -396,7 +405,13 @@ export const MyScapePage = () => {
           }
         }
 
-        const fallback = createPlacedLandmark(item.landmarkId, current.slice(0, index), assetMap, item.scale);
+        const fallback = createPlacedLandmark(
+          item.landmarkId,
+          current.slice(0, index),
+          assetMap,
+          item.scale,
+          activeGridSize,
+        );
         return {
           ...item,
           col: fallback.col,
@@ -405,7 +420,7 @@ export const MyScapePage = () => {
         };
       }),
     );
-  }, [assetMap]);
+  }, [activeGridSize, assetMap]);
 
   useEffect(() => {
     if (!selectedId || placedLandmarks.some((item) => item.id === selectedId)) {
@@ -423,11 +438,11 @@ export const MyScapePage = () => {
     }
 
     const saveTimer = window.setTimeout(() => {
-      saveMyScapeLayout(activeLayoutScopeKey, serializeMyScapeLayout(placedLandmarks));
+      saveMyScapeLayout(activeLayoutScopeKey, serializeMyScapeLayout(placedLandmarks, activeGridSize));
     }, 120);
 
     return () => window.clearTimeout(saveTimer);
-  }, [activeLayoutScopeKey, loadedLayoutScopeKey, placedLandmarks]);
+  }, [activeGridSize, activeLayoutScopeKey, loadedLayoutScopeKey, placedLandmarks]);
 
   useEffect(() => {
     savePlacedAssetIds(Array.from(placedAssetIds));
@@ -877,6 +892,7 @@ export const MyScapePage = () => {
           const grid = screenToGrid(finalPreview.x, finalPreview.y, board.clientWidth, board.clientHeight);
           return [grid.col, grid.row, draggingFootprint.width, draggingFootprint.height] as const;
         })(),
+        activeGridSize,
       );
 
       setPlacedLandmarks((current) =>
@@ -892,6 +908,7 @@ export const MyScapePage = () => {
               current,
               buildPlacementAssetLookup(item.landmarkId),
               item.id,
+              activeGridSize,
             )
           ) {
             return {
@@ -925,7 +942,7 @@ export const MyScapePage = () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [assetMap, dragPreview, placedLandmarks]);
+  }, [activeGridSize, assetMap, dragPreview, placedLandmarks]);
 
   const selectedItem = useMemo(
     () => placedLandmarks.find((item) => item.id === selectedId) ?? null,
@@ -946,13 +963,20 @@ export const MyScapePage = () => {
       const draggedAsset = draggedItem ? assetMap.get(draggedItem.landmarkId) : null;
       const footprint = getAssetFootprint(draggedAsset);
       const snapped = screenToGrid(dragPreview.x, dragPreview.y, boardRef.current.clientWidth, boardRef.current.clientHeight);
-      const clampedGrid = clampGridPositionForFootprint(snapped.col, snapped.row, footprint.width, footprint.height);
+      const clampedGrid = clampGridPositionForFootprint(
+        snapped.col,
+        snapped.row,
+        footprint.width,
+        footprint.height,
+        activeGridSize,
+      );
       const valid = !isGridCellOccupied(
         clampedGrid.col,
         clampedGrid.row,
         placedLandmarks,
         draggedItem ? buildPlacementAssetLookup(draggedItem.landmarkId) : assetMap,
         draggingId,
+        activeGridSize,
       );
       return {
         assetId: draggedItem?.landmarkId ?? "",
@@ -974,7 +998,7 @@ export const MyScapePage = () => {
     }
 
     return null;
-  }, [assetMap, dragPreview, draggingId, isEditMode, placedLandmarks, selectedItem]);
+  }, [activeGridSize, assetMap, dragPreview, draggingId, isEditMode, placedLandmarks, selectedItem]);
 
   const dayRuns = useMemo(
     () => state.runHistory.filter((entry) => isWithinDay(entry.completedAt, selectedDayStart)),
@@ -1130,7 +1154,7 @@ export const MyScapePage = () => {
       return;
     }
 
-    const created = createPlacedLandmark(asset.id, placedLandmarks, assetMap, asset.defaultScale ?? 1);
+    const created = createPlacedLandmark(asset.id, placedLandmarks, assetMap, asset.defaultScale ?? 1, activeGridSize);
     setPlacedLandmarks((current) => [...current, created]);
     setPlacedAssetIds((current) => new Set(current).add(asset.id));
     setSelectedId(created.id);
@@ -1274,7 +1298,7 @@ export const MyScapePage = () => {
     }
 
     if (isEditMode) {
-      saveMyScapeLayout(activeLayoutScopeKey, serializeMyScapeLayout(placedLandmarks));
+      saveMyScapeLayout(activeLayoutScopeKey, serializeMyScapeLayout(placedLandmarks, activeGridSize));
       setIsEditMode(false);
       setActionMenuItemId(null);
       setInfoItemId(null);
@@ -1304,9 +1328,11 @@ export const MyScapePage = () => {
         draggingId={draggingId}
         dragPreview={dragPreview}
         entryReady={entryReady}
+        gridSize={activeGridSize}
         placementPreview={placementPreview}
         isEditMode={isEditMode}
         newTodayIds={newTodayIds}
+        scrollable={isOverviewMap}
         onItemPointerDown={handleItemPointerDown}
         onSelectItem={handleSelectItem}
       />
