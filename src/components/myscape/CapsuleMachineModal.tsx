@@ -303,7 +303,7 @@ const CapsuleMachineVisual = ({
   ];
 
   return (
-    <div className="relative shrink-0 overflow-hidden rounded-[22px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(244,240,232,0.98))] px-3 pb-2.5 pt-2.5 shadow-[0_18px_40px_rgba(35,52,40,0.08)]">
+    <div className="relative mx-auto flex shrink-0 justify-center overflow-visible py-1">
       <div className={cn("relative mx-auto w-[232px] transition-[height] duration-300", compact ? "h-[150px]" : "h-[250px]")}>
         <motion.div
           className="absolute left-0 top-0 h-[250px] w-[232px]"
@@ -484,7 +484,7 @@ const CapsuleMachineVisual = ({
 const DuplicateConversion = ({ fragments }: { fragments: number }) => (
   <div className="mt-3 rounded-[18px] bg-amber-50/90 px-3 py-2.5 ring-1 ring-amber-200">
     <div className="flex items-center gap-3">
-      <div className="relative flex h-10 w-[78px] items-center justify-between overflow-hidden">
+      <div className="flex shrink-0 items-center gap-2">
         <motion.div
           className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-amber-600 shadow-[0_8px_16px_rgba(187,128,54,0.12)]"
           animate={{ x: [0, -4, -6], rotate: [0, -8, -14], opacity: [1, 0.85, 0.18], scale: [1, 0.96, 0.82] }}
@@ -492,15 +492,14 @@ const DuplicateConversion = ({ fragments }: { fragments: number }) => (
         >
           <Ticket className="h-4.5 w-4.5" />
         </motion.div>
-        <div className="absolute left-[34px] top-1/2 h-[1px] w-5 -translate-y-1/2 bg-amber-300" />
+        <div className="h-px w-4 rounded-full bg-amber-300" />
         <motion.div
-          className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-1"
+          className="flex h-9 min-w-9 items-center justify-center gap-0.5 rounded-2xl bg-white px-2 text-amber-600 shadow-[0_8px_16px_rgba(187,128,54,0.1)]"
           animate={{ x: [6, 0], opacity: [0, 1], scale: [0.85, 1] }}
           transition={{ duration: 0.42, delay: 0.12 }}
         >
-          {Array.from({ length: Math.min(3, Math.max(1, fragments)) }, (_, index) => (
-            <Gem key={index} className="h-3.5 w-3.5 text-amber-500" />
-          ))}
+          <Gem className="h-4 w-4 text-amber-500" />
+          <span className="text-xs font-bold">+{fragments}</span>
         </motion.div>
       </div>
       <div className="min-w-0">
@@ -788,8 +787,13 @@ export const CapsuleMachineModal = ({
                 </div>
               </div>
 
-              <div className="mt-3 flex items-center gap-2">
-                <div className="flex h-11 min-w-[94px] items-center justify-between rounded-[18px] bg-[linear-gradient(180deg,#eff3ee,#e2e9e1)] px-3 text-ink ring-1 ring-white/80">
+              <div
+                className={cn(
+                  "mt-3 grid gap-2",
+                  typeof currentStamps === "number" ? "grid-cols-[minmax(88px,1fr)_minmax(70px,0.75fr)]" : "grid-cols-1",
+                )}
+              >
+                <div className="flex h-11 min-w-0 items-center justify-between rounded-[18px] bg-[linear-gradient(180deg,#eff3ee,#e2e9e1)] px-3 text-ink ring-1 ring-white/80">
                   <div>
                     <p className="text-[9px] uppercase tracking-[0.22em] text-sage-500">Fragments</p>
                     <p className="mt-0.5 text-lg font-semibold tracking-[-0.04em]">{availableFragments}</p>
@@ -797,15 +801,17 @@ export const CapsuleMachineModal = ({
                   <Gem className="h-4.5 w-4.5 text-[#c79746]" />
                 </div>
                 {typeof currentStamps === "number" ? (
-                  <div className="hidden h-11 min-w-[78px] items-center justify-between rounded-[18px] bg-white/62 px-3 text-ink ring-1 ring-white/80 min-[390px]:flex">
+                  <div className="flex h-11 min-w-0 items-center justify-between rounded-[18px] bg-white/62 px-3 text-ink ring-1 ring-white/80">
                     <div>
                       <p className="text-[9px] uppercase tracking-[0.22em] text-sage-500">Stamps</p>
                       <p className="mt-0.5 text-lg font-semibold tracking-[-0.04em]">{currentStamps}</p>
                     </div>
                   </div>
                 ) : null}
+              </div>
 
-                <div className="grid flex-1 grid-cols-2 gap-2">
+              <div className="mt-3 flex justify-center">
+                <div className="grid w-full max-w-[246px] grid-cols-2 gap-2 rounded-[18px] bg-white/42 p-1 ring-1 ring-white/70">
                   {tabs.map((tab) => {
                     const Icon = tab.icon;
                     const selected = activeTab === tab.key;
@@ -816,10 +822,10 @@ export const CapsuleMachineModal = ({
                         type="button"
                         onClick={() => setActiveTab(tab.key)}
                         className={cn(
-                          "flex items-center justify-center gap-2 rounded-[16px] px-3 py-2.5 text-sm font-semibold transition",
+                          "flex items-center justify-center gap-2 rounded-[14px] px-3 py-2.5 text-sm font-semibold transition",
                           selected
                             ? "bg-[linear-gradient(180deg,#6f8374,#506458)] text-white shadow-[0_12px_22px_rgba(45,62,53,0.15)]"
-                            : "bg-white/72 text-sage-600 ring-1 ring-sage-900/6",
+                            : "text-sage-600 hover:bg-white/60",
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -857,7 +863,7 @@ export const CapsuleMachineModal = ({
               </AnimatePresence>
             </header>
 
-            <main className="flex-1 overflow-hidden px-3 py-3">
+            <main className="flex-1 overflow-hidden px-4 py-3">
               <AnimatePresence mode="wait">
                 {activeTab === "machine" ? (
                   <motion.div
@@ -866,7 +872,7 @@ export const CapsuleMachineModal = ({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -14 }}
                     transition={{ duration: 0.2 }}
-                    className="flex h-full flex-col gap-2.5"
+                    className="mx-auto flex h-full w-full max-w-[292px] flex-col items-center gap-2.5"
                   >
                     <CapsuleMachineVisual
                       phase={drawPhase}
@@ -875,29 +881,28 @@ export const CapsuleMachineModal = ({
                       compact={Boolean(drawResult) && drawPhase === "result"}
                     />
 
-                    <div className="shrink-0 rounded-[20px] bg-white/80 p-2.5 shadow-[0_18px_40px_rgba(35,52,40,0.08)] ring-1 ring-white/80">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className={cn("min-w-0", drawResult ? "hidden" : "")}>
-                          <p className="text-sm font-semibold text-ink">Pool</p>
-                          <p className="mt-0.5 text-xs text-sage-500">{routePool.length} tickets / {decorationPool.length} decor</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleDraw}
-                          disabled={drawLocked}
-                          className="inline-flex items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#556a5f,#72877b)] px-4 py-2.5 text-sm font-bold text-white shadow-[0_14px_28px_rgba(77,97,86,0.18)] transition enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45"
-                        >
-                          <Sparkles className="h-4 w-4" />
-                          {drawInProgress ? "Spinning..." : "Spin"}
-                          {drawCostLabel ? <span className="rounded-full bg-white/14 px-2 py-0.5 text-[11px]">{drawCostLabel}</span> : null}
-                        </button>
-                      </div>
+                    <div className="w-full shrink-0">
+                      {!drawResult ? (
+                        <p className="mb-1 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-sage-500">
+                          {routePool.length} tickets / {decorationPool.length} decor
+                        </p>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={handleDraw}
+                        disabled={drawLocked}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#556a5f,#72877b)] px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(77,97,86,0.18)] transition enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        {drawInProgress ? "Spinning..." : "Spin"}
+                        {drawCostLabel ? <span className="rounded-full bg-white/14 px-2 py-0.5 text-[11px]">{drawCostLabel}</span> : null}
+                      </button>
                       {resolvedDisabledReason ? (
                         <p className="mt-2 rounded-2xl bg-sage-50 px-3 py-2 text-sm text-sage-600">{resolvedDisabledReason}</p>
                       ) : null}
                     </div>
 
-                    <div className={cn("min-h-0 flex-1", drawResult ? "rounded-[22px] bg-white/58 p-2 ring-1 ring-white/74" : "")}>
+                    <div className="min-h-0 w-full flex-1 overflow-hidden">
                       <AnimatePresence mode="wait">
                         {drawResult ? (
                           <motion.div
@@ -905,7 +910,7 @@ export const CapsuleMachineModal = ({
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="h-full min-h-[190px] overflow-visible"
+                            className="h-full min-h-[170px] overflow-y-auto pb-1"
                           >
                             <PrizeResultCard result={drawResult} />
                           </motion.div>
@@ -915,7 +920,7 @@ export const CapsuleMachineModal = ({
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="flex h-full min-h-[46px] items-center justify-center rounded-[18px] border border-dashed border-sage-300/70 bg-white/42 px-4 py-2 text-center text-sm text-sage-500"
+                            className="flex h-full min-h-[46px] items-center justify-center px-4 py-2 text-center text-sm text-sage-500"
                           >
                             Prize goes to Box.
                           </motion.div>
@@ -930,7 +935,7 @@ export const CapsuleMachineModal = ({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -14 }}
                     transition={{ duration: 0.2 }}
-                    className="flex h-full flex-col gap-3 overflow-y-auto pr-1"
+                    className="mx-auto flex h-full w-full max-w-[292px] flex-col gap-3 overflow-y-auto"
                   >
                     {exchangeNotice ? (
                       <motion.p

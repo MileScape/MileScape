@@ -7,6 +7,7 @@ export type CapsuleMachineButtonProps = Omit<CapsuleMachineModalProps, "isOpen" 
   caption?: string;
   className?: string;
   buttonMode?: "card" | "compact";
+  iconSrc?: string;
 };
 
 export const CapsuleMachineButton = ({
@@ -14,9 +15,12 @@ export const CapsuleMachineButton = ({
   caption = "Draw",
   className = "",
   buttonMode = "card",
+  iconSrc,
   ...modalProps
 }: CapsuleMachineButtonProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [iconLoadFailed, setIconLoadFailed] = useState(false);
+  const shouldUseImageIcon = Boolean(iconSrc) && !iconLoadFailed;
 
   return (
     <>
@@ -32,7 +36,16 @@ export const CapsuleMachineButton = ({
         aria-label="Open capsule machine"
       >
         {buttonMode === "compact" ? (
-          <>
+          shouldUseImageIcon ? (
+            <img
+              src={iconSrc}
+              alt=""
+              className="pointer-events-none h-full w-full object-contain transition duration-300 group-hover:scale-[1.04]"
+              draggable={false}
+              onError={() => setIconLoadFailed(true)}
+            />
+          ) : (
+            <>
             <span className="absolute left-1/2 top-[1px] h-[35px] w-[38px] -translate-x-1/2 rounded-[18px_18px_14px_14px] border border-white/85 bg-[radial-gradient(circle_at_34%_25%,rgba(255,255,255,0.98),rgba(214,225,214,0.84)_62%,rgba(176,196,181,0.82)_100%)] shadow-[inset_0_0_0_4px_rgba(255,255,255,0.56),0_8px_16px_rgba(74,94,82,0.14)]" />
             <span className="absolute left-[18px] top-[14px] h-2.5 w-2.5 rounded-full bg-[linear-gradient(180deg,#fff4bf_0%,#e9bd54_48%,#c96543_50%,#8f3b34_100%)] shadow-[0_4px_8px_rgba(196,105,62,0.2)]" />
             <span className="absolute left-[32px] top-[11px] h-2 w-2 rounded-full bg-[linear-gradient(180deg,#f8f7ff_0%,#d6d9ee_48%,#c89bb6_50%,#8a617a_100%)] shadow-[0_4px_8px_rgba(129,93,122,0.16)]" />
@@ -43,7 +56,8 @@ export const CapsuleMachineButton = ({
               <Sparkles className="h-2.5 w-2.5" />
             </span>
             <span className="absolute bottom-[1px] left-1/2 h-[2px] w-8 -translate-x-1/2 rounded-full bg-[#60796d]/36" />
-          </>
+            </>
+          )
         ) : (
           <>
             <span className="absolute -right-8 -top-10 h-28 w-28 rounded-full bg-gold/30 blur-2xl transition group-hover:scale-125" />

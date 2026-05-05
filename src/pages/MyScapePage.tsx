@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarDays, Download, Share2, X } from "lucide-react";
+import { CalendarDays, Share2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrangeInventoryTray } from "../components/myscape/ArrangeInventoryTray";
@@ -166,7 +166,7 @@ export const MyScapePage = () => {
   const [isSharePanelOpen, setIsSharePanelOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState(() => getMyScapeDateKey(todayDate));
-  const [shareActionInProgress, setShareActionInProgress] = useState<"save" | "share" | null>(null);
+  const [shareActionInProgress, setShareActionInProgress] = useState<"share" | null>(null);
   const [capsuleState, setCapsuleState] = useState<MyScapeCapsuleState>(() => {
     const storedCapsuleState = loadMyScapeCapsuleState();
 
@@ -669,23 +669,22 @@ export const MyScapePage = () => {
       context.textAlign = "left";
     }
 
-    const statY = 930;
-    const statCards = [
-      { label: "DISTANCE", value: formatDistance(activeStats.distanceKm) },
-      { label: "RUNS", value: `${activeStats.runCount}` },
-      { label: "UNLOCKS", value: `${activeStats.unlockCount}` },
+    const statRows = [
+      { label: "Distance", value: formatDistance(activeStats.distanceKm) },
+      { label: "Runs", value: `${activeStats.runCount}` },
+      { label: "Unlocks", value: `${activeStats.unlockCount}` },
     ];
+    const statX = 560;
+    const statY = 910;
 
-    statCards.forEach((stat, index) => {
-      const cardWidth = 220;
-      const x = 92 + index * 250;
-      fillRoundedRect(x, statY, cardWidth, 116, 24, "rgba(255,255,255,0.76)");
-      context.fillStyle = "#7c8b83";
-      context.font = "700 18px sans-serif";
-      context.fillText(stat.label, x + 24, statY + 38);
+    statRows.forEach((stat, index) => {
+      const y = statY + index * 56;
+      context.fillStyle = "#819187";
+      context.font = "500 20px sans-serif";
+      context.fillText(stat.label.toUpperCase(), statX, y);
       context.fillStyle = "#2c3a33";
-      context.font = "700 32px sans-serif";
-      context.fillText(stat.value, x + 24, statY + 84);
+      context.font = "700 42px sans-serif";
+      context.fillText(stat.value, statX + 210, y + 2);
     });
 
     context.fillStyle = "#6f8177";
@@ -693,31 +692,6 @@ export const MyScapePage = () => {
     context.fillText(`${placedLandmarks.length} placed on my lawn`, 92, 1108);
 
     return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png", 0.96));
-  };
-
-  const handleSaveShareImage = async () => {
-    setShareActionInProgress("save");
-    showToast("Generating share image...");
-    try {
-      const blob = await createShareImageBlob();
-      if (!blob) {
-        return;
-      }
-
-      const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = `milescape-${summaryTab}-${selectedDayKey}.png`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 500);
-      showToast("Share image saved");
-    } catch {
-      showToast("Save failed. Try Share instead.");
-    } finally {
-      setShareActionInProgress(null);
-    }
   };
 
   const handleNativeShare = async () => {
@@ -742,18 +716,17 @@ export const MyScapePage = () => {
         return;
       }
 
-      if (navigator.share) {
-        await navigator.share({ title: shareTitle, text: shareText });
-        showToast("Share sheet opened");
-        return;
-      }
-
       const objectUrl = URL.createObjectURL(blob);
-      window.open(objectUrl, "_blank", "noopener,noreferrer");
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
-      showToast("Opened share image");
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `milescape-${summaryTab}-${selectedDayKey}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 500);
+      showToast("Share image saved");
     } catch {
-      showToast("Share failed or cancelled");
+      showToast("Share failed. Try again.");
     } finally {
       setShareActionInProgress(null);
     }
@@ -1557,33 +1530,26 @@ export const MyScapePage = () => {
               onClick={() => setIsSharePanelOpen(false)}
             />
             <motion.section
-              className="relative z-10 flex h-[min(94dvh,760px)] w-full max-w-[390px] flex-col overflow-hidden rounded-[32px] border border-white/70 bg-[linear-gradient(180deg,#fbf7ef,#eee9dc)] text-ink shadow-[0_30px_80px_rgba(35,52,40,0.26)]"
+              className="relative z-10 w-full max-w-[390px] text-ink"
               initial={{ y: 18, scale: 0.97 }}
               animate={{ y: 0, scale: 1 }}
               exit={{ y: 12, scale: 0.98 }}
               transition={{ type: "spring", stiffness: 190, damping: 22 }}
             >
-              <div className="flex items-start justify-between gap-3 border-b border-sage-900/8 px-5 pb-4 pt-5">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-sage-500">Share Card</p>
-                  <h2 className="mt-1 text-2xl font-semibold tracking-[-0.06em]">{shareTitle}</h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsSharePanelOpen(false)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/76 text-sage-700 ring-1 ring-sage-900/10"
-                  aria-label="Close share preview"
-                >
-                  <X className="h-4.5 w-4.5" />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsSharePanelOpen(false)}
+                className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/76 text-sage-700 shadow-[0_10px_20px_rgba(45,62,53,0.12)] ring-1 ring-sage-900/10"
+                aria-label="Close share preview"
+              >
+                <X className="h-4.5 w-4.5" />
+              </button>
 
-              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-                <div
-                  className="overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,#eef4ec,#dbe7d8)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.74)] ring-1 ring-white/80"
-                >
+              <div
+                className="overflow-hidden rounded-[30px] bg-[linear-gradient(180deg,#eef4ec,#dbe7d8)] p-3 shadow-[0_30px_80px_rgba(35,52,40,0.26),inset_0_1px_0_rgba(255,255,255,0.74)] ring-1 ring-white/80"
+              >
                   <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(180deg,#f8f5ee_0%,#edf2e8_70%,#e2eadf_100%)]">
-                    <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between px-4 pt-4">
+                    <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-3 px-4 pr-16 pt-4">
                       <div>
                         <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-sage-500">MileScape</p>
                         <h3 className="mt-1 max-w-[190px] text-xl font-semibold leading-none tracking-[-0.06em] text-[#2c3a33]">
@@ -1615,41 +1581,29 @@ export const MyScapePage = () => {
                       </div>
                     </div>
 
-                    <div className="absolute inset-x-3 bottom-3 z-10 grid grid-cols-3 gap-2">
-                      <div className="rounded-[16px] bg-white/82 px-3 py-2 ring-1 ring-white/80">
-                        <p className="text-[9px] uppercase tracking-[0.16em] text-sage-500">Distance</p>
-                        <p className="mt-1 text-sm font-bold text-[#2c3a33]">{formatDistance(activeStats.distanceKm)}</p>
-                      </div>
-                      <div className="rounded-[16px] bg-white/82 px-3 py-2 ring-1 ring-white/80">
-                        <p className="text-[9px] uppercase tracking-[0.16em] text-sage-500">Runs</p>
-                        <p className="mt-1 text-sm font-bold text-[#2c3a33]">{activeStats.runCount}</p>
-                      </div>
-                      <div className="rounded-[16px] bg-white/82 px-3 py-2 ring-1 ring-white/80">
-                        <p className="text-[9px] uppercase tracking-[0.16em] text-sage-500">Unlocks</p>
-                        <p className="mt-1 text-sm font-bold text-[#2c3a33]">{activeStats.unlockCount}</p>
-                      </div>
+                    <div className="absolute bottom-5 right-5 z-10 w-[144px] space-y-2.5 text-left [text-shadow:0_1px_10px_rgba(255,255,255,0.58)]">
+                      {[
+                        { label: "Distance", value: formatDistance(activeStats.distanceKm) },
+                        { label: "Runs", value: `${activeStats.runCount}` },
+                        { label: "Unlocks", value: `${activeStats.unlockCount}` },
+                      ].map((row) => (
+                        <div key={row.label} className="grid grid-cols-[1fr_auto] items-baseline gap-x-3">
+                          <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-[#819187]">{row.label}</span>
+                          <span className="justify-self-start font-destination-display text-[1.18rem] leading-none tracking-[-0.02em] text-[#27352d]">
+                            {row.value}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
 
-                <p className="mt-3 rounded-[20px] bg-white/62 px-4 py-3 text-sm leading-6 text-sage-700">{shareText}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 border-t border-sage-900/8 p-4">
-                <button
-                  type="button"
-                  onClick={handleSaveShareImage}
-                  disabled={shareActionInProgress !== null}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#556a5f,#72877b)] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(77,97,86,0.18)]"
-                >
-                  <Download className="h-4 w-4" />
-                  {shareActionInProgress === "save" ? "Saving..." : "Save"}
-                </button>
+              <div className="mt-3">
                 <button
                   type="button"
                   onClick={handleNativeShare}
                   disabled={shareActionInProgress !== null}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#7b8f82,#5f7568)] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(77,97,86,0.16)]"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#7b8f82,#5f7568)] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(77,97,86,0.16)]"
                 >
                   <Share2 className="h-4 w-4" />
                   {shareActionInProgress === "share" ? "Sharing..." : "Share"}
