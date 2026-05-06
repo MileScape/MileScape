@@ -22,6 +22,7 @@ export const AppShell = () => {
   const isRunResult = location.pathname === "/run/result";
   const isPaceportHome = location.pathname === "/paceport";
   const isMyScapeHome = location.pathname === "/myscape";
+  const isAchievementsHome = location.pathname === "/achievements";
   const isPaceCrewSubpage = location.pathname.startsWith("/pacecrew/") && location.pathname !== "/pacecrew";
   const isWearablesSubpage = location.pathname.startsWith("/wearables/") && location.pathname !== "/wearables";
   const isWearablesFullBleed = isWearablesHome && !state.wearableConnection;
@@ -132,7 +133,7 @@ export const AppShell = () => {
           <p className={cn("uppercase tracking-[0.28em]", isPrimaryHome ? "text-[10px] text-white/92" : "text-[11px] text-sage-500")}>
             MILESCAPE
           </p>
-          {!isPrimaryHome && !isPaceCrewHome && !isWearablesFullBleed && !isMyScapeHome && !isRunResult ? (
+          {!isPrimaryHome && !isPaceCrewHome && !isWearablesFullBleed && !isMyScapeHome && !isRunResult && !isAchievementsHome ? (
             <h1 className="mt-1 text-base font-semibold text-ink">{title}</h1>
           ) : null}
         </div>
@@ -145,6 +146,8 @@ export const AppShell = () => {
           "flex-1 min-h-0",
           isOnboarding || isPrimaryHome || isWearablesFullBleed || isMyScapeHome
             ? "overflow-hidden px-0 pb-0 pt-0"
+            : isAchievementsHome
+              ? "overflow-hidden px-4 pb-0 pt-1"
             : isRunResult
               ? "px-0 pb-8 pt-0"
               : "px-4 pb-8 pt-1",

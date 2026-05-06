@@ -79,7 +79,7 @@ export const CountryAchievementCard = ({
         }
       }}
       onContextMenu={(event) => event.preventDefault()}
-      className="relative mx-auto h-[178px] w-full max-w-[350px] transform-gpu overflow-hidden opacity-100 saturate-100 transition-all duration-500 ease-out will-change-transform sm:h-[184px]"
+      className="relative mx-auto h-[178px] w-full max-w-none transform-gpu overflow-hidden opacity-100 saturate-100 transition-all duration-500 ease-out will-change-transform sm:h-[184px]"
       style={{
         pointerEvents: active ? "auto" : "none",
         zIndex: active ? 20 : 10
@@ -118,7 +118,7 @@ export const CountryAchievementCard = ({
                 <p className="truncate text-base font-semibold leading-tight text-ink sm:text-lg">
                   {getDisplayCountry(set.country, language)}
                 </p>
-                <div className="mt-1.5 h-1.5 w-44 overflow-hidden rounded-full bg-white/70 ring-1 ring-white/70 sm:w-52">
+                <div className="mt-1.5 h-1.5 w-full max-w-[420px] overflow-hidden rounded-full bg-white/70 ring-1 ring-white/70">
                   <div className="h-full rounded-full bg-sage-600" style={{ width: `${progressPercent}%` }} />
                 </div>
                 <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-sage-500">
