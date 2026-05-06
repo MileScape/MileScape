@@ -482,37 +482,70 @@ const CapsuleMachineVisual = ({
 };
 
 const DuplicateConversion = ({ fragments }: { fragments: number }) => (
-  <div className="mt-3 rounded-[18px] bg-amber-50/90 px-3 py-2.5 ring-1 ring-amber-200">
-    <div className="flex items-center gap-3">
-      <div className="flex shrink-0 items-center gap-2">
+  <div className="rounded-[17px] bg-[#fff8e5]/90 px-3 py-2.5 ring-1 ring-[#ecdcb8]">
+    <div className="flex items-center gap-2.5">
+      <div className="grid shrink-0 grid-cols-[32px_14px_32px] items-center gap-1.5">
         <motion.div
-          className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-amber-600 shadow-[0_8px_16px_rgba(187,128,54,0.12)]"
+          className="flex h-8 w-8 items-center justify-center rounded-[14px] bg-white/74 text-[#a77b36] shadow-[0_8px_16px_rgba(177,138,73,0.1)]"
           animate={{ x: [0, -4, -6], rotate: [0, -8, -14], opacity: [1, 0.85, 0.18], scale: [1, 0.96, 0.82] }}
           transition={{ duration: 0.52 }}
         >
-          <Ticket className="h-4.5 w-4.5" />
+          <Ticket className="h-4 w-4" />
         </motion.div>
-        <div className="h-px w-4 rounded-full bg-amber-300" />
+        <div className="h-px w-full rounded-full bg-[#e7cf92]" />
         <motion.div
-          className="flex h-9 min-w-9 items-center justify-center gap-0.5 rounded-2xl bg-white px-2 text-amber-600 shadow-[0_8px_16px_rgba(187,128,54,0.1)]"
+          className="flex h-8 w-8 items-center justify-center gap-0.5 text-[#7e6435]"
           animate={{ x: [6, 0], opacity: [0, 1], scale: [0.85, 1] }}
           transition={{ duration: 0.42, delay: 0.12 }}
         >
-          <Gem className="h-4 w-4 text-amber-500" />
-          <span className="text-xs font-bold">+{fragments}</span>
+          <Gem className="h-3.5 w-3.5 text-[#c99b47]" />
+          <span className="text-[11px] font-bold">+{fragments}</span>
         </motion.div>
       </div>
       <div className="min-w-0">
-        <p className="text-sm font-semibold text-amber-900">Duplicate route</p>
-        <p className="text-xs text-amber-700">+{fragments} fragments for effects.</p>
+        <p className="text-xs font-semibold text-[#745b33]">Duplicate route</p>
+        <p className="text-[11px] text-[#927344]">+{fragments} fragments for effects.</p>
       </div>
     </div>
   </div>
 );
 
+const PrizePreviewBadge = ({ result }: { result: CapsuleDrawResult }) => {
+  const isRoute = result.kind === "route_ticket";
+
+  if (isRoute) {
+    return (
+      <div className="flex h-[58px] w-[64px] shrink-0 items-center justify-center text-[#44564a]">
+        <Ticket className="h-10 w-10" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative h-[58px] w-[74px] shrink-0 overflow-hidden rounded-[18px] bg-[#eef3ec] shadow-[0_12px_22px_rgba(68,86,74,0.16)] ring-1 ring-white/70">
+      {result.decoration.image ? (
+        <img
+          src={result.decoration.image}
+          alt=""
+          className="h-full w-full object-contain p-2"
+          draggable={false}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-white">
+          <TreePine className="h-5 w-5" />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const PrizeResultCard = ({ result }: { result: CapsuleDrawResult }) => {
   const isRoute = result.kind === "route_ticket";
   const isDuplicate = isRoute && result.isDuplicate;
+  const title = isRoute ? result.route.name : result.decoration.name;
+  const subtitle = isRoute ? `${result.route.city}, ${result.route.country}` : "Sent to Box";
+  const statusCopy = isRoute ? "Stored as a route ticket." : "Ready to place from Box.";
+  const routeCoverImage = isRoute ? result.route.coverImage : null;
 
   return (
     <motion.div
@@ -520,47 +553,61 @@ const PrizeResultCard = ({ result }: { result: CapsuleDrawResult }) => {
       initial={{ opacity: 0, y: 18, scale: 0.94 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 18, scale: 0.94 }}
-      className="rounded-[22px] border border-white/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(246,243,236,0.94))] p-3.5 shadow-[0_18px_36px_rgba(13,20,16,0.08)]"
+      className={cn(
+        "relative grid h-full content-between gap-4 overflow-hidden rounded-[22px] border border-white/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(246,243,236,0.94))] p-4 shadow-[0_18px_36px_rgba(13,20,16,0.08)]",
+        isDuplicate ? "min-h-[156px]" : "min-h-[136px]",
+      )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      {routeCoverImage ? (
+        <>
+          <img
+            src={routeCoverImage}
+            alt=""
+            className="pointer-events-none absolute inset-0 h-full w-full scale-[1.03] object-cover opacity-[0.46] saturate-[0.72]"
+            draggable={false}
+          />
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.83)_0%,rgba(250,248,242,0.66)_46%,rgba(246,243,236,0.28)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.26),rgba(246,243,236,0.7))]" />
+        </>
+      ) : null}
+
+      <div className="relative flex items-start gap-3.5">
+        <PrizePreviewBadge result={result} />
+        <div className="min-w-0 flex-1 space-y-2 pt-0.5">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sage-500">
             {isRoute ? "Route Ticket" : "Decor"}
           </p>
-          <h3 className="mt-1 text-base font-semibold tracking-[-0.04em] text-ink">
-            {isRoute ? result.route.name : result.decoration.name}
-          </h3>
-          <p className="mt-1 text-xs text-sage-600">
-            {isRoute ? `${result.route.city}, ${result.route.country}` : "Sent to Box"}
-          </p>
-        </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#44564a] text-white shadow-[0_10px_18px_rgba(68,86,74,0.16)]">
-          {isRoute ? <Ticket className="h-4.5 w-4.5" /> : <TreePine className="h-4.5 w-4.5" />}
+          <div className="space-y-1">
+            <h3 className="line-clamp-2 text-base font-semibold leading-[1.08] tracking-[-0.04em] text-ink">{title}</h3>
+            <p className="line-clamp-1 text-xs text-sage-600">{subtitle}</p>
+          </div>
         </div>
       </div>
 
-      <div className="mt-2.5 flex flex-wrap items-center gap-2">
-        {isRoute ? (
-          <span className={cn("rounded-full px-3 py-1 text-xs font-bold ring-1", tierPillClass[result.tier])}>
-            {result.tier}
-          </span>
-        ) : (
-          <span className={cn("rounded-full px-3 py-1 text-xs font-bold capitalize ring-1", rarityPillClass[result.decoration.rarity])}>
-            {result.decoration.rarity}
-          </span>
-        )}
-        {isDuplicate ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-3 py-1 text-xs font-bold text-white">
-            <Gem className="h-3.5 w-3.5" />
-            +{result.fragmentsAwarded}
-          </span>
+      <div className="relative grid gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {isRoute ? (
+            <span className={cn("rounded-full px-3 py-1 text-[11px] font-bold ring-1", tierPillClass[result.tier])}>
+              {result.tier}
+            </span>
+          ) : (
+            <span className={cn("rounded-full px-3 py-1 text-[11px] font-bold capitalize ring-1", rarityPillClass[result.decoration.rarity])}>
+              {result.decoration.rarity}
+            </span>
+          )}
+          {isDuplicate ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#f5dfab] px-3 py-1 text-[11px] font-bold text-[#6b5633] ring-1 ring-white/60">
+              <Gem className="h-3 w-3 text-[#c99b47]" />
+              +{result.fragmentsAwarded}
+            </span>
+          ) : null}
+        </div>
+
+        {isDuplicate ? <DuplicateConversion fragments={result.fragmentsAwarded} /> : null}
+        {!isDuplicate ? (
+          <p className="rounded-[15px] bg-white/48 px-3 py-2 text-[11px] text-sage-600 ring-1 ring-white/60">{statusCopy}</p>
         ) : null}
       </div>
-
-      {isDuplicate ? <DuplicateConversion fragments={result.fragmentsAwarded} /> : null}
-      {!isDuplicate ? (
-        <p className="mt-2.5 text-xs text-sage-500">{isRoute ? "Stored as a route ticket." : "Ready to place from Box."}</p>
-      ) : null}
     </motion.div>
   );
 };
@@ -798,7 +845,7 @@ export const CapsuleMachineModal = ({
                     <p className="text-[9px] uppercase tracking-[0.22em] text-sage-500">Fragments</p>
                     <p className="mt-0.5 text-lg font-semibold tracking-[-0.04em]">{availableFragments}</p>
                   </div>
-                  <Gem className="h-4.5 w-4.5 text-[#c79746]" />
+                  <Gem className="h-4.5 w-4.5 text-[#d0aa62]" />
                 </div>
                 {typeof currentStamps === "number" ? (
                   <div className="flex h-11 min-w-0 items-center justify-between rounded-[18px] bg-white/62 px-3 text-ink ring-1 ring-white/80">
@@ -883,8 +930,8 @@ export const CapsuleMachineModal = ({
 
                     <div className="w-full shrink-0">
                       {!drawResult ? (
-                        <p className="mb-1 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-sage-500">
-                          {routePool.length} tickets / {decorationPool.length} decor
+                        <p className="mb-1 truncate text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-sage-500">
+                          {resolvedDisabledReason ?? `${routePool.length} tickets / ${decorationPool.length} decor`}
                         </p>
                       ) : null}
                       <button
@@ -897,12 +944,9 @@ export const CapsuleMachineModal = ({
                         {drawInProgress ? "Spinning..." : "Spin"}
                         {drawCostLabel ? <span className="rounded-full bg-white/14 px-2 py-0.5 text-[11px]">{drawCostLabel}</span> : null}
                       </button>
-                      {resolvedDisabledReason ? (
-                        <p className="mt-2 rounded-2xl bg-sage-50 px-3 py-2 text-sm text-sage-600">{resolvedDisabledReason}</p>
-                      ) : null}
                     </div>
 
-                    <div className="min-h-0 w-full flex-1 overflow-hidden">
+                    <div className="flex min-h-0 w-full flex-1 items-stretch justify-center overflow-hidden pb-4 pt-2">
                       <AnimatePresence mode="wait">
                         {drawResult ? (
                           <motion.div
@@ -910,7 +954,7 @@ export const CapsuleMachineModal = ({
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="h-full min-h-[170px] overflow-y-auto pb-1"
+                            className="h-full w-full overflow-visible"
                           >
                             <PrizeResultCard result={drawResult} />
                           </motion.div>
@@ -966,8 +1010,8 @@ export const CapsuleMachineModal = ({
                                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/74 text-ink shadow-[0_12px_24px_rgba(31,43,36,0.12)]">
                                   <EffectIcon className="h-5 w-5" />
                                 </div>
-                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-900 ring-1 ring-amber-200">
-                                  <Gem className="h-3.5 w-3.5" />
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[#fff7df]/90 px-3 py-1 text-xs font-bold text-[#746033] ring-1 ring-[#ecdcb8]">
+                                  <Gem className="h-3.5 w-3.5 text-[#cda153]" />
                                   {effect.costFragments}
                                 </span>
                               </div>

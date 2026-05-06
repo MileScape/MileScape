@@ -8,6 +8,57 @@ export interface MyScapeAssetConfig {
 }
 
 export const myScapeAssetConfigs: Record<string, MyScapeAssetConfig> = {
+  // Capsule machine decor
+  "capsule-garden-bench": {
+    defaultScale: 0.68,
+    footprintWidth: 2,
+    offsetY: 18,
+  },
+  "capsule-safety-cone": {
+    defaultScale: 0.58,
+    offsetY: 19,
+  },
+  "capsule-flower-pot": {
+    defaultScale: 0.58,
+    offsetY: 18,
+  },
+  "capsule-stone-path": {
+    defaultScale: 0.72,
+    footprintHeight: 2,
+    offsetY: 24,
+  },
+  "capsule-street-lamp": {
+    defaultScale: 0.72,
+    footprintHeight: 2,
+    offsetY: 10,
+  },
+  "capsule-small-fence": {
+    defaultScale: 0.7,
+    footprintWidth: 2,
+    offsetY: 21,
+  },
+  "capsule-picnic-basket": {
+    defaultScale: 0.58,
+    offsetY: 19,
+  },
+  "capsule-hollow-log": {
+    defaultScale: 0.68,
+    footprintWidth: 2,
+    offsetY: 22,
+  },
+  "capsule-oak-tree": {
+    defaultScale: 0.82,
+    footprintWidth: 2,
+    footprintHeight: 2,
+    offsetY: 12,
+  },
+  "capsule-fountain": {
+    defaultScale: 0.78,
+    footprintWidth: 2,
+    footprintHeight: 2,
+    offsetY: 16,
+  },
+
   // Manhattan lights trail
   "statue-of-liberty": {
     defaultScale: 1.8,
