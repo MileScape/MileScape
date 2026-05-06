@@ -26,6 +26,7 @@ import {
   getAssetFootprint,
   getMyScapeDateKey,
   getMyScapeGridSizeForScope,
+  getMyScapeAssetConfig,
   getItemZIndex,
   getPlacementAnchorPoint,
   isGridCellOccupied,
@@ -244,26 +245,30 @@ export const MyScapePage = () => {
         return [];
       }
 
+      const decorationConfig = getMyScapeAssetConfig(decoration.id);
+      const defaultScale = decoration.rarity === "legendary" ? 0.88 : decoration.rarity === "epic" ? 0.82 : 0.76;
+
       return [
         {
           id: decoration.id,
           name: decoration.name,
           description: decoration.description ?? "Capsule machine decoration",
           image: decoration.image ?? decoration.icon ?? "",
-          imageSrc: decoration.image,
+          imageSrc: decorationConfig.imageSrc ?? decoration.image,
           routeId: CAPSULE_ROUTE_ID,
           routeName: CAPSULE_ROUTE_NAME,
           city: "My Scape",
           country: "Collection",
           assetType: "decor" as const,
-          defaultScale: decoration.rarity === "legendary" ? 0.88 : decoration.rarity === "epic" ? 0.82 : 0.76,
+          defaultScale: decorationConfig.defaultScale ?? defaultScale,
           rarity: decoration.rarity,
           ownedCount,
           routeOrder: Number.MAX_SAFE_INTEGER,
           itemOrder: index,
-          footprintWidth: decoration.rarity === "legendary" ? 2 : 1,
-          footprintHeight: decoration.rarity === "legendary" ? 2 : 1,
-          offsetY: 14,
+          footprintWidth: decorationConfig.footprintWidth ?? (decoration.rarity === "legendary" ? 2 : 1),
+          footprintHeight: decorationConfig.footprintHeight ?? (decoration.rarity === "legendary" ? 2 : 1),
+          offsetX: decorationConfig.offsetX,
+          offsetY: decorationConfig.offsetY ?? 14,
         },
       ];
     });

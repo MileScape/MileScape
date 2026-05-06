@@ -166,11 +166,11 @@ export const ArrangeInventoryTray = forwardRef<HTMLDivElement, ArrangeInventoryT
                   {rarityFilterLabel[activeRarityFilter]}
                 </button>
               ) : (
-                <div className="flex h-[34px] items-center gap-1 rounded-full bg-white/36 px-3 text-[10px] font-medium uppercase tracking-[0.12em] text-[#718278]" aria-hidden="true">
+                <div className="flex h-[34px] min-w-0 max-w-[88px] items-center gap-1 overflow-hidden rounded-full bg-white/36 px-2.5 text-[10px] font-medium uppercase tracking-[0.08em] text-[#718278]" aria-hidden="true">
                   {category === "scene" ? (
                     <>
-                      <CloudSun className="h-3.5 w-3.5" />
-                      Effects
+                      <CloudSun className="h-3.5 w-3.5 shrink-0" />
+                      <span className="min-w-0 truncate">Effects</span>
                     </>
                   ) : null}
                 </div>
