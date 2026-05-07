@@ -258,10 +258,9 @@ const PosterTransitionShell = ({
                   clearHoldTimer();
                   setIsPressed(false);
                 }}
-                className="relative block w-full cursor-pointer rounded-[2rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] p-3 text-left shadow-[0_20px_56px_rgba(63,84,72,0.08)] backdrop-blur-[20px]"
+                className="relative block w-full cursor-pointer text-left"
                 aria-label="Press and hold to flip poster"
               >
-                <span className="pointer-events-none absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.006)_30%,rgba(255,255,255,0)_100%)]" />
                 <motion.div
                   animate={{ rotateY: isFlipped ? 180 : 0, scale: isPressed ? 0.988 : 1 }}
                   transition={{ duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
@@ -329,22 +328,67 @@ const PosterBackFace = ({
   secondaryValue: string;
   footer: string;
 }) => (
-  <section className="relative flex aspect-[4/5] flex-col justify-between overflow-hidden rounded-[30px] bg-[linear-gradient(180deg,rgba(245,247,241,0.96),rgba(225,236,228,0.92))] p-5 shadow-[0_24px_80px_rgba(76,88,110,0.10)]">
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.55),transparent_34%),radial-gradient(circle_at_bottom,rgba(180,202,188,0.24),transparent_40%)]" />
-    <div className="relative space-y-4">
-      <p className="text-[0.72rem] font-medium uppercase tracking-[0.28em] text-sage-500">{eyebrow}</p>
-      <h3 className="max-w-[12ch] text-[2.1rem] font-semibold leading-[0.94] tracking-[-0.06em] text-ink">{title}</h3>
+  <section className="relative flex aspect-[4/5] flex-col justify-between overflow-hidden border border-[#816646]/30 bg-[#f7f1df] p-5 shadow-[0_20px_56px_rgba(76,88,110,0.10)]">
+    <div className="pointer-events-none absolute inset-0 opacity-[0.34] [background-image:radial-gradient(circle_at_center,rgba(129,102,70,0.42)_0_1.15px,transparent_1.3px)] [background-size:15px_15px]" />
+    <div className="pointer-events-none absolute inset-0 opacity-[0.2] [background-image:radial-gradient(circle_at_center,rgba(216,154,88,0.36)_0_1px,transparent_1.2px)] [background-position:7px_7px] [background-size:15px_15px]" />
+    <div className="pointer-events-none absolute inset-[10px] border border-[#816646]/24" />
+    <div className="pointer-events-none absolute inset-x-5 top-[5.2rem] border-t border-dashed border-[#816646]/34" />
+    <div className="pointer-events-none absolute bottom-5 right-5 h-20 w-20 rotate-[-8deg] border-2 border-dashed border-[#567b72]/42 opacity-55" />
+
+    <div className="relative space-y-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="font-mono text-[0.68rem] font-semibold uppercase leading-none tracking-[0.18em] text-[#53685f]/78 mix-blend-multiply [font-family:'Courier_New','Courier_Prime','American_Typewriter','Special_Elite',monospace] [text-shadow:0.4px_0_rgba(17,31,22,0.24)]">
+            {eyebrow}
+          </p>
+          <p className="mt-2 font-mono text-[0.58rem] uppercase tracking-[0.16em] text-[#816646]/62 [font-family:'Courier_New','Courier_Prime','American_Typewriter','Special_Elite',monospace]">
+            MileScape Field Note
+          </p>
+        </div>
+        <div className="border border-[#816646]/28 px-2 py-1 text-right">
+          <p className="font-mono text-[0.55rem] uppercase tracking-[0.14em] text-[#816646]/70 [font-family:'Courier_New','Courier_Prime','American_Typewriter','Special_Elite',monospace]">
+            Logged
+          </p>
+          <p className="font-mono text-[0.68rem] font-semibold text-[#53685f]/82 mix-blend-multiply [font-family:'Courier_New','Courier_Prime','American_Typewriter','Special_Elite',monospace]">
+            01
+          </p>
+        </div>
+      </div>
+
+      <h3 className="max-w-[13ch] font-mono text-[1.85rem] font-semibold uppercase leading-[0.98] text-[#263229]/90 mix-blend-multiply [font-family:'Courier_New','Courier_Prime','American_Typewriter','Special_Elite',monospace] [text-shadow:0.6px_0_rgba(17,31,22,0.22),-0.4px_0_rgba(17,31,22,0.12)]">
+        {title}
+      </h3>
     </div>
-    <div className="relative space-y-3">
-      <div className="rounded-[22px] bg-white/56 px-4 py-4 backdrop-blur-xl">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-sage-500">Distance</p>
-        <p className="mt-2 text-[2rem] font-semibold tracking-[-0.05em] text-ink">{primaryValue}</p>
+
+    <div className="relative space-y-4">
+      <div className="border-y border-dashed border-[#816646]/34 py-3">
+        <p className="font-mono text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[#816646]/72 [font-family:'Courier_New','Courier_Prime','American_Typewriter','Special_Elite',monospace]">
+          Distance
+        </p>
+        <p className="mt-2 font-mono text-[2rem] font-semibold leading-none text-[#263229]/90 mix-blend-multiply [font-family:'Courier_New','Courier_Prime','American_Typewriter','Special_Elite',monospace] [text-shadow:0.7px_0_rgba(17,31,22,0.2)]">
+          {primaryValue}
+        </p>
       </div>
-      <div className="rounded-[22px] bg-white/42 px-4 py-4 backdrop-blur-xl">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-sage-500">Impact</p>
-        <p className="mt-2 text-lg font-semibold tracking-[-0.03em] text-ink">{secondaryValue}</p>
+
+      <div className="grid grid-cols-[1fr_auto] items-end gap-4 border-b border-dashed border-[#816646]/30 pb-3">
+        <div>
+          <p className="font-mono text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[#816646]/72 [font-family:'Courier_New','Courier_Prime','American_Typewriter','Special_Elite',monospace]">
+            Impact
+          </p>
+          <p className="mt-2 font-mono text-[1rem] font-semibold uppercase leading-snug text-[#263229]/86 mix-blend-multiply [font-family:'Courier_New','Courier_Prime','American_Typewriter','Special_Elite',monospace] [text-shadow:0.5px_0_rgba(17,31,22,0.18)]">
+            {secondaryValue}
+          </p>
+        </div>
+        <div className="rotate-[-5deg] border-2 border-[#567b72]/46 px-2 py-1">
+          <p className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-[#567b72]/76 [font-family:'Courier_New','Courier_Prime','American_Typewriter','Special_Elite',monospace]">
+            Verified
+          </p>
+        </div>
       </div>
-      <p className="pt-1 text-xs uppercase tracking-[0.18em] text-sage-500">{footer}</p>
+
+      <p className="font-mono text-[0.68rem] font-semibold uppercase leading-relaxed tracking-[0.14em] text-[#53685f]/76 mix-blend-multiply [font-family:'Courier_New','Courier_Prime','American_Typewriter','Special_Elite',monospace]">
+        {footer}
+      </p>
     </div>
   </section>
 );

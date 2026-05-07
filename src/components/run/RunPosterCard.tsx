@@ -16,9 +16,7 @@ export const RunPosterCard = memo(({
   topLabel,
 }: RunPosterCardProps) => {
   return (
-    <section className="relative overflow-hidden rounded-[30px] bg-[linear-gradient(180deg,rgba(255,255,255,0.16),rgba(255,255,255,0.05))] shadow-[0_24px_80px_rgba(76,88,110,0.08)] backdrop-blur-[24px]">
-      <div className="pointer-events-none absolute inset-0 rounded-[30px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.012)_28%,rgba(255,255,255,0.00)_100%)]" />
-      <div className="pointer-events-none absolute inset-[1px] rounded-[29px] bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.005))]" />
+    <section className="relative overflow-hidden border border-white/70 bg-white shadow-[0_20px_56px_rgba(76,88,110,0.10)]">
 
       <div className="relative aspect-[4/5]">
         <img
@@ -35,7 +33,7 @@ export const RunPosterCard = memo(({
           <span>{topLabel ?? ""}</span>
           {dateLabel ? <span className="text-right">{dateLabel}</span> : null}
         </div>
-        <div className="absolute inset-x-4 bottom-4 rounded-[18px] bg-black/22 px-4 py-3 text-white backdrop-blur-sm">
+        <div className="absolute inset-x-4 bottom-4 bg-black/22 px-4 py-3 text-white backdrop-blur-sm">
           <p className="text-[0.68rem] uppercase tracking-[0.26em] text-white/62">{subtitle}</p>
           <p className="mt-2 text-2xl font-semibold tracking-[-0.05em]">{title}</p>
         </div>
