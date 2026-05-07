@@ -40,8 +40,6 @@ export const MY_SCAPE_TILE_WIDTH = 64;
 export const MY_SCAPE_TILE_HEIGHT = 32;
 export const MY_SCAPE_GRID_COLUMNS = 8;
 export const MY_SCAPE_GRID_ROWS = 8;
-export const MY_SCAPE_OVERVIEW_GRID_COLUMNS = 128;
-export const MY_SCAPE_OVERVIEW_GRID_ROWS = 128;
 export const MY_SCAPE_MIN_SCALE = 0.8;
 export const MY_SCAPE_MAX_SCALE = 1.4;
 const MY_SCAPE_ORIGIN_X_RATIO = 0.5;
@@ -52,30 +50,8 @@ const MY_SCAPE_ORIGIN_Y_OFFSET = 12;
 const DEFAULT_FOOTPRINT_WIDTH = 1;
 const DEFAULT_FOOTPRINT_HEIGHT = 1;
 
-export interface MyScapeGridSize {
-  columns: number;
-  rows: number;
-}
-
-export const MY_SCAPE_DEFAULT_GRID_SIZE: MyScapeGridSize = {
-  columns: MY_SCAPE_GRID_COLUMNS,
-  rows: MY_SCAPE_GRID_ROWS,
-};
-
-export const MY_SCAPE_OVERVIEW_GRID_SIZE: MyScapeGridSize = {
-  columns: MY_SCAPE_OVERVIEW_GRID_COLUMNS,
-  rows: MY_SCAPE_OVERVIEW_GRID_ROWS,
-};
-
 const isFiniteNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 const getFiniteNumber = (value: unknown, fallback: number) => (isFiniteNumber(value) ? value : fallback);
-const getSafeGridSize = (gridSize: MyScapeGridSize = MY_SCAPE_DEFAULT_GRID_SIZE): MyScapeGridSize => ({
-  columns: Math.max(1, Math.round(getFiniteNumber(gridSize.columns, MY_SCAPE_GRID_COLUMNS))),
-  rows: Math.max(1, Math.round(getFiniteNumber(gridSize.rows, MY_SCAPE_GRID_ROWS))),
-});
-
-export const getMyScapeGridSizeForScope = (scopeKey = "overview") =>
-  scopeKey === "overview" ? MY_SCAPE_OVERVIEW_GRID_SIZE : MY_SCAPE_DEFAULT_GRID_SIZE;
 
 export const clamp = (value: number, min: number, max: number) => {
   const safeMin = getFiniteNumber(min, 0);
@@ -123,12 +99,10 @@ export const screenToGrid = (
 export const clampGridPosition = (
   col: number,
   row: number,
-  gridSize: MyScapeGridSize = MY_SCAPE_DEFAULT_GRID_SIZE,
 ) => {
-  const { columns, rows } = getSafeGridSize(gridSize);
   return {
-    col: clamp(col, 0, columns - 1),
-    row: clamp(row, 0, rows - 1),
+    col: clamp(col, 0, MY_SCAPE_GRID_COLUMNS - 1),
+    row: clamp(row, 0, MY_SCAPE_GRID_ROWS - 1),
   };
 };
 
@@ -136,25 +110,19 @@ export const getItemZIndex = (col: number, row: number) => col + row + 10;
 
 export const serializeMyScapeLayout = (
   placedLandmarks: MyScapePlacedLandmark[],
-  gridSize: MyScapeGridSize = MY_SCAPE_DEFAULT_GRID_SIZE,
 ): MyScapeLayout => ({
-  placedLandmarks: sanitizePlacedLandmarks(placedLandmarks, gridSize),
+  placedLandmarks: sanitizePlacedLandmarks(placedLandmarks),
   updatedAt: new Date().toISOString(),
 });
 
-const sanitizePlacedLandmarks = (
-  placedLandmarks: MyScapePlacedLandmark[] = [],
-  gridSize: MyScapeGridSize = MY_SCAPE_DEFAULT_GRID_SIZE,
-): MyScapePlacedLandmark[] => {
-  const { columns, rows } = getSafeGridSize(gridSize);
-
-  return placedLandmarks
+const sanitizePlacedLandmarks = (placedLandmarks: MyScapePlacedLandmark[] = []): MyScapePlacedLandmark[] =>
+  placedLandmarks
     .filter((item) => item && typeof item.id === "string" && typeof item.landmarkId === "string")
     .map((item, index) => {
-      const fallbackCol = index % columns;
-      const fallbackRow = Math.floor(index / columns) % rows;
-      const col = clamp(Math.round(getFiniteNumber(item.col, fallbackCol)), 0, columns - 1);
-      const row = clamp(Math.round(getFiniteNumber(item.row, fallbackRow)), 0, rows - 1);
+      const fallbackCol = index % MY_SCAPE_GRID_COLUMNS;
+      const fallbackRow = Math.floor(index / MY_SCAPE_GRID_COLUMNS) % MY_SCAPE_GRID_ROWS;
+      const col = clamp(Math.round(getFiniteNumber(item.col, fallbackCol)), 0, MY_SCAPE_GRID_COLUMNS - 1);
+      const row = clamp(Math.round(getFiniteNumber(item.row, fallbackRow)), 0, MY_SCAPE_GRID_ROWS - 1);
       const scale = clamp(getFiniteNumber(item.scale, 1), MY_SCAPE_MIN_SCALE, MY_SCAPE_MAX_SCALE);
       const zIndex = Math.round(getFiniteNumber(item.zIndex, getItemZIndex(col, row)));
 
@@ -166,10 +134,9 @@ const sanitizePlacedLandmarks = (
         zIndex,
       };
     });
-};
 
-export const restoreMyScapeLayout = (scopeKey = "overview", gridSize = getMyScapeGridSizeForScope(scopeKey)) =>
-  sanitizePlacedLandmarks(loadMyScapeLayout(scopeKey)?.placedLandmarks ?? [], gridSize);
+export const restoreMyScapeLayout = (scopeKey = "overview") =>
+  sanitizePlacedLandmarks(loadMyScapeLayout(scopeKey)?.placedLandmarks ?? []);
 
 export const restorePlacedAssetIds = () => loadPlacedAssetIds();
 
@@ -210,12 +177,10 @@ export const clampGridPositionForFootprint = (
   row: number,
   footprintWidth = DEFAULT_FOOTPRINT_WIDTH,
   footprintHeight = DEFAULT_FOOTPRINT_HEIGHT,
-  gridSize: MyScapeGridSize = MY_SCAPE_DEFAULT_GRID_SIZE,
 ) => {
-  const { columns, rows } = getSafeGridSize(gridSize);
   return {
-    col: clamp(col, 0, Math.max(0, columns - footprintWidth)),
-    row: clamp(row, 0, Math.max(0, rows - footprintHeight)),
+    col: clamp(col, 0, Math.max(0, MY_SCAPE_GRID_COLUMNS - footprintWidth)),
+    row: clamp(row, 0, Math.max(0, MY_SCAPE_GRID_ROWS - footprintHeight)),
   };
 };
 
@@ -517,17 +482,10 @@ export const isGridCellOccupied = (
   items: MyScapePlacedLandmark[],
   assetLookup?: Map<string, UnlockedLandmarkAsset>,
   excludeId?: string,
-  gridSize: MyScapeGridSize = MY_SCAPE_DEFAULT_GRID_SIZE,
 ) => {
   const targetAsset = assetLookup?.get("__placement-preview__");
   const targetFootprint = getAssetFootprint(targetAsset);
-  const normalizedTarget = clampGridPositionForFootprint(
-    col,
-    row,
-    targetFootprint.width,
-    targetFootprint.height,
-    gridSize,
-  );
+  const normalizedTarget = clampGridPositionForFootprint(col, row, targetFootprint.width, targetFootprint.height);
 
   return items.some((item) => {
     if (item.id === excludeId) {
@@ -536,13 +494,7 @@ export const isGridCellOccupied = (
 
     const itemAsset = assetLookup?.get(item.landmarkId);
     const itemFootprint = getAssetFootprint(itemAsset);
-    const normalizedItem = clampGridPositionForFootprint(
-      item.col,
-      item.row,
-      itemFootprint.width,
-      itemFootprint.height,
-      gridSize,
-    );
+    const normalizedItem = clampGridPositionForFootprint(item.col, item.row, itemFootprint.width, itemFootprint.height);
 
     return placementsOverlap(
       {
@@ -566,23 +518,20 @@ export const createPlacedLandmark = (
   existing: MyScapePlacedLandmark[],
   assetLookup?: Map<string, UnlockedLandmarkAsset>,
   initialScale = 1,
-  gridSize: MyScapeGridSize = MY_SCAPE_DEFAULT_GRID_SIZE,
 ): MyScapePlacedLandmark => {
-  const { columns, rows } = getSafeGridSize(gridSize);
   const asset = assetLookup?.get(landmarkId);
   const footprint = getAssetFootprint(asset);
-  const centerCol = Math.floor(columns / 2);
-  const centerRow = Math.floor(rows / 2);
+  const centerCol = Math.floor(MY_SCAPE_GRID_COLUMNS / 2);
+  const centerRow = Math.floor(MY_SCAPE_GRID_ROWS / 2);
   const centeredStart = clampGridPositionForFootprint(
     centerCol - Math.floor((footprint.width - 1) / 2),
     centerRow - Math.floor((footprint.height - 1) / 2),
     footprint.width,
     footprint.height,
-    gridSize,
   );
   const candidateOffsets = [{ col: centeredStart.col, row: centeredStart.row }];
 
-  for (let ring = 1; ring <= Math.max(columns, rows); ring += 1) {
+  for (let ring = 1; ring <= Math.max(MY_SCAPE_GRID_COLUMNS, MY_SCAPE_GRID_ROWS); ring += 1) {
     for (let colOffset = -ring; colOffset <= ring; colOffset += 1) {
       const rowOffset = ring - Math.abs(colOffset);
       candidateOffsets.push(
@@ -591,7 +540,6 @@ export const createPlacedLandmark = (
           centeredStart.row + rowOffset,
           footprint.width,
           footprint.height,
-          gridSize,
         ),
       );
       if (rowOffset !== 0) {
@@ -601,7 +549,6 @@ export const createPlacedLandmark = (
             centeredStart.row - rowOffset,
             footprint.width,
             footprint.height,
-            gridSize,
           ),
         );
       }
@@ -614,9 +561,9 @@ export const createPlacedLandmark = (
       if (asset) {
         placementAssetLookup.set("__placement-preview__", asset);
       }
-      return !isGridCellOccupied(candidate.col, candidate.row, existing, placementAssetLookup, undefined, gridSize);
+      return !isGridCellOccupied(candidate.col, candidate.row, existing, placementAssetLookup);
     }) ??
-    clampGridPositionForFootprint(centeredStart.col, centeredStart.row, footprint.width, footprint.height, gridSize);
+    clampGridPositionForFootprint(centeredStart.col, centeredStart.row, footprint.width, footprint.height);
 
   return {
     id: crypto.randomUUID(),
