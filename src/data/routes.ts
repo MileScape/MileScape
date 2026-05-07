@@ -201,12 +201,13 @@ export const routes: Route[] = [
     country: "South Korea",
     totalDistanceKm: 12,
     coverImage: "/posters/Seoul.jpg",
-    description: "A compact Seoul route built from the Korean landmark models currently in the project.",
-    motivation: "Collect palace, mountain, and memorial landmarks through steady short runs.",
+    description: "A compact Seoul route reserved for the Campus Striders PaceCrew archive.",
+    motivation: "Collect palace, mountain, and memorial landmarks through shared campus missions.",
     tier: "Standard",
     priceStamps: 85,
-    sourceType: "personal",
-    sourceCrewId: null,
+    sourceType: "pacecrew",
+    crewOnly: true,
+    sourceCrewId: "campus-striders",
     landmarks: [
       landmark("gyeongbokgung-palace", "Gyeongbokgung Palace", 3, "The opening palace landmark for the Seoul route.", "/models/landmarks/koera-route/GyeongbokgungPalace.png"),
       landmark("korean-tomb", "Korean Tomb", 7, "A quiet historical midpoint reward.", "/models/landmarks/koera-route/KoreanTomb.png"),
@@ -234,7 +235,7 @@ export const routes: Route[] = [
     priceStamps: 95,
     sourceType: "pacecrew",
     crewOnly: true,
-    sourceCrewId: null,
+    sourceCrewId: "night-owls",
     landmarks: [
       landmark("sydney-opera-house", "Sydney Opera House", 4, "The opening harbor icon for this route.", "/models/landmarks/sydney-route/SydneyOperaHouse.png"),
       landmark("harbour-bridge", "Harbour Bridge", 9, "A strong midpoint landmark across the water.", "/models/landmarks/sydney-route/HarbourBridge.png"),
@@ -342,7 +343,7 @@ export const routes: Route[] = [
     priceStamps: 55,
     sourceType: "pacecrew",
     crewOnly: true,
-    sourceCrewId: null,
+    sourceCrewId: "sunrise-collective",
     landmarks: [
       landmark("floating-market", "Floating Market", 4, "A colorful opening landmark from the Bangkok set.", "/models/landmarks/bamkok/floating-market.png"),
       landmark("buddha", "Buddha", 9, "The completion landmark for this compact Bangkok route.", "/models/landmarks/bamkok/buddha.png")

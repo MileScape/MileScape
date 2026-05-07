@@ -56,8 +56,8 @@ export const PaceCrewMissionCard = ({
       </div>
 
       {destinationRewardName ? (
-        <div className="mt-4 rounded-[22px] bg-[#edf5f8]/88 px-4 py-3 ring-1 ring-[#d8e7ee]">
-          <p className="inline-flex items-center gap-2 text-sm font-medium text-sky-700">
+        <div className="mt-4 rounded-[22px] bg-[#edf4ee]/88 px-4 py-3 ring-1 ring-sage-200/80">
+          <p className="inline-flex items-center gap-2 text-sm font-medium text-sage-700">
             <LockKeyhole className="h-4 w-4" />
             Destination reward: {destinationRewardName}
           </p>

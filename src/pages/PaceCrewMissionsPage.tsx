@@ -41,8 +41,8 @@ export const PaceCrewMissionsPage = () => {
 
             return (
               <div key={mission.id} className="space-y-3">
-                <div className="rounded-[24px] bg-[#edf5f8]/88 px-4 py-3 ring-1 ring-[#d8e7ee] backdrop-blur-xl">
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-sky-700">From PaceCrew</p>
+                <div className="rounded-[24px] bg-[#edf4ee]/88 px-4 py-3 ring-1 ring-sage-200/80 backdrop-blur-xl">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-sage-700">From PaceCrew</p>
                   <p className="mt-1 text-sm font-semibold text-ink">{crew.name}</p>
                 </div>
                 <PaceCrewMissionCard

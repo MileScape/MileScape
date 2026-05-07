@@ -29,11 +29,12 @@ export const paceCrewMissions: PaceCrewMission[] = [
     id: "mission-study-break",
     crewId: "campus-striders",
     title: "Study Break Loop",
-    description: "Sneak in 1.5 km between classes for an easy deposit-backed reward.",
+    description: "Sneak in 1.5 km between classes and unlock a Seoul team route for the campus archive.",
     targetDistanceKm: 1.5,
     depositStamps: 10,
     rewardStamps: 25,
     deadline: "2026-12-31T12:00:00.000Z",
+    destinationRewardId: "seoul-heritage-route",
     status: "open"
   }
 ];

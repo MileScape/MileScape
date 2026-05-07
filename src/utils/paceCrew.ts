@@ -11,7 +11,7 @@ import type {
 
 export const isCrewOnlyRoute = (route: Route) => route.sourceType === "pacecrew" || route.crewOnly;
 
-export const paceCrewMembershipUnlockRouteIds = ["sydney-harbor-route", "bangkok-floating-route"];
+export const paceCrewMembershipUnlockRouteIds: string[] = [];
 
 export const getPaceCrewMembershipUnlockRouteIds = (state: AppState) =>
   state.userPaceCrewState.memberships.length > 0 ? paceCrewMembershipUnlockRouteIds : [];

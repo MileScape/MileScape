@@ -521,7 +521,7 @@ export const RunResultPage = () => {
 
               {unlockedDestination ? (
                 <div className="border-t border-sage-900/8 pt-5">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-sky-700">{t("paceport.pacecrewOnly")}</p>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-sage-700">{t("paceport.pacecrewOnly")}</p>
                   <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-ink">{unlockedDestination.name} unlocked</h3>
                 </div>
               ) : null}

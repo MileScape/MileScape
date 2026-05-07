@@ -8,6 +8,7 @@ import { FloatingStatsText } from "../components/myscape/FloatingStatsText";
 import { ItemActionMenu } from "../components/myscape/ItemActionMenu";
 import { ItemMemoryCard } from "../components/myscape/ItemMemoryCard";
 import { MyScapeAtmosphereLayer } from "../components/myscape/MyScapeAtmosphereLayer";
+import { MyScapeCalendarView } from "../components/myscape/MyScapeCalendarView";
 import { MyScapeDayDateSwitcher } from "../components/myscape/MyScapeDayDateSwitcher";
 import { MyScapeHeaderControls } from "../components/myscape/MyScapeHeaderControls";
 import { MyScapeBoard } from "../components/myscape/MyScapeBoard";
@@ -313,6 +314,21 @@ export const MyScapePage = () => {
   const activeLayoutScopeKey = summaryTab === "overview" ? "overview" : `day:${selectedDayKey}`;
   const boardViewKey = `${summaryTab}-${selectedDayKey}`;
 
+  const goToPreviousMonth = () => {
+    setSelectedDayDate((current) => {
+      const next = new Date(current.getFullYear(), current.getMonth() - 1, 1);
+      return getStartOfDay(next);
+    });
+  };
+
+  const goToNextMonth = () => {
+    setSelectedDayDate((current) => {
+      const next = new Date(current.getFullYear(), current.getMonth() + 1, 1);
+      const clampedDay = next.getTime() > todayDate.getTime() ? todayDate : next;
+      return getStartOfDay(clampedDay);
+    });
+  };
+
   const goToPreviousDay = () => {
     setDayTransitionDirection(-1);
     setSelectedDayDate((current) => {
@@ -449,6 +465,16 @@ export const MyScapePage = () => {
       setInfoItemId(null);
     }
   }, [isEditMode, isSelectedDayToday, summaryTab]);
+
+  useEffect(() => {
+    if (summaryTab !== "calendar" || !isEditMode) {
+      return;
+    }
+
+    setIsEditMode(false);
+    setActionMenuItemId(null);
+    setInfoItemId(null);
+  }, [isEditMode, summaryTab]);
 
   useEffect(() => {
     if (isDatePickerOpen) {
@@ -1000,6 +1026,23 @@ export const MyScapePage = () => {
   const newTodayIds = useMemo(() => new Set(dayUnlocks.map((entry) => entry.id)), [dayUnlocks]);
   const scopedCatalogAssets = useMemo(() => liveCatalogAssets, [liveCatalogAssets]);
 
+  const calendarMonthRuns = useMemo(
+    () =>
+      state.runHistory.filter((entry) => {
+        const completedAt = new Date(entry.completedAt);
+        return completedAt.getFullYear() === selectedDayDate.getFullYear() && completedAt.getMonth() === selectedDayDate.getMonth();
+      }),
+    [selectedDayDate, state.runHistory],
+  );
+  const calendarMonthUnlocks = useMemo(
+    () =>
+      unlockTimeline.filter((entry) => {
+        const unlockedAt = new Date(entry.unlockedAt);
+        return unlockedAt.getFullYear() === selectedDayDate.getFullYear() && unlockedAt.getMonth() === selectedDayDate.getMonth();
+      }),
+    [selectedDayDate, unlockTimeline],
+  );
+
   const summaryStats = useMemo<Record<ScapeSummaryTab, SummaryStats>>(
     () => ({
       day: {
@@ -1007,17 +1050,27 @@ export const MyScapePage = () => {
         runCount: dayRuns.length,
         unlockCount: dayUnlocks.length,
       },
+      calendar: {
+        distanceKm: calendarMonthRuns.reduce((sum, entry) => sum + entry.distanceKm, 0),
+        runCount: calendarMonthRuns.length,
+        unlockCount: calendarMonthUnlocks.length,
+      },
       overview: {
         distanceKm: state.runHistory.reduce((sum, entry) => sum + entry.distanceKm, 0),
         runCount: state.runHistory.length,
         unlockCount: liveCatalogAssets.filter((asset) => (asset.ownedCount ?? 0) > 0).length,
       },
     }),
-    [dayRuns, dayUnlocks.length, liveCatalogAssets, state.runHistory],
+    [calendarMonthRuns, calendarMonthUnlocks.length, dayRuns, dayUnlocks.length, liveCatalogAssets, state.runHistory],
   );
 
   const activeStats = summaryStats[summaryTab];
-  const shareTitle = summaryTab === "day" ? `My Scape on ${formatDaySwitcherDate(selectedDayDate)}` : "My Scape Overview";
+  const shareTitle =
+    summaryTab === "day"
+      ? `My Scape on ${formatDaySwitcherDate(selectedDayDate)}`
+      : summaryTab === "calendar"
+        ? `My Scape in ${selectedDayDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`
+        : "My Scape Overview";
   const shareText = `${shareTitle}: ${formatDistance(activeStats.distanceKm)}, ${activeStats.runCount} run${
     activeStats.runCount === 1 ? "" : "s"
   }, ${activeStats.unlockCount} unlock${activeStats.unlockCount === 1 ? "" : "s"}.`;
@@ -1038,7 +1091,7 @@ export const MyScapePage = () => {
       }).length,
     [newTodayIds, placedAssetIds, placedCountsByAssetId, unlockedAssets],
   );
-  const arrangeDisabled = summaryTab === "day" && !isSelectedDayToday;
+  const arrangeDisabled = summaryTab === "calendar" || (summaryTab === "day" && !isSelectedDayToday);
 
   useEffect(() => {
     if (!entryReady || newToastShownRef.current || newUnplacedCount <= 0) {
@@ -1213,7 +1266,7 @@ export const MyScapePage = () => {
   };
 
   const capsuleButton =
-    summaryTab === "overview" || isSelectedDayToday ? (
+    summaryTab !== "calendar" && (summaryTab === "overview" || isSelectedDayToday) ? (
       <CapsuleMachineButton
         buttonMode="compact"
         routes={routes}
@@ -1273,7 +1326,7 @@ export const MyScapePage = () => {
 
   const handleToggleArrange = () => {
     if (arrangeDisabled) {
-      showToast("Past lawns are read-only");
+      showToast(summaryTab === "calendar" ? "Calendar is read-only" : "Past lawns are read-only");
       return;
     }
 
@@ -1298,22 +1351,38 @@ export const MyScapePage = () => {
       transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
       className="relative min-h-screen overflow-hidden bg-[#f6f3ec] text-ink"
     >
-      <ScapeBoardStage
-        viewKey={boardViewKey}
-        transitionDirection={summaryTab === "day" ? dayTransitionDirection : 0}
-        boardRef={boardRef}
-        assets={liveCatalogAssets}
-        placedLandmarks={placedLandmarks}
-        selectedId={selectedId}
-        draggingId={draggingId}
-        dragPreview={dragPreview}
-        entryReady={entryReady}
-        placementPreview={placementPreview}
-        isEditMode={isEditMode}
-        newTodayIds={newTodayIds}
-        onItemPointerDown={handleItemPointerDown}
-        onSelectItem={handleSelectItem}
-      />
+      {summaryTab === "calendar" ? (
+        <MyScapeCalendarView
+          monthDate={selectedDayDate}
+          todayDate={todayDate}
+          runHistory={state.runHistory}
+          unlockTimeline={unlockTimeline}
+          selectedDateKey={selectedDayKey}
+          onPreviousMonth={goToPreviousMonth}
+          onNextMonth={goToNextMonth}
+          onSelectDate={(date) => {
+            setSelectedDayDate(getStartOfDay(date));
+            setDayTransitionDirection(0);
+          }}
+        />
+      ) : (
+        <ScapeBoardStage
+          viewKey={boardViewKey}
+          transitionDirection={summaryTab === "day" ? dayTransitionDirection : 0}
+          boardRef={boardRef}
+          assets={liveCatalogAssets}
+          placedLandmarks={placedLandmarks}
+          selectedId={selectedId}
+          draggingId={draggingId}
+          dragPreview={dragPreview}
+          entryReady={entryReady}
+          placementPreview={placementPreview}
+          isEditMode={isEditMode}
+          newTodayIds={newTodayIds}
+          onItemPointerDown={handleItemPointerDown}
+          onSelectItem={handleSelectItem}
+        />
+      )}
 
       <MyScapeAtmosphereLayer activeEffectIds={activeAtmosphereEffectIds} />
 
@@ -1338,7 +1407,7 @@ export const MyScapePage = () => {
         />
       ) : null}
 
-      {!isEditMode ? (
+      {!isEditMode && summaryTab !== "calendar" ? (
         <FloatingStatsText
           key={`${summaryTab}-${selectedDayKey}`}
           tab={summaryTab}

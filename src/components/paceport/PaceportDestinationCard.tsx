@@ -75,7 +75,7 @@ export const PaceportDestinationCard = ({
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {route.crewOnly ? (
-            <span className="rounded-full bg-sky-100/80 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-sky-700">
+            <span className="rounded-full bg-sage-100/80 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-sage-700">
               PaceCrew Only
             </span>
           ) : null}

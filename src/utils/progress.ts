@@ -36,6 +36,33 @@ const createDefaultRouteProgress = (routeId: string): RouteProgress => ({
 
 const createDefaultWearableSyncHistory = (): WearableSyncRecord[] => [];
 
+const mergeDefaultPaceCrews = (loadedCrews: AppState["paceCrews"] | undefined) => {
+  const loadedById = new Map((loadedCrews ?? []).map((crew) => [crew.id, crew]));
+  const defaultIds = new Set(initialPaceCrews.map((crew) => crew.id));
+  const mergedDefaults = initialPaceCrews.map((crew) => ({
+    ...(loadedById.get(crew.id) ?? crew),
+    name: crew.name,
+    description: crew.description,
+    exclusiveDestinationIds: crew.exclusiveDestinationIds
+  }));
+  const customCrews = (loadedCrews ?? []).filter((crew) => !defaultIds.has(crew.id));
+
+  return [...mergedDefaults, ...customCrews];
+};
+
+const mergeDefaultPaceCrewMissions = (loadedMissions: AppState["paceCrewMissions"] | undefined) => {
+  const loadedById = new Map((loadedMissions ?? []).map((mission) => [mission.id, mission]));
+  const defaultIds = new Set(initialPaceCrewMissions.map((mission) => mission.id));
+  const mergedDefaults = initialPaceCrewMissions.map((mission) => ({
+    ...(loadedById.get(mission.id) ?? mission),
+    description: mission.description,
+    destinationRewardId: mission.destinationRewardId
+  }));
+  const customMissions = (loadedMissions ?? []).filter((mission) => !defaultIds.has(mission.id));
+
+  return [...mergedDefaults, ...customMissions];
+};
+
 export const createInitialState = (): AppState =>
   syncExpiredMissionStates({
     debugModeEnabled: false,
@@ -112,8 +139,8 @@ export const normalizeState = (loadedState: Partial<AppState> | null): AppState 
       organizedCrewId: loadedState.userPaceCrewState?.organizedCrewId ?? null,
       memberships
     },
-    paceCrews: loadedState.paceCrews ?? initialPaceCrews,
-    paceCrewMissions: loadedState.paceCrewMissions ?? initialPaceCrewMissions,
+    paceCrews: mergeDefaultPaceCrews(loadedState.paceCrews),
+    paceCrewMissions: mergeDefaultPaceCrewMissions(loadedState.paceCrewMissions),
     userMissionStates:
       loadedState.userMissionStates?.map((missionState) => ({
         ...missionState,
