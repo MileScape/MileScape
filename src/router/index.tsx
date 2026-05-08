@@ -32,6 +32,7 @@ const PaceCrewCreatePage = lazyPage(() => import("../pages/PaceCrewCreatePage"),
 const PaceCrewDetailPage = lazyPage(() => import("../pages/PaceCrewDetailPage"), "PaceCrewDetailPage");
 const PaceCrewDiscoverPage = lazyPage(() => import("../pages/PaceCrewDiscoverPage"), "PaceCrewDiscoverPage");
 const PaceCrewJoinedPage = lazyPage(() => import("../pages/PaceCrewJoinedPage"), "PaceCrewJoinedPage");
+const PaceCrewManagePage = lazyPage(() => import("../pages/PaceCrewManagePage"), "PaceCrewManagePage");
 const PaceCrewMissionsPage = lazyPage(() => import("../pages/PaceCrewMissionsPage"), "PaceCrewMissionsPage");
 const PaceCrewPage = lazyPage(() => import("../pages/PaceCrewPage"), "PaceCrewPage");
 const PaceportDetailPage = lazyPage(() => import("../pages/PaceportDetailPage"), "PaceportDetailPage");
@@ -55,6 +56,7 @@ export const router = createBrowserRouter([
       { path: "pacecrew/joined", element: routeElement(<PaceCrewJoinedPage />) },
       { path: "pacecrew/discover", element: routeElement(<PaceCrewDiscoverPage />) },
       { path: "pacecrew/missions", element: routeElement(<PaceCrewMissionsPage />) },
+      { path: "pacecrew/manage", element: routeElement(<PaceCrewManagePage />) },
       { path: "pacecrew/:crewId", element: routeElement(<PaceCrewDetailPage />) },
       { path: "paceport", element: routeElement(<PaceportOverviewPage />) },
       { path: "paceport/:routeId", element: routeElement(<PaceportDetailPage />) },

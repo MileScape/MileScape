@@ -1,6 +1,6 @@
-import { FileText, Lock, Mic, NotebookTabs, Search, Sparkles, Users, X, type LucideIcon } from "lucide-react";
+import { FileText, Mic, NotebookTabs, Plus, Search, Settings2, Sparkles, Users, X, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { RunPosterCard } from "../components/run/RunPosterCard";
 import { useAppState } from "../hooks/useAppState";
 import { cn } from "../utils/cn";
@@ -36,13 +36,18 @@ const heroCopy: Record<PaceCrewTab, { kicker: string; title: string; description
 
 export const PaceCrewPage = () => {
   const { routes, state } = useAppState();
-  const [activeTab, setActiveTab] = useState<PaceCrewTab>("crew");
+  const location = useLocation();
+  const initialTab = (location.state as { tab?: PaceCrewTab } | null)?.tab === "summary" ? "summary" : "crew";
+  const [activeTab, setActiveTab] = useState<PaceCrewTab>(initialTab);
   const [searchExpanded, setSearchExpanded] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [flippedRouteIds, setFlippedRouteIds] = useState<string[]>([]);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const ActiveIcon = tabs.find((tab) => tab.id === activeTab)?.icon ?? FileText;
   const activeHeroCopy = heroCopy[activeTab];
+  const organizedCrew = state.userPaceCrewState.organizedCrewId
+    ? state.paceCrews.find((crew) => crew.id === state.userPaceCrewState.organizedCrewId) ?? null
+    : null;
 
   const crewRouteEntries = useMemo(() => {
     const crewDestinationIds = new Set(
@@ -83,6 +88,24 @@ export const PaceCrewPage = () => {
     });
   }, [crewRouteEntries, searchValue]);
 
+  const visibleCrews = useMemo(() => {
+    const normalizedQuery = searchValue.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return state.paceCrews;
+    }
+
+    return state.paceCrews.filter((crew) => {
+      const crewMissionTitles = state.paceCrewMissions
+        .filter((mission) => mission.crewId === crew.id)
+        .map((mission) => mission.title);
+
+      return [crew.name, crew.description, ...crewMissionTitles]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(normalizedQuery));
+    });
+  }, [searchValue, state.paceCrewMissions, state.paceCrews]);
+
   useEffect(() => {
     if (!searchExpanded) {
       return;
@@ -112,9 +135,20 @@ export const PaceCrewPage = () => {
                 <Sparkles className="h-3.5 w-3.5" />
                 {activeHeroCopy.kicker}
               </p>
-              <h1 className="mt-5 whitespace-nowrap text-[clamp(2.15rem,9vw,4.8rem)] font-semibold leading-[0.88] tracking-[-0.06em] text-ink">
-                {activeHeroCopy.title}
-              </h1>
+              <div className="mt-5 flex flex-wrap items-center gap-4">
+                <h1 className="whitespace-nowrap text-[clamp(2.15rem,9vw,4.8rem)] font-semibold leading-[0.88] tracking-[-0.06em] text-ink">
+                  {activeHeroCopy.title}
+                </h1>
+                {activeTab === "summary" ? (
+                  <Link
+                    to="/pacecrew/manage"
+                    className="ml-3 inline-flex rotate-[-1deg] items-center gap-1.5 bg-[#edf4ee]/68 px-2.5 py-1.5 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-sage-800 shadow-[0_8px_20px_rgba(62,89,70,0.08)] transition hover:-translate-y-0.5 hover:bg-[#e3eee5] hover:text-sage-900 md:ml-8"
+                  >
+                    {organizedCrew ? <Settings2 className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+                    {organizedCrew ? "Manage My Crew" : "Create Crew"}
+                  </Link>
+                ) : null}
+              </div>
             </div>
             <p className="max-w-[34ch] font-mono text-[13px] leading-6 text-[#6c624f] [font-family:'Courier_New','Courier_Prime','American_Typewriter','Special_Elite',monospace]">
               {activeHeroCopy.description}
@@ -124,7 +158,12 @@ export const PaceCrewPage = () => {
 
         {activeTab === "summary" ? (
           <section className="mx-auto mt-9 grid max-w-5xl gap-4 md:grid-cols-3">
-            {state.paceCrews.map((crew, index) => {
+            {visibleCrews.length === 0 ? (
+              <div className="col-span-full bg-white/58 p-6 text-sm font-medium text-sage-700 shadow-[0_18px_46px_rgba(58,48,33,0.08)] ring-1 ring-[#b99361]/18">
+                No crew notes match this search.
+              </div>
+            ) : null}
+            {visibleCrews.map((crew, index) => {
               const openMissionCount = state.paceCrewMissions.filter(
                 (mission) => mission.crewId === crew.id && mission.status === "open",
               ).length;
@@ -199,14 +238,7 @@ export const PaceCrewPage = () => {
                             dateLabel={unlocked ? "Unlocked" : "Locked"}
                           />
                         </div>
-                        {!unlocked ? (
-                          <div className="absolute inset-0 grid place-items-center bg-[#1f2421]/18">
-                            <span className="inline-flex items-center gap-2 rounded-full bg-white/84 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#4f554f] shadow-sm">
-                              <Lock className="h-3.5 w-3.5" />
-                              Locked
-                            </span>
-                          </div>
-                        ) : null}
+                        {!unlocked ? <div className="absolute inset-0 bg-[#1f2421]/18" /> : null}
                       </div>
 
                       <div className="absolute inset-0 flex aspect-[4/5] flex-col justify-between overflow-hidden border border-[#816646]/30 bg-[#f7f1df] p-5 shadow-[0_20px_56px_rgba(76,88,110,0.10)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
@@ -254,7 +286,7 @@ export const PaceCrewPage = () => {
                                 <div
                                   key={reward.id}
                                   className={cn(
-                                    "relative aspect-square bg-white/72 p-1.5 shadow-sm ring-1 ring-[#816646]/16",
+                                    "relative aspect-square p-1.5",
                                     rewardFrameAngles[rewardIndex % rewardFrameAngles.length],
                                     !unlocked && "grayscale",
                                   )}

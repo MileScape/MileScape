@@ -641,6 +641,37 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
         return { success: true, message: "Member removed" };
       },
+      publishPaceCrewMap: (crewId, routeId) => {
+        if (!isCrewOrganizer(state, crewId)) {
+          return { success: false, message: "Only the organizer can publish maps" };
+        }
+
+        const route = routes.find((entry) => entry.id === routeId);
+        if (!route) {
+          return { success: false, message: "Route not found" };
+        }
+
+        const crew = state.paceCrews.find((entry) => entry.id === crewId);
+        if (!crew) {
+          return { success: false, message: "PaceCrew not found" };
+        }
+
+        if (crew.exclusiveDestinationIds.includes(routeId)) {
+          return { success: false, message: "Map already published" };
+        }
+
+        setState((current) => ({
+          ...current,
+          paceCrews: current.paceCrews.map((entry) =>
+            entry.id === crewId
+              ? { ...entry, exclusiveDestinationIds: [...entry.exclusiveDestinationIds, routeId] }
+              : entry,
+          ),
+          unlockedCrewDestinationIds: Array.from(new Set([...current.unlockedCrewDestinationIds, routeId])),
+        }));
+
+        return { success: true, message: `${route.name} published` };
+      },
       createMission: (crewId, input) => {
         if (!isCrewOrganizer(state, crewId)) {
           return { success: false, message: "Only the organizer can publish missions" };
@@ -665,6 +696,38 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         }));
 
         return { success: true, message: "Mission published" };
+      },
+      updateMission: (missionId, input) => {
+        const mission = state.paceCrewMissions.find((entry) => entry.id === missionId);
+        if (!mission) {
+          return { success: false, message: "Mission not found" };
+        }
+
+        if (!isCrewOrganizer(state, mission.crewId)) {
+          return { success: false, message: "Only the organizer can manage missions" };
+        }
+
+        setState((current) => ({
+          ...current,
+          paceCrewMissions: current.paceCrewMissions.map((entry) =>
+            entry.id === missionId
+              ? {
+                  ...entry,
+                  ...input,
+                  targetDistanceKm:
+                    input.targetDistanceKm === undefined
+                      ? entry.targetDistanceKm
+                      : Math.max(0.5, input.targetDistanceKm),
+                  depositStamps:
+                    input.depositStamps === undefined ? entry.depositStamps : Math.max(0, Math.round(input.depositStamps)),
+                  rewardStamps:
+                    input.rewardStamps === undefined ? entry.rewardStamps : Math.max(0, Math.round(input.rewardStamps)),
+                }
+              : entry,
+          ),
+        }));
+
+        return { success: true, message: "Mission updated" };
       },
       acceptMission: (missionId) => {
         const mission = state.paceCrewMissions.find((entry) => entry.id === missionId);

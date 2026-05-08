@@ -225,6 +225,7 @@ export interface AppContextValue {
   leavePaceCrew: (crewId: string) => { success: boolean; message: string };
   dissolvePaceCrew: (crewId: string) => { success: boolean; message: string };
   removePaceCrewMember: (crewId: string, memberId: string) => { success: boolean; message: string };
+  publishPaceCrewMap: (crewId: string, routeId: string) => { success: boolean; message: string };
   createMission: (
     crewId: string,
     input: {
@@ -236,6 +237,19 @@ export interface AppContextValue {
       deadline: string;
       destinationRewardId?: string;
     },
+  ) => { success: boolean; message: string };
+  updateMission: (
+    missionId: string,
+    input: Partial<{
+      title: string;
+      description: string;
+      targetDistanceKm: number;
+      depositStamps: number;
+      rewardStamps: number;
+      deadline: string;
+      destinationRewardId?: string;
+      status: PaceCrewMissionStatus;
+    }>,
   ) => { success: boolean; message: string };
   acceptMission: (missionId: string) => { success: boolean; message: string };
   connectWearable: (input: { id: string; name: string }) => { success: boolean; message: string };
