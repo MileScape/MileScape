@@ -112,6 +112,8 @@ export const CountryAchievementCard = ({
                     "h-5 w-5 object-contain sm:h-6 sm:w-6",
                     set.unlocked ? "opacity-100" : "opacity-55 grayscale"
                   )}
+                  loading="lazy"
+                  decoding="async"
                 />
               </span>
               <div className="min-w-0 flex-1">

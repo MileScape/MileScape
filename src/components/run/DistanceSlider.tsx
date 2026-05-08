@@ -44,6 +44,7 @@ export const DistanceSlider = ({
               alt=""
               aria-hidden="true"
               className="pointer-events-none absolute top-0 h-12 w-16 -translate-x-1/2 object-contain object-bottom"
+              decoding="async"
               style={{
                 left: `${selectedPercent}%`,
               }}

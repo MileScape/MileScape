@@ -39,7 +39,14 @@ export const MyScapeAssetTray = ({ assets, placedLandmarkIds, onPlace }: MyScape
               <div className="flex items-start justify-between gap-3">
               <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-[16px] bg-[linear-gradient(180deg,rgba(191,212,195,0.95),rgba(149,175,156,0.95))] text-white shadow-[0_10px_22px_rgba(62,85,69,0.14)]">
                 {asset.imageSrc ? (
-                  <img src={asset.imageSrc} alt={asset.name} className="h-8 w-8 object-contain" draggable={false} />
+                  <img
+                    src={asset.imageSrc}
+                    alt={asset.name}
+                    className="h-8 w-8 object-contain"
+                    loading="lazy"
+                    decoding="async"
+                    draggable={false}
+                  />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center">
                     <Landmark className="h-4 w-4" />

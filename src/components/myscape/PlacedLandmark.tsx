@@ -85,6 +85,8 @@ export const PlacedLandmark = ({
             src={asset.imageSrc}
             alt={asset.name}
             className="pointer-events-none max-h-[112px] w-auto max-w-[132px] object-contain"
+            loading="lazy"
+            decoding="async"
             draggable={false}
           />
         </div>

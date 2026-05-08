@@ -528,6 +528,8 @@ const PrizePreviewBadge = ({ result }: { result: CapsuleDrawResult }) => {
           src={result.decoration.image}
           alt=""
           className="h-full w-full object-contain p-2"
+          loading="lazy"
+          decoding="async"
           draggable={false}
         />
       ) : (
@@ -564,6 +566,8 @@ const PrizeResultCard = ({ result }: { result: CapsuleDrawResult }) => {
             src={routeCoverImage}
             alt=""
             className="pointer-events-none absolute inset-0 h-full w-full scale-[1.03] object-cover opacity-[0.46] saturate-[0.72]"
+            loading="lazy"
+            decoding="async"
             draggable={false}
           />
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.83)_0%,rgba(250,248,242,0.66)_46%,rgba(246,243,236,0.28)_100%)]" />

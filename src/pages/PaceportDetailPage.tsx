@@ -187,7 +187,13 @@ export const PaceportDetailPage = () => {
                 <div className="mt-4 flex items-center gap-4">
                   <div className="grid h-16 w-16 shrink-0 place-items-center">
                     {getPaceportLandmarkImageSrc(nextLandmark) ? (
-                      <img src={getPaceportLandmarkImageSrc(nextLandmark)} alt="" className="h-full w-full object-contain opacity-70 grayscale drop-shadow-[0_8px_14px_rgba(58,48,33,0.12)]" />
+                      <img
+                        src={getPaceportLandmarkImageSrc(nextLandmark)}
+                        alt=""
+                        className="h-full w-full object-contain opacity-70 grayscale drop-shadow-[0_8px_14px_rgba(58,48,33,0.12)]"
+                        loading="lazy"
+                        decoding="async"
+                      />
                     ) : (
                       <Flag className="h-6 w-6 text-sage-500" />
                     )}
@@ -248,6 +254,7 @@ export const PaceportDetailPage = () => {
                         src={imageSrc}
                         alt=""
                         loading="lazy"
+                        decoding="async"
                         className={cn(
                           "h-full w-full object-contain drop-shadow-[0_10px_16px_rgba(58,48,33,0.13)]",
                           unlocked ? "opacity-100" : "opacity-45 grayscale",

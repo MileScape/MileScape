@@ -42,6 +42,8 @@ export const LandmarkTimeline = ({
                   "h-full w-full object-contain p-2",
                   unlocked ? "opacity-100" : "opacity-45 grayscale",
                 )}
+                loading="lazy"
+                decoding="async"
               />
             ) : (
               <Star className={cn("h-8 w-8", unlocked ? "text-sage-700" : "text-sage-300")} />

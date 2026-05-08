@@ -5,6 +5,7 @@ import runnerMan from "../assets/runner_man.png";
 import runnerWoman from "../assets/runner_woman.png";
 import { MyScapeBoard } from "../components/myscape/MyScapeBoard";
 import { routes } from "../data/routes";
+import { useAppState } from "../hooks/useAppState";
 import type { MyScapePlacedLandmark, RouteProgress } from "../types";
 import { cn } from "../utils/cn";
 import {
@@ -133,6 +134,7 @@ const buildWelcomeScapeLayout = (assets: UnlockedLandmarkAsset[]): MyScapePlaced
 
 export const HomePage = () => {
   const navigate = useNavigate();
+  const { setDemoModeEnabled } = useAppState();
   const [activePage, setActivePage] = useState(0);
   const [flippedRouteIds, setFlippedRouteIds] = useState<string[]>([]);
   const [selectedRunnerId, setSelectedRunnerId] = useState<(typeof journeyRunners)[number]["id"]>("woman");
@@ -190,6 +192,12 @@ export const HomePage = () => {
   };
 
   const startJourney = () => {
+    setDemoModeEnabled(false);
+    navigate("/run/setup", { state: { runnerId: selectedRunnerId } });
+  };
+
+  const startDemoMode = () => {
+    setDemoModeEnabled(true);
     navigate("/run/setup", { state: { runnerId: selectedRunnerId } });
   };
 
@@ -512,9 +520,8 @@ export const HomePage = () => {
                                         src={route.coverImage}
                                         alt=""
                                         className="absolute inset-0 h-full w-full object-cover"
-                                        loading="eager"
+                                        loading="lazy"
                                         decoding="async"
-                                        fetchPriority="high"
                                       />
                                       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(17,24,39,0.02)_0%,rgba(17,24,39,0.18)_100%)]" />
                                       <div className="absolute inset-x-4 bottom-4 bg-black/20 px-4 py-3 text-left text-white backdrop-blur-sm">
@@ -568,8 +575,8 @@ export const HomePage = () => {
                       <div className="absolute left-1/2 top-[62%] h-[440px] w-full max-w-[440px] -translate-x-1/2 -translate-y-1/2 overflow-visible">
                         <MyScapeBoard
                           boardRef={welcomeScapeBoardRef}
-                          assets={welcomeScapeAssets}
-                          placedLandmarks={welcomeScapeItems}
+                          assets={activePage === index ? welcomeScapeAssets : []}
+                          placedLandmarks={activePage === index ? welcomeScapeItems : []}
                           selectedId={null}
                           draggingId={null}
                           dragPreview={null}
@@ -599,6 +606,8 @@ export const HomePage = () => {
                           src={logo}
                           alt="MileScape"
                           className="h-auto w-[min(64vw,250px)] object-contain"
+                          loading="lazy"
+                          decoding="async"
                         />
                       </div>
 
@@ -630,6 +639,8 @@ export const HomePage = () => {
                                   "relative h-auto max-h-[42vh] w-full max-w-[182px] object-contain object-bottom transition duration-300",
                                   selected ? "saturate-100" : "saturate-[0.72]",
                                 )}
+                                loading="lazy"
+                                decoding="async"
                                 draggable={false}
                               />
                             </button>
@@ -644,6 +655,13 @@ export const HomePage = () => {
                         className="relative z-20 mb-1 mt-4 flex h-14 w-full max-w-[360px] items-center justify-center rounded-full bg-sage-700/95 px-6 text-base font-semibold text-white transition hover:bg-sage-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-700/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f7f4ed]"
                       >
                         Start Journey
+                      </button>
+                      <button
+                        type="button"
+                        onClick={startDemoMode}
+                        className="relative z-20 flex h-11 w-full max-w-[360px] items-center justify-center rounded-full border border-sage-700/25 bg-white/62 px-6 text-sm font-semibold text-sage-800 transition hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-700/30 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f7f4ed]"
+                      >
+                        Demo Mode
                       </button>
                     </div>
                   )}

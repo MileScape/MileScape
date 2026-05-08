@@ -98,6 +98,8 @@ const CollectibleImageTile = ({
                 ? "opacity-70 grayscale-[0.85]"
                 : "opacity-35 grayscale",
           )}
+          loading="lazy"
+          decoding="async"
         />
       ) : (
         <div className="text-sm text-sage-500">{title}</div>

@@ -66,6 +66,7 @@ const mergeDefaultPaceCrewMissions = (loadedMissions: AppState["paceCrewMissions
 export const createInitialState = (): AppState =>
   syncExpiredMissionStates({
     debugModeEnabled: false,
+    demoModeEnabled: false,
     language: "en",
     selectedRouteId: defaultPurchasedRouteIds[0] ?? routes[0]?.id ?? null,
     routeProgress: routes.map((route) => createDefaultRouteProgress(route.id)),
@@ -119,7 +120,8 @@ export const normalizeState = (loadedState: Partial<AppState> | null): AppState 
   const memberships = loadedState.userPaceCrewState?.memberships ?? initialState.userPaceCrewState.memberships;
 
   const normalizedState: AppState = {
-    debugModeEnabled: loadedState.debugModeEnabled ?? false,
+    debugModeEnabled: false,
+    demoModeEnabled: loadedState.demoModeEnabled ?? false,
     language: loadedState.language ?? "en",
     selectedRouteId: loadedState.selectedRouteId ?? purchasedRouteIds[0] ?? initialState.selectedRouteId,
     routeProgress: mergedProgress,

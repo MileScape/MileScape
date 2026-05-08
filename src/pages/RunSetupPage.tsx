@@ -460,6 +460,7 @@ export const RunSetupPage = () => {
                     alt=""
                     aria-hidden="true"
                     className="absolute top-1/2 h-14 w-20 -translate-y-[68%] object-contain object-bottom"
+                    decoding="async"
                     initial={{ left: 0 }}
                     animate={{ left: "calc(100% - 80px)" }}
                     transition={{ duration: runSimulationDurationSeconds, ease: "easeInOut" }}

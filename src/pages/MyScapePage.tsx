@@ -48,6 +48,19 @@ const formatDate = (value: string) =>
 const CAPSULE_ROUTE_NAME = "Capsule Machine";
 const CAPSULE_ROUTE_ID = "capsule-machine";
 const CAPSULE_DRAW_COST_STAMPS = 40;
+const DEMO_BLUEPRINT_FRAGMENTS = 999999;
+
+const demoScapePositions: Record<string, { col: number; row: number; scale?: number }> = {
+  shibuya: { col: 0, row: 0, scale: 0.96 },
+  "senso-ji": { col: 3, row: 0, scale: 0.98 },
+  "tokyo-tower": { col: 5, row: 1, scale: 0.98 },
+  "tower-bridge": { col: 1, row: 3, scale: 0.94 },
+  "big-ben": { col: 4, row: 3, scale: 0.96 },
+  "cairo-citadel": { col: 6, row: 4, scale: 0.92 },
+  "capsule-garden-bench": { col: 2, row: 5, scale: 0.88 },
+  "capsule-flower-pot": { col: 5, row: 6, scale: 0.86 },
+  "capsule-street-lamp": { col: 7, row: 2, scale: 0.9 },
+};
 
 interface SummaryStats {
   distanceKm: number;
@@ -63,6 +76,39 @@ interface ItemMemoryContent {
   title: string;
   unlockDateLabel?: string | null;
 }
+
+const buildDemoScapeLayout = (assets: UnlockedLandmarkAsset[], scopeKey: string): MyScapePlacedLandmark[] => {
+  const scopeOffset = scopeKey === "overview" ? 0 : scopeKey.endsWith("1") || scopeKey.endsWith("3") ? 1 : 2;
+  const assetMap = new Map(assets.map((asset) => [asset.id, asset]));
+
+  return Object.entries(demoScapePositions)
+    .flatMap(([assetId, position], index) => {
+      const asset = assetMap.get(assetId);
+      if (!asset || (asset.ownedCount ?? 0) <= 0) {
+        return [];
+      }
+
+      const footprint = getAssetFootprint(asset);
+      const shifted = clampGridPositionForFootprint(
+        position.col,
+        Math.min(7, position.row + (index % 3 === 0 ? scopeOffset : 0)),
+        footprint.width,
+        footprint.height,
+      );
+
+      return [
+        {
+          id: `demo-${scopeKey}-${assetId}`,
+          landmarkId: assetId,
+          col: shifted.col,
+          row: shifted.row,
+          scale: (asset.defaultScale ?? 1) * (position.scale ?? 0.92),
+          zIndex: getItemZIndex(shifted.col, shifted.row),
+        },
+      ];
+    })
+    .slice(0, scopeKey === "overview" ? 9 : 6);
+};
 
 const getStartOfToday = () => {
   const today = new Date();
@@ -182,12 +228,25 @@ export const MyScapePage = () => {
     };
   });
   const {
-    blueprintFragments: currentBlueprintFragments,
+    blueprintFragments: storedBlueprintFragments,
     capsuleRouteTicketIds,
-    capsuleDecorationItems,
+    capsuleDecorationItems: storedCapsuleDecorationItems,
     ownedAtmosphereEffectIds,
     activeAtmosphereEffectIds,
   } = capsuleState;
+  const currentBlueprintFragments = state.demoModeEnabled ? DEMO_BLUEPRINT_FRAGMENTS : storedBlueprintFragments;
+  const capsuleDecorationItems = useMemo(
+    () =>
+      state.demoModeEnabled
+        ? [
+            ...storedCapsuleDecorationItems,
+            { instanceId: "demo-capsule-garden-bench", decorationId: "capsule-garden-bench" },
+            { instanceId: "demo-capsule-flower-pot", decorationId: "capsule-flower-pot" },
+            { instanceId: "demo-capsule-street-lamp", decorationId: "capsule-street-lamp" },
+          ]
+        : storedCapsuleDecorationItems,
+    [state.demoModeEnabled, storedCapsuleDecorationItems],
+  );
   const capsuleStateRef = useRef(capsuleState);
   const initialDayScopeKey = `day:${getMyScapeDateKey(todayDate)}`;
   const [placedLandmarks, setPlacedLandmarks] = useState<MyScapePlacedLandmark[]>(() => restoreMyScapeLayout(initialDayScopeKey));
@@ -342,7 +401,12 @@ export const MyScapePage = () => {
   }, []);
 
   useEffect(() => {
-    setPlacedLandmarks(restoreMyScapeLayout(activeLayoutScopeKey));
+    const restoredLayout = restoreMyScapeLayout(activeLayoutScopeKey);
+    setPlacedLandmarks(
+      state.demoModeEnabled && restoredLayout.length === 0
+        ? buildDemoScapeLayout(liveCatalogAssets, activeLayoutScopeKey)
+        : restoredLayout,
+    );
     setLoadedLayoutScopeKey(activeLayoutScopeKey);
     setSelectedId(null);
     setInfoItemId(null);
@@ -350,7 +414,7 @@ export const MyScapePage = () => {
     setDraggingId(null);
     setDragPreview(null);
     setIsInventoryDropActive(false);
-  }, [activeLayoutScopeKey]);
+  }, [activeLayoutScopeKey, liveCatalogAssets, state.demoModeEnabled]);
 
   useEffect(() => {
     setPlacedLandmarks((current) => {

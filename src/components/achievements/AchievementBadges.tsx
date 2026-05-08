@@ -101,6 +101,8 @@ export const BadgeHex = ({
       src={asset.image}
       alt=""
       className={cn("object-contain drop-shadow-[0_8px_10px_rgba(17,31,22,0.18)]", imageSizeClass)}
+      loading="lazy"
+      decoding="async"
       onError={(event) => {
         event.currentTarget.src = fallbackBadgeImage;
       }}
@@ -552,7 +554,7 @@ export const CountryPrizeBadge = ({ set }: { set: CountryAchievementSet }) => (
       className="flex h-full w-full items-center justify-center bg-[#f8f7f1] p-3"
       style={{ clipPath: "polygon(25% 6%, 75% 6%, 98% 50%, 75% 94%, 25% 94%, 2% 50%)" }}
     >
-      <img src={set.countryImage} alt="" className="h-16 w-16 object-contain" />
+      <img src={set.countryImage} alt="" className="h-16 w-16 object-contain" loading="lazy" decoding="async" />
     </div>
     {!set.unlocked ? (
       <div className="absolute inset-0 flex items-center justify-center bg-ink/18">

@@ -340,6 +340,8 @@ export const ArrangeInventoryTray = forwardRef<HTMLDivElement, ArrangeInventoryT
                               src={asset.imageSrc}
                               alt={asset.name}
                               className={`max-h-[44px] max-w-[62px] object-contain ${isUnlocked ? "" : "grayscale saturate-0 opacity-60"}`}
+                              loading="lazy"
+                              decoding="async"
                               draggable={false}
                             />
                           ) : (

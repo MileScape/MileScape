@@ -41,6 +41,8 @@ export const CapsuleMachineButton = ({
               src={iconSrc}
               alt=""
               className="pointer-events-none h-full w-full object-contain transition duration-300 group-hover:scale-[1.04]"
+              loading="lazy"
+              decoding="async"
               draggable={false}
               onError={() => setIconLoadFailed(true)}
             />

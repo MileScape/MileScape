@@ -60,6 +60,72 @@ const getSafeCapsuleRouteTicketIds = (routeIds: string[]) => {
   return routeIds.filter((routeId) => personalRouteIds.has(routeId));
 };
 
+const DEMO_STAMP_BALANCE = 99999;
+const DEMO_LOCKED_ROUTE_IDS = ["paris-eiffel-route", "california-discovery-route", "taipei-skyline-route"];
+const demoLockedRouteIdSet = new Set(DEMO_LOCKED_ROUTE_IDS);
+
+const getDemoPersonalRouteIds = () =>
+  routes
+    .filter((route) => route.sourceType === "personal" && !demoLockedRouteIdSet.has(route.id))
+    .map((route) => route.id);
+
+const getDemoCrewRouteIds = () => routes.filter((route) => route.sourceType === "pacecrew").map((route) => route.id);
+
+const createDemoRunHistory = (): AppState["runHistory"] => {
+  const today = new Date();
+  const atDaysAgo = (daysAgo: number, hour: number) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() - daysAgo);
+    date.setHours(hour, 20, 0, 0);
+    return date.toISOString();
+  };
+
+  return [
+    { id: "demo-run-tokyo-today", routeId: "tokyo-city-route", runTargetType: "personal", distanceKm: 6.4, completedAt: atDaysAgo(0, 8) },
+    { id: "demo-run-london-yesterday", routeId: "london-landmark-route", runTargetType: "personal", distanceKm: 8.2, completedAt: atDaysAgo(1, 18) },
+    { id: "demo-run-cairo-two-days", routeId: "cairo-pyramid-route", runTargetType: "personal", distanceKm: 5.7, completedAt: atDaysAgo(2, 7) },
+    { id: "demo-run-barcelona-three-days", routeId: "barcelona-coast-route", runTargetType: "personal", distanceKm: 7.1, completedAt: atDaysAgo(3, 17) },
+  ];
+};
+
+const buildDemoState = (routeAccessState: AppState): AppState => {
+  const unlockedPersonalRouteIds = getDemoPersonalRouteIds();
+  const unlockedCrewRouteIds = getDemoCrewRouteIds();
+  const ownedRouteIdSet = new Set([...unlockedPersonalRouteIds, ...unlockedCrewRouteIds]);
+  const demoHistory = [...createDemoRunHistory(), ...routeAccessState.runHistory];
+
+  return {
+    ...routeAccessState,
+    routeProgress: routes.map((route) => {
+      const existingProgress = routeAccessState.routeProgress.find((entry) => entry.routeId === route.id);
+      const isDemoOwned = ownedRouteIdSet.has(route.id);
+
+      return {
+        routeId: route.id,
+        completedDistanceKm: isDemoOwned ? Math.max(existingProgress?.completedDistanceKm ?? 0, route.totalDistanceKm * 0.72) : existingProgress?.completedDistanceKm ?? 0,
+        unlockedLandmarkIds: isDemoOwned
+          ? route.landmarks.map((landmark) => landmark.id)
+          : existingProgress?.unlockedLandmarkIds ?? [],
+        decorations: isDemoOwned
+          ? Object.fromEntries((route.decorations ?? []).map((decoration) => [decoration.id, Math.max(1, existingProgress?.decorations?.[decoration.id] ?? 0)]))
+          : existingProgress?.decorations ?? {},
+        runCount: isDemoOwned ? Math.max(existingProgress?.runCount ?? 0, 2) : existingProgress?.runCount ?? 0,
+        achievementTier: existingProgress?.achievementTier ?? "none",
+        completed: existingProgress?.completed ?? false,
+      };
+    }),
+    runHistory: demoHistory,
+    currentStamps: DEMO_STAMP_BALANCE,
+    totalStampsEarned: Math.max(routeAccessState.totalStampsEarned, DEMO_STAMP_BALANCE),
+    purchasedRouteIds: Array.from(new Set([...unlockedPersonalRouteIds, ...routeAccessState.purchasedRouteIds])),
+    unlockedCrewDestinationIds: Array.from(new Set([...unlockedCrewRouteIds, ...routeAccessState.unlockedCrewDestinationIds])),
+    selectedRouteId:
+      routeAccessState.selectedRouteId && ownedRouteIdSet.has(routeAccessState.selectedRouteId)
+        ? routeAccessState.selectedRouteId
+        : unlockedPersonalRouteIds[0] ?? routeAccessState.selectedRouteId,
+  };
+};
+
 const mergeCapsuleRouteTicketsIntoState = (current: AppState, capsuleRouteTicketIds: string[]): AppState => {
   const safeTicketIds = getSafeCapsuleRouteTicketIds(capsuleRouteTicketIds);
   if (safeTicketIds.length === 0) {
@@ -228,7 +294,7 @@ const createWearableSyncRecordFromRun = (
 export const AppProvider = ({ children }: AppProviderProps) => {
   const [state, setState] = useState<AppState>(() => normalizeState(loadState()));
   const [capsuleRouteTicketIds, setCapsuleRouteTicketIds] = useState<string[]>(() => loadMyScapeCapsuleRouteTicketIds());
-  const debugModeEnabled = state.debugModeEnabled ?? false;
+  const demoModeEnabled = state.demoModeEnabled ?? false;
 
   useEffect(() => {
     const syncCapsuleTickets = () => {
@@ -281,37 +347,12 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       capsuleRouteTicketIds,
     );
 
-    if (!debugModeEnabled) {
-      return routeAccessState;
+    if (demoModeEnabled) {
+      return buildDemoState(routeAccessState);
     }
 
-    const unlockedPersonalRouteIds = routes.filter((route) => route.sourceType === "personal").map((route) => route.id);
-    const unlockedCrewRouteIds = routes.filter((route) => route.sourceType === "pacecrew").map((route) => route.id);
-
-    return {
-      ...routeAccessState,
-      routeProgress: routes.map((route) => {
-        const existingProgress = routeAccessState.routeProgress.find((entry) => entry.routeId === route.id);
-        return {
-          routeId: route.id,
-          completedDistanceKm: existingProgress?.completedDistanceKm ?? 0,
-          unlockedLandmarkIds: route.landmarks.map((landmark) => landmark.id),
-          decorations: Object.fromEntries(
-            (route.decorations ?? []).map((decoration) => [
-              decoration.id,
-              Math.max(1, existingProgress?.decorations?.[decoration.id] ?? 0),
-            ]),
-          ),
-          runCount: existingProgress?.runCount ?? 0,
-          achievementTier: existingProgress?.achievementTier ?? "none",
-          completed: existingProgress?.completed ?? false,
-        };
-      }),
-      purchasedRouteIds: unlockedPersonalRouteIds,
-      unlockedCrewDestinationIds: unlockedCrewRouteIds,
-      selectedRouteId: routeAccessState.selectedRouteId ?? unlockedPersonalRouteIds[0] ?? null,
-    };
-  }, [capsuleRouteTicketIds, debugModeEnabled, state]);
+    return routeAccessState;
+  }, [capsuleRouteTicketIds, demoModeEnabled, state]);
 
   const playableRoutes = routes.filter((route) => isRouteOwnedInPaceport(route.id, effectiveState));
 
@@ -330,7 +371,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         setState((current) => {
           const routeAccessState = reconcilePaceCrewRouteAccess(current, capsuleRouteTicketIds);
           const effectiveRouteAccessState = mergeCapsuleRouteTicketsIntoState(routeAccessState, capsuleRouteTicketIds);
-          return routes.some((route) => route.id === routeId && ((routeAccessState.debugModeEnabled ?? false) || isRouteOwnedInPaceport(route.id, effectiveRouteAccessState)))
+          const selectableState = routeAccessState.demoModeEnabled ? buildDemoState(effectiveRouteAccessState) : effectiveRouteAccessState;
+          return routes.some((route) => route.id === routeId && isRouteOwnedInPaceport(route.id, selectableState))
             ? { ...routeAccessState, selectedRouteId: routeId }
             : routeAccessState;
         });
@@ -346,7 +388,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           if (input.targetType === "personal") {
             const route = routes.find((entry) => entry.id === input.routeId);
 
-            if (!route || (!(synced.debugModeEnabled ?? false) && !isRouteOwnedInPaceport(route.id, effectiveSynced))) {
+            const playableState = synced.demoModeEnabled ? buildDemoState(effectiveSynced) : effectiveSynced;
+            if (!route || !isRouteOwnedInPaceport(route.id, playableState)) {
               throw new Error(`Unknown or locked route: ${input.routeId}`);
             }
 
@@ -422,17 +465,17 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           return { success: false, message: "This destination is not sold in Shop" };
         }
 
-        if (debugModeEnabled || effectiveState.purchasedRouteIds.includes(routeId)) {
+        if (effectiveState.purchasedRouteIds.includes(routeId)) {
           return { success: false, message: "Already owned" };
         }
 
-        if (state.currentStamps < route.priceStamps) {
+        if (!demoModeEnabled && state.currentStamps < route.priceStamps) {
           return { success: false, message: "Insufficient Stamps" };
         }
 
         setState((current) => ({
           ...current,
-          currentStamps: current.currentStamps - route.priceStamps,
+          currentStamps: current.demoModeEnabled ? current.currentStamps : current.currentStamps - route.priceStamps,
           purchasedRouteIds: [...current.purchasedRouteIds, routeId]
         }));
 
@@ -442,7 +485,11 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         const normalizedAmount = Math.max(0, Math.round(amount));
 
         if (normalizedAmount <= 0) {
-          return { success: true, message: reason, updatedStamps: state.currentStamps };
+          return { success: true, message: reason, updatedStamps: effectiveState.currentStamps };
+        }
+
+        if (demoModeEnabled) {
+          return { success: true, message: reason, updatedStamps: DEMO_STAMP_BALANCE };
         }
 
         if (state.currentStamps < normalizedAmount) {
@@ -457,13 +504,13 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
         return { success: true, message: reason, updatedStamps };
       },
-      setDebugModeEnabled: (enabled) => {
+      setDemoModeEnabled: (enabled) => {
         setState((current) => ({
           ...current,
-          debugModeEnabled: enabled,
+          demoModeEnabled: enabled,
           selectedRouteId:
             enabled && !current.selectedRouteId
-              ? routes.find((route) => route.sourceType === "personal")?.id ?? null
+              ? getDemoPersonalRouteIds()[0] ?? routes.find((route) => route.sourceType === "personal")?.id ?? null
               : current.selectedRouteId,
         }));
       },
@@ -744,13 +791,13 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           return { success: false, message: "Mission already accepted" };
         }
 
-        if (state.currentStamps < mission.depositStamps) {
+        if (!demoModeEnabled && state.currentStamps < mission.depositStamps) {
           return { success: false, message: "Insufficient Stamps for deposit" };
         }
 
         setState((current) => ({
           ...current,
-          currentStamps: current.currentStamps - mission.depositStamps,
+          currentStamps: current.demoModeEnabled ? current.currentStamps : current.currentStamps - mission.depositStamps,
           userMissionStates: [
             ...current.userMissionStates,
             {
@@ -844,7 +891,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         setState(createInitialState());
       }
     }),
-    [capsuleRouteTicketIds, currentUser, debugModeEnabled, effectiveState, playableRoutes, state],
+    [capsuleRouteTicketIds, currentUser, demoModeEnabled, effectiveState, playableRoutes, state],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

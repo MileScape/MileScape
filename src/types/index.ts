@@ -183,6 +183,7 @@ export interface MyScapeLayout {
 
 export interface AppState {
   debugModeEnabled?: boolean;
+  demoModeEnabled?: boolean;
   language: AppLanguage;
   selectedRouteId: string | null;
   routeProgress: RouteProgress[];
@@ -217,7 +218,7 @@ export interface AppContextValue {
   purchaseRoute: (routeId: string) => { success: boolean; message: string };
   spendStamps: (amount: number, reason?: string) => { success: boolean; message: string; updatedStamps: number };
   t: (key: string, params?: Record<string, string | number>) => string;
-  setDebugModeEnabled: (enabled: boolean) => void;
+  setDemoModeEnabled: (enabled: boolean) => void;
   setLanguage: (language: AppLanguage) => void;
   setSliderMaxDistanceKm: (distanceKm: number) => void;
   createPaceCrew: (input: { name: string; description: string }) => { success: boolean; message: string };
