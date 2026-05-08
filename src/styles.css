@@ -67,6 +67,15 @@ input {
   animation: welcomeFooterReveal 620ms ease-out 3.35s both;
 }
 
+.welcome-postcard-mounted {
+  opacity: 0;
+}
+
+.welcome-postcard-mounted.is-mounted {
+  transform-origin: 50% 12%;
+  animation: welcomePostcardMount 680ms cubic-bezier(0.18, 1.18, 0.34, 1) both;
+}
+
 @keyframes welcomeSloganTyping {
   to {
     width: 29ch;
@@ -101,6 +110,24 @@ input {
 @keyframes welcomeSloganCaretHide {
   to {
     border-color: transparent;
+  }
+}
+
+@keyframes welcomePostcardMount {
+  0% {
+    opacity: 0;
+    transform: translate3d(34px, -46px, 0) rotate(var(--welcome-card-drop-rotate, -2deg)) scale(1.045);
+    filter: blur(1.6px);
+  }
+  58% {
+    opacity: 1;
+    transform: translate3d(-2px, 3px, 0) rotate(var(--welcome-card-drop-rotate, -2deg)) scale(0.992);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(var(--welcome-card-drop-rotate, -2deg)) scale(1);
+    filter: blur(0);
   }
 }
 
