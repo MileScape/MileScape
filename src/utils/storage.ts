@@ -1,7 +1,6 @@
 import type { AppState, MyScapeLayout } from "../types";
 
 const STORAGE_KEY = "milescape-state";
-const ONBOARDING_KEY = "milescape-onboarding-seen";
 const MY_SCAPE_OVERVIEW_LAYOUT_KEY = "milescape-my-scape-layout";
 const MY_SCAPE_DAY_LAYOUTS_KEY = "milescape-my-scape-day-layouts";
 const MY_SCAPE_PLACED_ASSET_IDS_KEY = "milescape-my-scape-placed-asset-ids";
@@ -47,14 +46,6 @@ export const clearState = () => {
   }
 
   window.localStorage.removeItem(STORAGE_KEY);
-};
-
-export const markOnboardingSeen = () => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(ONBOARDING_KEY, "true");
 };
 
 export const loadMyScapeLayout = (scopeKey = "overview"): MyScapeLayout | null => {

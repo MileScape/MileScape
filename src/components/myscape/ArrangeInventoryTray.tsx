@@ -24,6 +24,7 @@ interface ArrangeInventoryTrayProps {
     id: string;
     name: string;
     description: string;
+    previewClassName?: string;
     owned: boolean;
     active: boolean;
   }>;
@@ -37,7 +38,7 @@ type DecorationRarityFilter = "all" | Rarity;
 
 const categoryTabs: Array<{ key: InventoryCategory; label: string }> = [
   { key: "landmarks", label: "Landmarks" },
-  { key: "decorations", label: "Decorations" },
+  { key: "decorations", label: "Decors" },
   { key: "scene", label: "Scene" },
 ];
 
@@ -51,6 +52,21 @@ const rarityFilterLabel: Record<DecorationRarityFilter, string> = {
 };
 
 const shelfContentTransition = { duration: 0.18, ease: [0.22, 1, 0.36, 1] as const };
+
+const previewSnowflakes = Array.from({ length: 9 }, (_, index) => ({
+  id: `preview-snow-${index}`,
+  left: `${(index * 19 + 8) % 92}%`,
+  delay: `${(index % 5) * -0.42}s`,
+  duration: `${2.8 + (index % 4) * 0.32}s`,
+  size: `${2 + (index % 3)}px`,
+}));
+
+const previewPetals = Array.from({ length: 8 }, (_, index) => ({
+  id: `preview-petal-${index}`,
+  left: `${(index * 23 + 10) % 92}%`,
+  delay: `${(index % 5) * -0.38}s`,
+  duration: `${3.1 + (index % 4) * 0.34}s`,
+}));
 
 const getInventoryCategory = (asset: UnlockedLandmarkAsset): InventoryCategory =>
   asset.assetType === "landmark" ? "landmarks" : "decorations";
@@ -184,9 +200,7 @@ export const ArrangeInventoryTray = forwardRef<HTMLDivElement, ArrangeInventoryT
             key={shelfMotionKey}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1, transition: { staggerChildren: 0.035, delayChildren: 0.02 } }}
-            className={`grid h-full w-max min-w-full grid-flow-col grid-rows-[repeat(2,108px)] gap-x-4 gap-y-3 ${
-              category === "scene" ? "auto-cols-[112px]" : "auto-cols-[84px]"
-            }`}
+            className="grid h-full w-max min-w-full grid-flow-col grid-rows-[repeat(2,108px)] auto-cols-[84px] gap-x-4 gap-y-3"
           >
               {category === "scene" ? (
                 atmosphereEffects.length === 0 ? (
@@ -200,15 +214,8 @@ export const ArrangeInventoryTray = forwardRef<HTMLDivElement, ArrangeInventoryT
                   </motion.div>
                 ) : (
                   atmosphereEffects.map((effect, index) => {
-                    const icon = effect.owned ? (
-                      effect.active ? (
-                        <Check className="h-4 w-4 text-[#4b6154]" />
-                      ) : (
-                        <CloudSun className="h-4 w-4 text-[#65776e]" />
-                      )
-                    ) : (
-                      <Lock className="h-4 w-4 text-[#939d97]" />
-                    );
+                    const hasSnowPreview = effect.id === "snowfall";
+                    const hasSakuraPreview = effect.id === "sakura-fall";
 
                     return (
                       <motion.button
@@ -230,19 +237,65 @@ export const ArrangeInventoryTray = forwardRef<HTMLDivElement, ArrangeInventoryT
                           transition: { ...shelfContentTransition, delay: index * 0.035 },
                         }}
                         exit={{ opacity: 0, y: -4, scale: 0.98, transition: { duration: 0.1 } }}
-                        className={`relative flex h-[108px] w-[112px] flex-col items-center justify-center rounded-[24px] border px-3 text-center transition ${
-                          effect.active
-                            ? "border-[#607868]/40 bg-[linear-gradient(180deg,rgba(232,241,232,0.84),rgba(213,228,216,0.66))] text-[#2f3e36] shadow-[0_12px_24px_rgba(47,62,54,0.1)]"
-                            : effect.owned
-                              ? "border-white/62 bg-white/42 text-[#506258]"
-                              : "border-white/42 bg-white/24 text-[#8a978f]"
+                        className={`relative flex h-[108px] w-[84px] flex-col items-center text-center transition ${
+                          effect.owned ? "opacity-100 hover:opacity-88" : "opacity-70"
                         }`}
                       >
-                        <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-[16px] bg-white/62 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
-                          {icon}
+                        <div className="relative flex h-[50px] w-full items-center justify-center">
+                          <div
+                            className={`flex h-[44px] w-[62px] items-center justify-center overflow-hidden rounded-[18px] bg-gradient-to-br shadow-[inset_0_1px_0_rgba(255,255,255,0.64),0_8px_14px_rgba(47,62,54,0.08)] ${
+                              effect.previewClassName ?? "from-slate-100 via-sky-100 to-white"
+                            } ${effect.owned ? "" : "grayscale saturate-0 opacity-60"}`}
+                          >
+                            {hasSnowPreview ? (
+                              <div className="absolute inset-0 overflow-hidden">
+                                {previewSnowflakes.map((flake) => (
+                                  <span
+                                    key={flake.id}
+                                    className="myscape-preview-snowflake absolute top-[-10%] rounded-full bg-white/95 shadow-[0_0_6px_rgba(255,255,255,0.72)]"
+                                    style={{
+                                      left: flake.left,
+                                      width: flake.size,
+                                      height: flake.size,
+                                      animationDelay: flake.delay,
+                                      animationDuration: flake.duration,
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            ) : null}
+                            {hasSakuraPreview ? (
+                              <div className="absolute inset-0 overflow-hidden">
+                                {previewPetals.map((petal) => (
+                                  <span
+                                    key={petal.id}
+                                    className="myscape-preview-sakura-petal absolute top-[-12%] h-1.5 w-1 rounded-[999px_999px_999px_0] bg-[#ee9fad]/85 shadow-[0_0_5px_rgba(236,160,177,0.28)]"
+                                    style={{
+                                      left: petal.left,
+                                      animationDelay: petal.delay,
+                                      animationDuration: petal.duration,
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            ) : null}
+                            <CloudSun className={`h-5 w-5 ${effect.owned ? "text-[#4f6258]" : "text-[#9aa59f]"}`} />
+                          </div>
+                          {!effect.owned ? (
+                            <span className="absolute bottom-0 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#7d877f] text-white shadow-[0_5px_10px_rgba(48,64,55,0.12)]">
+                              <Lock className="h-2.5 w-2.5" />
+                            </span>
+                          ) : null}
+                          {effect.owned && effect.active ? (
+                            <span className="absolute bottom-0 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#4b6154] text-white shadow-[0_5px_10px_rgba(48,64,55,0.18)]">
+                              <Check className="h-2.5 w-2.5" />
+                            </span>
+                          ) : null}
                         </div>
-                        <p className="line-clamp-2 text-[11px] font-semibold leading-[15px]">{effect.name}</p>
-                        <p className="mt-1 text-[9px] font-medium uppercase tracking-[0.16em]">
+                        <p className={`mt-1 line-clamp-2 h-[30px] w-full overflow-hidden text-[11px] font-semibold leading-[15px] ${effect.owned ? "text-[#2f3e36]" : "text-[#7f8a83]"}`}>
+                          {effect.name}
+                        </p>
+                        <p className={`mt-1 h-[15px] w-full overflow-hidden text-[9px] font-medium uppercase leading-[15px] tracking-[0.16em] ${effect.owned ? "text-[#7f8d85]" : "text-[#8d9690]"}`}>
                           {!effect.owned ? "LOCKED" : effect.active ? "ON" : "OFF"}
                         </p>
                       </motion.button>

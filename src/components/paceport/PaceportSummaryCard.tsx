@@ -66,85 +66,97 @@ export const PaceportSummaryCard = ({ countryName, routes, currentStamps, onUnlo
 
       <div className="mt-7 space-y-4 border-t border-sage-900/8 pt-5">
         <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-sage-500">Routes</p>
-        <div className="space-y-3">
+        <div className="divide-y divide-[#816646]/12">
           {sortedRoutes.map((summary) => {
             const { route } = summary;
             const locked = summary.status === "locked";
             const canUnlock = currentStamps >= route.priceStamps;
-            const cardClassName = cn(
-              "group block rounded-[24px] px-4 py-4 ring-1 transition",
-              locked
-                ? "bg-white/42 text-sage-500 ring-sage-900/6"
-                : "bg-white/72 text-ink ring-sage-900/8 hover:bg-white/88",
+            const routeRowClassName = cn(
+              "group block px-0 py-4 transition first:pt-0 last:pb-0",
+              locked ? "text-sage-500" : "text-ink hover:bg-white/28",
             );
 
             const content = (
               <>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-sage-500">{route.city}</p>
-                    <h3 className={cn("mt-1 truncate text-base font-semibold tracking-[-0.02em]", locked && "text-sage-500")}>
-                      {route.name}
-                    </h3>
+                <div className="flex gap-3.5">
+                  <div className="relative h-[72px] w-[58px] shrink-0 overflow-hidden bg-[#e8ddc8] shadow-[0_10px_24px_rgba(58,48,33,0.10)]">
+                    <img
+                      src={route.coverImage}
+                      alt=""
+                      loading="lazy"
+                      className={cn("h-full w-full object-cover", locked && "opacity-45 grayscale")}
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(36,50,40,0.26))]" />
                   </div>
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]",
-                      summary.status === "completed" && "bg-sage-700 text-white",
-                      summary.status === "in_progress" && "bg-sage-100 text-sage-700",
-                      summary.status === "owned" && "bg-white text-sage-700 ring-1 ring-sage-900/8",
-                      summary.status === "locked" && "bg-sage-900/5 text-sage-500",
-                    )}
-                  >
-                    {statusLabels[summary.status]}
-                  </span>
-                </div>
 
-                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-sage-900/8">
-                  <div
-                    className={cn("h-full rounded-full transition-all duration-500", locked ? "bg-sage-300/45" : "bg-sage-700")}
-                    style={{ width: `${locked ? 0 : Math.round(summary.progressPercent)}%` }}
-                  />
-                </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-sage-500">{route.city}</p>
+                        <h3 className={cn("mt-1 truncate text-[1.05rem] font-semibold tracking-[-0.02em]", locked && "text-sage-500")}>
+                          {route.name}
+                        </h3>
+                      </div>
+                      <span
+                        className={cn(
+                          "shrink-0 px-0 text-[10px] font-semibold uppercase tracking-[0.14em]",
+                          summary.status === "completed" && "text-sage-800",
+                          summary.status === "in_progress" && "text-sage-700",
+                          summary.status === "owned" && "text-sage-700",
+                          summary.status === "locked" && "text-sage-500",
+                        )}
+                      >
+                        {statusLabels[summary.status]}
+                      </span>
+                    </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-sage-600">
-                  <span className="inline-flex items-center gap-1">
-                    {locked ? <Lock className="h-3.5 w-3.5" /> : <RouteIcon className="h-3.5 w-3.5" />}
-                    {locked ? `${route.priceStamps} stamps` : `${formatDistance(summary.completedDistanceKm)} / ${formatDistance(route.totalDistanceKm)}`}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <MapPinned className="h-3.5 w-3.5" />
-                    {summary.unlockedLandmarkCount}/{route.landmarks.length}
-                  </span>
-                  {locked ? (
-                    <span className="ml-auto text-sage-500">{canUnlock ? "Ready to unlock" : "Need more stamps"}</span>
-                  ) : (
-                    <span className="ml-auto inline-flex items-center gap-1 font-medium text-sage-600">
-                      View
-                      <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-                    </span>
-                  )}
+                    <div className="mt-3 h-1 overflow-hidden rounded-full bg-sage-900/8">
+                      <div
+                        className={cn("h-full rounded-full transition-all duration-500", locked ? "bg-sage-300/40" : "bg-[#6f7f63]")}
+                        style={{ width: `${locked ? 0 : Math.round(summary.progressPercent)}%` }}
+                      />
+                    </div>
+
+                    <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-sage-600">
+                      <span className="inline-flex items-center gap-1">
+                        {locked ? <Lock className="h-3.5 w-3.5" /> : <RouteIcon className="h-3.5 w-3.5" />}
+                        {locked ? `${route.priceStamps} stamps` : `${formatDistance(summary.completedDistanceKm)} / ${formatDistance(route.totalDistanceKm)}`}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <MapPinned className="h-3.5 w-3.5" />
+                        {summary.unlockedLandmarkCount}/{route.landmarks.length}
+                      </span>
+                      {locked ? (
+                        <span className="ml-auto text-sage-500">{canUnlock ? "Ready to unlock" : "Need more stamps"}</span>
+                      ) : (
+                        <span className="ml-auto inline-flex items-center gap-1 font-medium text-sage-600">
+                          View
+                          <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </>
             );
 
             if (!locked) {
               return (
-                <Link key={route.id} to={`/paceport/${route.id}`} className={cardClassName}>
+                <Link key={route.id} to={`/paceport/${route.id}`} className={routeRowClassName}>
                   {content}
                 </Link>
               );
             }
 
             return (
-              <div key={route.id} className={cardClassName}>
+              <div key={route.id} className={routeRowClassName}>
                 {content}
                 <button
                   type="button"
                   onClick={() => onUnlock(route.id)}
                   disabled={!canUnlock}
                   className={cn(
-                    "mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold transition",
+                    "mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold transition",
                     canUnlock
                       ? "bg-sage-700 text-white hover:bg-sage-800"
                       : "bg-sage-900/5 text-sage-400",

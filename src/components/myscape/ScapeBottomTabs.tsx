@@ -1,4 +1,4 @@
-type ScapeSummaryTab = "day" | "calendar" | "overview";
+type ScapeSummaryTab = "day" | "overview";
 
 interface ScapeBottomTabsProps {
   activeTab: ScapeSummaryTab;
@@ -7,7 +7,6 @@ interface ScapeBottomTabsProps {
 
 const tabs: Array<{ key: ScapeSummaryTab; label: string }> = [
   { key: "day", label: "Day" },
-  { key: "calendar", label: "Calendar" },
   { key: "overview", label: "Overview" },
 ];
 

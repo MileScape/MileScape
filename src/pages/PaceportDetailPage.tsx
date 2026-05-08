@@ -185,9 +185,9 @@ export const PaceportDetailPage = () => {
               </p>
               {nextLandmark ? (
                 <div className="mt-4 flex items-center gap-4">
-                  <div className="grid h-16 w-16 shrink-0 place-items-center bg-white/72 p-2 shadow-sm ring-1 ring-[#816646]/12">
+                  <div className="grid h-16 w-16 shrink-0 place-items-center">
                     {getPaceportLandmarkImageSrc(nextLandmark) ? (
-                      <img src={getPaceportLandmarkImageSrc(nextLandmark)} alt="" className="h-full w-full object-contain opacity-70 grayscale" />
+                      <img src={getPaceportLandmarkImageSrc(nextLandmark)} alt="" className="h-full w-full object-contain opacity-70 grayscale drop-shadow-[0_8px_14px_rgba(58,48,33,0.12)]" />
                     ) : (
                       <Flag className="h-6 w-6 text-sage-500" />
                     )}
@@ -238,17 +238,20 @@ export const PaceportDetailPage = () => {
                 <article
                   key={landmark.id}
                   className={cn(
-                    "grid grid-cols-[4.5rem_minmax(0,1fr)] gap-4 bg-white/68 p-4 shadow-[0_12px_32px_rgba(58,48,33,0.07)] ring-1 ring-[#816646]/12 backdrop-blur md:grid-cols-[5rem_minmax(0,1fr)_auto]",
+                    "grid grid-cols-[4.5rem_minmax(0,1fr)] gap-4 border-b border-[#816646]/12 px-1 py-5 last:border-b-0 md:grid-cols-[5rem_minmax(0,1fr)_auto]",
                     index % 2 === 0 ? "-rotate-[0.4deg]" : "rotate-[0.35deg]",
                   )}
                 >
-                  <div className="grid h-16 w-16 place-items-center bg-[#fff9ed] p-2 shadow-sm ring-1 ring-[#816646]/12 md:h-20 md:w-20">
+                  <div className="grid h-16 w-16 place-items-center md:h-20 md:w-20">
                     {imageSrc ? (
                       <img
                         src={imageSrc}
                         alt=""
                         loading="lazy"
-                        className={cn("h-full w-full object-contain", unlocked ? "opacity-100" : "opacity-45 grayscale")}
+                        className={cn(
+                          "h-full w-full object-contain drop-shadow-[0_10px_16px_rgba(58,48,33,0.13)]",
+                          unlocked ? "opacity-100" : "opacity-45 grayscale",
+                        )}
                       />
                     ) : (
                       <Flag className={cn("h-7 w-7", unlocked ? "text-sage-700" : "text-sage-300")} />

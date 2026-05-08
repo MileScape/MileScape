@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { CalendarDays, Download, Share2, X } from "lucide-react";
+import { CalendarDays, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrangeInventoryTray } from "../components/myscape/ArrangeInventoryTray";
@@ -8,10 +8,8 @@ import { FloatingStatsText } from "../components/myscape/FloatingStatsText";
 import { ItemActionMenu } from "../components/myscape/ItemActionMenu";
 import { ItemMemoryCard } from "../components/myscape/ItemMemoryCard";
 import { MyScapeAtmosphereLayer } from "../components/myscape/MyScapeAtmosphereLayer";
-import { MyScapeCalendarView } from "../components/myscape/MyScapeCalendarView";
 import { MyScapeDayDateSwitcher } from "../components/myscape/MyScapeDayDateSwitcher";
 import { MyScapeHeaderControls } from "../components/myscape/MyScapeHeaderControls";
-import { MyScapeBoard } from "../components/myscape/MyScapeBoard";
 import { NewUnlockToast } from "../components/myscape/NewUnlockToast";
 import { ScapeBoardStage } from "../components/myscape/ScapeBoardStage";
 import { ScapeBottomTabs, type ScapeSummaryTab } from "../components/myscape/ScapeBottomTabs";
@@ -30,10 +28,6 @@ import {
   getItemZIndex,
   getPlacementAnchorPoint,
   isGridCellOccupied,
-  MY_SCAPE_GRID_COLUMNS,
-  MY_SCAPE_GRID_ROWS,
-  MY_SCAPE_TILE_HEIGHT,
-  MY_SCAPE_TILE_WIDTH,
   resolveMyScapeCatalogAssets,
   restoreMyScapeLayout,
   restorePlacedAssetIds,
@@ -174,10 +168,8 @@ export const MyScapePage = () => {
   const [isInventoryDropActive, setIsInventoryDropActive] = useState(false);
   const [entryReady, setEntryReady] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [isSharePanelOpen, setIsSharePanelOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState(() => getMyScapeDateKey(todayDate));
-  const [shareActionInProgress, setShareActionInProgress] = useState<"share" | null>(null);
   const [capsuleState, setCapsuleState] = useState<MyScapeCapsuleState>(() => {
     const storedCapsuleState = loadMyScapeCapsuleState();
 
@@ -202,7 +194,6 @@ export const MyScapePage = () => {
   const [loadedLayoutScopeKey, setLoadedLayoutScopeKey] = useState(initialDayScopeKey);
   const [placedAssetIds, setPlacedAssetIds] = useState<Set<string>>(() => new Set(restorePlacedAssetIds()));
   const boardRef = useRef<HTMLDivElement>(null);
-  const sharePreviewBoardRef = useRef<HTMLDivElement>(null);
   const inventoryTrayRef = useRef<HTMLDivElement>(null);
   const toastTimerRef = useRef<number | null>(null);
   const newToastShownRef = useRef(false);
@@ -290,6 +281,7 @@ export const MyScapePage = () => {
         id: effect.id,
         name: effect.name,
         description: effect.description,
+        previewClassName: effect.previewClassName,
         owned: ownedAtmosphereEffectIds.includes(effect.id),
         active: activeAtmosphereEffectIds.includes(effect.id),
       })),
@@ -313,21 +305,6 @@ export const MyScapePage = () => {
   const isSelectedDayToday = useMemo(() => isSameDay(selectedDayDate, todayDate), [selectedDayDate, todayDate]);
   const activeLayoutScopeKey = summaryTab === "overview" ? "overview" : `day:${selectedDayKey}`;
   const boardViewKey = `${summaryTab}-${selectedDayKey}`;
-
-  const goToPreviousMonth = () => {
-    setSelectedDayDate((current) => {
-      const next = new Date(current.getFullYear(), current.getMonth() - 1, 1);
-      return getStartOfDay(next);
-    });
-  };
-
-  const goToNextMonth = () => {
-    setSelectedDayDate((current) => {
-      const next = new Date(current.getFullYear(), current.getMonth() + 1, 1);
-      const clampedDay = next.getTime() > todayDate.getTime() ? todayDate : next;
-      return getStartOfDay(clampedDay);
-    });
-  };
 
   const goToPreviousDay = () => {
     setDayTransitionDirection(-1);
@@ -467,16 +444,6 @@ export const MyScapePage = () => {
   }, [isEditMode, isSelectedDayToday, summaryTab]);
 
   useEffect(() => {
-    if (summaryTab !== "calendar" || !isEditMode) {
-      return;
-    }
-
-    setIsEditMode(false);
-    setActionMenuItemId(null);
-    setInfoItemId(null);
-  }, [isEditMode, summaryTab]);
-
-  useEffect(() => {
     if (isDatePickerOpen) {
       setDatePickerValue(selectedDayKey);
     }
@@ -497,279 +464,6 @@ export const MyScapePage = () => {
       window.clearTimeout(toastTimerRef.current);
     }
     toastTimerRef.current = window.setTimeout(() => setToastMessage(null), 2600);
-  };
-
-  const createShareImageBlob = async () => {
-    const canvas = document.createElement("canvas");
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-    const width = 900;
-    const height = 1200;
-    canvas.width = width * pixelRatio;
-    canvas.height = height * pixelRatio;
-    const context = canvas.getContext("2d");
-
-    if (!context) {
-      showToast("Could not create share image");
-      return null;
-    }
-
-    context.scale(pixelRatio, pixelRatio);
-
-    const roundRect = (x: number, y: number, rectWidth: number, rectHeight: number, radius: number) => {
-      context.beginPath();
-      context.moveTo(x + radius, y);
-      context.arcTo(x + rectWidth, y, x + rectWidth, y + rectHeight, radius);
-      context.arcTo(x + rectWidth, y + rectHeight, x, y + rectHeight, radius);
-      context.arcTo(x, y + rectHeight, x, y, radius);
-      context.arcTo(x, y, x + rectWidth, y, radius);
-      context.closePath();
-    };
-
-    const fillRoundedRect = (x: number, y: number, rectWidth: number, rectHeight: number, radius: number, fillStyle: string | CanvasGradient) => {
-      roundRect(x, y, rectWidth, rectHeight, radius);
-      context.fillStyle = fillStyle;
-      context.fill();
-    };
-
-    const background = context.createLinearGradient(0, 0, 0, height);
-    background.addColorStop(0, "#fbf7ef");
-    background.addColorStop(0.62, "#edf2e8");
-    background.addColorStop(1, "#dfe9dc");
-    context.fillStyle = background;
-    context.fillRect(0, 0, width, height);
-
-    fillRoundedRect(48, 44, width - 96, height - 88, 46, "rgba(255,255,255,0.58)");
-    context.fillStyle = "#6f8177";
-    context.font = "700 28px sans-serif";
-    context.letterSpacing = "5px";
-    context.fillText("MILESCAPE", 92, 112);
-    context.letterSpacing = "0px";
-    context.fillStyle = "#2c3a33";
-    context.font = "700 58px sans-serif";
-    context.fillText(summaryTab === "day" ? formatDaySwitcherDate(selectedDayDate) : "My Scape", 92, 182);
-
-    const shareStage = {
-      boardHeight: 222,
-      boardLeft: 36,
-      boardTop: 24,
-      boardWidth: 352,
-      scale: 1.12,
-    };
-    const gridHalfWidth = (MY_SCAPE_GRID_COLUMNS * MY_SCAPE_TILE_WIDTH) / 2;
-    const gridHalfDepth = (MY_SCAPE_GRID_ROWS * MY_SCAPE_TILE_WIDTH) / 2;
-    const boardOriginX = shareStage.boardLeft + shareStage.boardWidth / 2;
-    const boardOriginY = shareStage.boardTop + shareStage.boardHeight * 0.12 + 12;
-    const platformThickness = 52;
-    const soilInset = 12;
-    const topPoint = { x: boardOriginX, y: boardOriginY - MY_SCAPE_TILE_HEIGHT / 2 };
-    const rightPoint = {
-      x: boardOriginX + gridHalfWidth,
-      y: boardOriginY + (MY_SCAPE_GRID_COLUMNS * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2,
-    };
-    const bottomPoint = {
-      x: boardOriginX,
-      y: boardOriginY + ((MY_SCAPE_GRID_COLUMNS + MY_SCAPE_GRID_ROWS) * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2,
-    };
-    const leftPoint = {
-      x: boardOriginX - gridHalfDepth,
-      y: boardOriginY + (MY_SCAPE_GRID_ROWS * MY_SCAPE_TILE_HEIGHT) / 2 - MY_SCAPE_TILE_HEIGHT / 2,
-    };
-    const leftBottomPoint = { x: bottomPoint.x, y: bottomPoint.y + platformThickness };
-    const rightBottomPoint = { x: rightPoint.x, y: rightPoint.y + platformThickness };
-    const leftFrontPoint = { x: leftPoint.x, y: leftPoint.y + platformThickness };
-    const innerTopPoint = { x: boardOriginX, y: topPoint.y + soilInset };
-    const innerRightPoint = { x: boardOriginX + gridHalfWidth - soilInset * 1.15, y: rightPoint.y + soilInset * 0.58 };
-    const innerBottomPoint = { x: boardOriginX, y: bottomPoint.y - soilInset };
-    const innerLeftPoint = { x: boardOriginX - gridHalfDepth + soilInset * 1.15, y: leftPoint.y + soilInset * 0.58 };
-    const stageBounds = {
-      maxX: boardOriginX + gridHalfWidth + 26,
-      maxY: leftBottomPoint.y + 28,
-      minX: boardOriginX - gridHalfDepth - 26,
-      minY: 0,
-    };
-    const stageOffsetX =
-      (width - (stageBounds.maxX - stageBounds.minX) * shareStage.scale) / 2 - stageBounds.minX * shareStage.scale;
-    const stageOffsetY = 258 - stageBounds.minY * shareStage.scale;
-    const projectPoint = (point: { x: number; y: number }) => ({
-      x: stageOffsetX + point.x * shareStage.scale,
-      y: stageOffsetY + point.y * shareStage.scale,
-    });
-    const drawPolygon = (points: Array<{ x: number; y: number }>, fillStyle: string | CanvasGradient) => {
-      const [firstPoint, ...restPoints] = points.map(projectPoint);
-      if (!firstPoint) {
-        return;
-      }
-
-      context.beginPath();
-      context.moveTo(firstPoint.x, firstPoint.y);
-      restPoints.forEach((point) => context.lineTo(point.x, point.y));
-      context.closePath();
-      context.fillStyle = fillStyle;
-      context.fill();
-    };
-    const strokePolyline = (points: Array<{ x: number; y: number }>, strokeStyle: string, lineWidth: number) => {
-      const [firstPoint, ...restPoints] = points.map(projectPoint);
-      if (!firstPoint) {
-        return;
-      }
-
-      context.beginPath();
-      context.moveTo(firstPoint.x, firstPoint.y);
-      restPoints.forEach((point) => context.lineTo(point.x, point.y));
-      context.strokeStyle = strokeStyle;
-      context.lineWidth = lineWidth;
-      context.stroke();
-    };
-
-    const boardGradient = context.createLinearGradient(
-      projectPoint(topPoint).x,
-      projectPoint(topPoint).y,
-      projectPoint(bottomPoint).x,
-      projectPoint(bottomPoint).y,
-    );
-    boardGradient.addColorStop(0, "#eef5ec");
-    boardGradient.addColorStop(0.52, "#d9e6d7");
-    boardGradient.addColorStop(1, "#bdd1c0");
-
-    drawPolygon([topPoint, rightPoint, bottomPoint, leftPoint], boardGradient);
-    drawPolygon([leftPoint, bottomPoint, leftBottomPoint, leftFrontPoint], "#7f957f");
-    drawPolygon([rightPoint, bottomPoint, leftBottomPoint, rightBottomPoint], "#6f8776");
-    drawPolygon([innerTopPoint, innerRightPoint, innerBottomPoint, innerLeftPoint], "rgba(255,255,255,0.08)");
-    drawPolygon([leftPoint, bottomPoint, leftBottomPoint, leftFrontPoint], "rgba(122,95,66,0.22)");
-    drawPolygon([rightPoint, bottomPoint, leftBottomPoint, rightBottomPoint], "rgba(94,72,51,0.18)");
-    strokePolyline([topPoint, rightPoint], "rgba(255,255,255,0.26)", 2);
-    strokePolyline([topPoint, leftPoint], "rgba(255,255,255,0.2)", 2);
-    strokePolyline([leftPoint, bottomPoint, rightPoint], "rgba(96,121,109,0.24)", 1.5);
-    strokePolyline([leftPoint, leftFrontPoint, leftBottomPoint, rightBottomPoint, rightPoint], "rgba(70,88,52,0.14)", 1.5);
-
-    const placedPreviewAssets = placedLandmarks
-      .map((item) => ({ item, asset: assetMap.get(item.landmarkId) }))
-      .filter((entry): entry is { item: MyScapePlacedLandmark; asset: UnlockedLandmarkAsset } => Boolean(entry.asset))
-      .sort((left, right) => (left.item.zIndex ?? 0) - (right.item.zIndex ?? 0));
-
-    const loadShareImage = (src: string) =>
-      new Promise<HTMLImageElement | null>((resolve) => {
-        const image = new Image();
-        image.crossOrigin = "anonymous";
-        image.onload = () => resolve(image);
-        image.onerror = () => resolve(null);
-        image.src = src;
-      });
-
-    for (const { item, asset } of placedPreviewAssets) {
-      const footprint = getAssetFootprint(asset);
-      const anchorPoint = getPlacementAnchorPoint(
-        item.col,
-        item.row,
-        footprint.width,
-        footprint.height,
-        shareStage.boardWidth,
-        shareStage.boardHeight,
-      );
-      const anchor = projectPoint({
-        x: shareStage.boardLeft + anchorPoint.x + (asset.offsetX ?? 0),
-        y: shareStage.boardTop + anchorPoint.y + (asset.offsetY ?? 0),
-      });
-      const itemScale = Math.max(0.45, item.scale || 1);
-      const maxImageWidth = 132 * itemScale * shareStage.scale;
-      const maxImageHeight = 112 * itemScale * shareStage.scale;
-
-      if (asset.imageSrc) {
-        const image = await loadShareImage(asset.imageSrc);
-
-        if (image) {
-          const imageRatio = image.width > 0 ? image.height / image.width : 1;
-          let imageWidth = maxImageWidth;
-          let imageHeight = imageWidth * imageRatio;
-
-          if (imageHeight > maxImageHeight) {
-            imageHeight = maxImageHeight;
-            imageWidth = imageHeight / imageRatio;
-          }
-
-          context.drawImage(image, anchor.x - imageWidth / 2, anchor.y - imageHeight, imageWidth, imageHeight);
-          continue;
-        }
-      }
-
-      const fallbackWidth = 96 * itemScale * shareStage.scale;
-      const fallbackHeight = 84 * itemScale * shareStage.scale;
-      fillRoundedRect(
-        anchor.x - fallbackWidth / 2,
-        anchor.y - fallbackHeight,
-        fallbackWidth,
-        fallbackHeight,
-        18 * itemScale * shareStage.scale,
-        "rgba(255,255,255,0.78)",
-      );
-      context.fillStyle = "#6f8177";
-      context.font = `700 ${Math.max(14, 18 * itemScale * shareStage.scale)}px sans-serif`;
-      context.textAlign = "center";
-      context.fillText(asset.name.slice(0, 2).toUpperCase(), anchor.x, anchor.y - fallbackHeight * 0.42);
-      context.textAlign = "left";
-    }
-
-    const statRows = [
-      { label: "Distance", value: formatDistance(activeStats.distanceKm) },
-      { label: "Runs", value: `${activeStats.runCount}` },
-      { label: "Unlocks", value: `${activeStats.unlockCount}` },
-    ];
-    const statX = 560;
-    const statY = 910;
-
-    statRows.forEach((stat, index) => {
-      const y = statY + index * 56;
-      context.fillStyle = "#819187";
-      context.font = "500 20px sans-serif";
-      context.fillText(stat.label.toUpperCase(), statX, y);
-      context.fillStyle = "#2c3a33";
-      context.font = "700 42px sans-serif";
-      context.fillText(stat.value, statX + 210, y + 2);
-    });
-
-    context.fillStyle = "#6f8177";
-    context.font = "500 24px sans-serif";
-    context.fillText(`${placedLandmarks.length} placed on my lawn`, 92, 1108);
-
-    return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png", 0.96));
-  };
-
-  const handleNativeShare = async () => {
-    setShareActionInProgress("share");
-    showToast("Preparing share image...");
-    try {
-      const blob = await createShareImageBlob();
-      if (!blob) {
-        return;
-      }
-
-      const file = new File([blob], `milescape-${summaryTab}-${selectedDayKey}.png`, { type: "image/png" });
-      const shareData = {
-        title: shareTitle,
-        text: shareText,
-        files: [file],
-      };
-
-      if (navigator.canShare?.(shareData) && navigator.share) {
-        await navigator.share(shareData);
-        showToast("Share sheet opened");
-        return;
-      }
-
-      const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = `milescape-${summaryTab}-${selectedDayKey}.png`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 500);
-      showToast("Share image saved");
-    } catch {
-      showToast("Share failed. Try again.");
-    } finally {
-      setShareActionInProgress(null);
-    }
   };
 
   const handleSelectItem = (itemId: string) => {
@@ -1026,23 +720,6 @@ export const MyScapePage = () => {
   const newTodayIds = useMemo(() => new Set(dayUnlocks.map((entry) => entry.id)), [dayUnlocks]);
   const scopedCatalogAssets = useMemo(() => liveCatalogAssets, [liveCatalogAssets]);
 
-  const calendarMonthRuns = useMemo(
-    () =>
-      state.runHistory.filter((entry) => {
-        const completedAt = new Date(entry.completedAt);
-        return completedAt.getFullYear() === selectedDayDate.getFullYear() && completedAt.getMonth() === selectedDayDate.getMonth();
-      }),
-    [selectedDayDate, state.runHistory],
-  );
-  const calendarMonthUnlocks = useMemo(
-    () =>
-      unlockTimeline.filter((entry) => {
-        const unlockedAt = new Date(entry.unlockedAt);
-        return unlockedAt.getFullYear() === selectedDayDate.getFullYear() && unlockedAt.getMonth() === selectedDayDate.getMonth();
-      }),
-    [selectedDayDate, unlockTimeline],
-  );
-
   const summaryStats = useMemo<Record<ScapeSummaryTab, SummaryStats>>(
     () => ({
       day: {
@@ -1050,30 +727,16 @@ export const MyScapePage = () => {
         runCount: dayRuns.length,
         unlockCount: dayUnlocks.length,
       },
-      calendar: {
-        distanceKm: calendarMonthRuns.reduce((sum, entry) => sum + entry.distanceKm, 0),
-        runCount: calendarMonthRuns.length,
-        unlockCount: calendarMonthUnlocks.length,
-      },
       overview: {
         distanceKm: state.runHistory.reduce((sum, entry) => sum + entry.distanceKm, 0),
         runCount: state.runHistory.length,
         unlockCount: liveCatalogAssets.filter((asset) => (asset.ownedCount ?? 0) > 0).length,
       },
     }),
-    [calendarMonthRuns, calendarMonthUnlocks.length, dayRuns, dayUnlocks.length, liveCatalogAssets, state.runHistory],
+    [dayRuns, dayUnlocks.length, liveCatalogAssets, state.runHistory],
   );
 
   const activeStats = summaryStats[summaryTab];
-  const shareTitle =
-    summaryTab === "day"
-      ? `My Scape on ${formatDaySwitcherDate(selectedDayDate)}`
-      : summaryTab === "calendar"
-        ? `My Scape in ${selectedDayDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`
-        : "My Scape Overview";
-  const shareText = `${shareTitle}: ${formatDistance(activeStats.distanceKm)}, ${activeStats.runCount} run${
-    activeStats.runCount === 1 ? "" : "s"
-  }, ${activeStats.unlockCount} unlock${activeStats.unlockCount === 1 ? "" : "s"}.`;
   const placedCountsByAssetId = useMemo(
     () =>
       placedLandmarks.reduce<Record<string, number>>((accumulator, item) => {
@@ -1091,7 +754,7 @@ export const MyScapePage = () => {
       }).length,
     [newTodayIds, placedAssetIds, placedCountsByAssetId, unlockedAssets],
   );
-  const arrangeDisabled = summaryTab === "calendar" || (summaryTab === "day" && !isSelectedDayToday);
+  const arrangeDisabled = summaryTab === "day" && !isSelectedDayToday;
 
   useEffect(() => {
     if (!entryReady || newToastShownRef.current || newUnplacedCount <= 0) {
@@ -1266,7 +929,7 @@ export const MyScapePage = () => {
   };
 
   const capsuleButton =
-    summaryTab !== "calendar" && (summaryTab === "overview" || isSelectedDayToday) ? (
+    summaryTab === "overview" || isSelectedDayToday ? (
       <CapsuleMachineButton
         buttonMode="compact"
         routes={routes}
@@ -1326,7 +989,7 @@ export const MyScapePage = () => {
 
   const handleToggleArrange = () => {
     if (arrangeDisabled) {
-      showToast(summaryTab === "calendar" ? "Calendar is read-only" : "Past lawns are read-only");
+      showToast("Past lawns are read-only");
       return;
     }
 
@@ -1351,38 +1014,22 @@ export const MyScapePage = () => {
       transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
       className="relative min-h-screen overflow-hidden bg-[#f6f3ec] text-ink"
     >
-      {summaryTab === "calendar" ? (
-        <MyScapeCalendarView
-          monthDate={selectedDayDate}
-          todayDate={todayDate}
-          runHistory={state.runHistory}
-          unlockTimeline={unlockTimeline}
-          selectedDateKey={selectedDayKey}
-          onPreviousMonth={goToPreviousMonth}
-          onNextMonth={goToNextMonth}
-          onSelectDate={(date) => {
-            setSelectedDayDate(getStartOfDay(date));
-            setDayTransitionDirection(0);
-          }}
-        />
-      ) : (
-        <ScapeBoardStage
-          viewKey={boardViewKey}
-          transitionDirection={summaryTab === "day" ? dayTransitionDirection : 0}
-          boardRef={boardRef}
-          assets={liveCatalogAssets}
-          placedLandmarks={placedLandmarks}
-          selectedId={selectedId}
-          draggingId={draggingId}
-          dragPreview={dragPreview}
-          entryReady={entryReady}
-          placementPreview={placementPreview}
-          isEditMode={isEditMode}
-          newTodayIds={newTodayIds}
-          onItemPointerDown={handleItemPointerDown}
-          onSelectItem={handleSelectItem}
-        />
-      )}
+      <ScapeBoardStage
+        viewKey={boardViewKey}
+        transitionDirection={summaryTab === "day" ? dayTransitionDirection : 0}
+        boardRef={boardRef}
+        assets={liveCatalogAssets}
+        placedLandmarks={placedLandmarks}
+        selectedId={selectedId}
+        draggingId={draggingId}
+        dragPreview={dragPreview}
+        entryReady={entryReady}
+        placementPreview={placementPreview}
+        isEditMode={isEditMode}
+        newTodayIds={newTodayIds}
+        onItemPointerDown={handleItemPointerDown}
+        onSelectItem={handleSelectItem}
+      />
 
       <MyScapeAtmosphereLayer activeEffectIds={activeAtmosphereEffectIds} />
 
@@ -1407,7 +1054,7 @@ export const MyScapePage = () => {
         />
       ) : null}
 
-      {!isEditMode && summaryTab !== "calendar" ? (
+      {!isEditMode ? (
         <FloatingStatsText
           key={`${summaryTab}-${selectedDayKey}`}
           tab={summaryTab}
@@ -1488,17 +1135,6 @@ export const MyScapePage = () => {
           <ScapeBottomTabs activeTab={summaryTab} onChange={setSummaryTab} />
         </motion.div>
       )}
-
-      {!isEditMode ? (
-        <button
-          type="button"
-          onClick={() => setIsSharePanelOpen(true)}
-          className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+86px)] right-4 z-40 inline-flex h-[52px] w-[52px] items-center justify-center rounded-[22px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(238,233,224,0.96))] text-[#314238] shadow-[0_16px_34px_rgba(45,62,53,0.2)] ring-1 ring-[#e4ddcf] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(45,62,53,0.24)]"
-          aria-label="Share My Scape"
-        >
-          <Share2 className="h-5 w-5" />
-        </button>
-      ) : null}
 
       {isDatePickerOpen ? (
         <motion.div
@@ -1584,103 +1220,6 @@ export const MyScapePage = () => {
                 <CalendarDays className="h-4 w-4" />
                 Go to Date
               </button>
-            </motion.section>
-        </motion.div>
-      ) : null}
-
-      {isSharePanelOpen ? (
-        <motion.div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(31,40,35,0.46)] px-5 py-5 backdrop-blur-[7px]"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <button
-              type="button"
-              className="absolute inset-0 h-full w-full cursor-default"
-              aria-label="Close share preview"
-              onClick={() => setIsSharePanelOpen(false)}
-            />
-            <motion.section
-              className="relative z-10 w-full max-w-[390px] text-ink"
-              initial={{ y: 18, scale: 0.97 }}
-              animate={{ y: 0, scale: 1 }}
-              exit={{ y: 12, scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 190, damping: 22 }}
-            >
-              <button
-                type="button"
-                onClick={() => setIsSharePanelOpen(false)}
-                className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/76 text-sage-700 shadow-[0_10px_20px_rgba(45,62,53,0.12)] ring-1 ring-sage-900/10"
-                aria-label="Close share preview"
-              >
-                <X className="h-4.5 w-4.5" />
-              </button>
-
-              <div
-                className="overflow-hidden rounded-[30px] bg-[linear-gradient(180deg,#eef4ec,#dbe7d8)] p-3 shadow-[0_30px_80px_rgba(35,52,40,0.26),inset_0_1px_0_rgba(255,255,255,0.74)] ring-1 ring-white/80"
-              >
-                  <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(180deg,#f8f5ee_0%,#edf2e8_70%,#e2eadf_100%)]">
-                    <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-3 px-4 pr-16 pt-4">
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-sage-500">MileScape</p>
-                        <h3 className="mt-1 max-w-[190px] text-xl font-semibold leading-none tracking-[-0.06em] text-[#2c3a33]">
-                          {summaryTab === "day" ? formatDaySwitcherDate(selectedDayDate) : "My Scape"}
-                        </h3>
-                      </div>
-                      <div className="rounded-full bg-white/72 px-3 py-1.5 text-[11px] font-bold text-sage-700 ring-1 ring-white/80">
-                        {placedLandmarks.length} placed
-                      </div>
-                    </div>
-
-                    <div className="flex h-[430px] justify-center overflow-hidden pt-8">
-                      <div className="pointer-events-none h-[620px] w-[560px] shrink-0 origin-top scale-[0.6]">
-                        <MyScapeBoard
-                          boardRef={sharePreviewBoardRef}
-                          assets={liveCatalogAssets}
-                          placedLandmarks={placedLandmarks}
-                          selectedId={null}
-                          draggingId={null}
-                          entryReady
-                          dragPreview={null}
-                          placementPreview={null}
-                          isEditMode={false}
-                          newTodayIds={new Set()}
-                          expanded
-                          onItemPointerDown={() => undefined}
-                          onSelectItem={() => undefined}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="absolute bottom-5 right-5 z-10 w-[144px] space-y-2.5 text-left [text-shadow:0_1px_10px_rgba(255,255,255,0.58)]">
-                      {[
-                        { label: "Distance", value: formatDistance(activeStats.distanceKm) },
-                        { label: "Runs", value: `${activeStats.runCount}` },
-                        { label: "Unlocks", value: `${activeStats.unlockCount}` },
-                      ].map((row) => (
-                        <div key={row.label} className="grid grid-cols-[1fr_auto] items-baseline gap-x-3">
-                          <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-[#819187]">{row.label}</span>
-                          <span className="justify-self-start font-destination-display text-[1.18rem] leading-none tracking-[-0.02em] text-[#27352d]">
-                            {row.value}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-              <div className="mt-3">
-                <button
-                  type="button"
-                  onClick={handleNativeShare}
-                  disabled={shareActionInProgress !== null}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#7b8f82,#5f7568)] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(77,97,86,0.16)]"
-                >
-                  <Share2 className="h-4 w-4" />
-                  {shareActionInProgress === "share" ? "Sharing..." : "Share"}
-                </button>
-              </div>
             </motion.section>
         </motion.div>
       ) : null}
