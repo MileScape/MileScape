@@ -18,6 +18,7 @@ interface PlacedLandmarkProps {
   dragging: boolean;
   onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => void;
   onSelect: (itemId: string) => void;
+  entryAnimation?: "settle" | "drop";
 }
 
 export const PlacedLandmark = ({
@@ -33,6 +34,7 @@ export const PlacedLandmark = ({
   dragging,
   onPointerDown,
   onSelect,
+  entryAnimation = "settle",
 }: PlacedLandmarkProps) => (
   <button
     type="button"
@@ -54,15 +56,20 @@ export const PlacedLandmark = ({
     {asset.imageSrc ? (
       <motion.div
         className="relative min-w-[84px]"
+        initial={animateIn && entryAnimation === "drop" ? { opacity: 0, y: -168, scale: 0.82, rotate: index % 2 === 0 ? -5 : 5 } : false}
         animate={
-          editable && !dragging
+          animateIn && entryAnimation === "drop"
+            ? { opacity: 1, scale: 1, y: 0, rotate: 0 }
+            : editable && !dragging
             ? { scale: [1.015, 1.025, 1.015], y: [-2, -4, -2] }
             : animateIn
               ? { scale: 1, y: 0 }
               : { scale: 1, y: 0 }
         }
         transition={
-          editable && !dragging
+          animateIn && entryAnimation === "drop"
+            ? { duration: 0.74, delay: index * 0.16, ease: [0.16, 1, 0.3, 1] }
+            : editable && !dragging
             ? { duration: 2.8, delay: index * 0.03, ease: "easeInOut", repeat: Infinity }
             : { duration: 0.36, delay: index * 0.045, ease: [0.22, 1, 0.36, 1] }
         }
@@ -88,15 +95,20 @@ export const PlacedLandmark = ({
           "relative w-[96px] rounded-[26px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(241,246,241,0.92))] px-3 pb-3 pt-2 transition",
           dragging ? "ring-1 ring-sage-300/50" : "ring-1 ring-sage-900/6",
         )}
+        initial={animateIn && entryAnimation === "drop" ? { opacity: 0, y: -168, scale: 0.82, rotate: index % 2 === 0 ? -5 : 5 } : false}
         animate={
-          editable && !dragging
+          animateIn && entryAnimation === "drop"
+            ? { opacity: 1, scale: 1, y: 0, rotate: 0 }
+            : editable && !dragging
             ? { scale: [1.015, 1.025, 1.015], y: [-2, -4, -2] }
             : animateIn
               ? { scale: 1, y: 0 }
               : { scale: 1, y: 0 }
         }
         transition={
-          editable && !dragging
+          animateIn && entryAnimation === "drop"
+            ? { duration: 0.74, delay: index * 0.16, ease: [0.16, 1, 0.3, 1] }
+            : editable && !dragging
             ? { duration: 2.8, delay: index * 0.03, ease: "easeInOut", repeat: Infinity }
             : { duration: 0.36, delay: index * 0.045, ease: [0.22, 1, 0.36, 1] }
         }

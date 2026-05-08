@@ -28,6 +28,10 @@ interface MyScapeBoardProps {
   isEditMode: boolean;
   newTodayIds: Set<string>;
   expanded?: boolean;
+  entryAnimation?: "settle" | "drop";
+  boardScaleOverride?: number;
+  showAmbientBackground?: boolean;
+  overflowVisible?: boolean;
   onItemPointerDown: (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => void;
   onSelectItem: (itemId: string) => void;
 }
@@ -44,10 +48,14 @@ export const MyScapeBoard = ({
   isEditMode,
   newTodayIds,
   expanded = false,
+  entryAnimation = "settle",
+  boardScaleOverride,
+  showAmbientBackground = true,
+  overflowVisible = false,
   onItemPointerDown,
   onSelectItem,
 }: MyScapeBoardProps) => {
-  const boardScale = expanded ? 1 : 0.76;
+  const boardScale = boardScaleOverride ?? (expanded ? 1 : 0.76);
   const assetMap = new Map(assets.map((asset) => [asset.id, asset]));
   const stageWidth = expanded ? 424 : 386;
   const stageHeight = expanded ? 356 : 327;
@@ -111,9 +119,13 @@ export const MyScapeBoard = ({
   });
 
   return (
-    <div className="relative h-full min-h-[420px] overflow-hidden bg-transparent">
-      <div className="absolute inset-0 bg-[radial-gradient(88%_58%_at_50%_18%,rgba(255,255,255,0.34)_0%,rgba(255,255,255,0.08)_42%,rgba(255,255,255,0)_70%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(247,244,237,0.14)_0%,rgba(239,243,234,0.05)_54%,rgba(235,239,230,0)_100%)]" />
+    <div className={overflowVisible ? "relative h-full min-h-[420px] overflow-visible bg-transparent" : "relative h-full min-h-[420px] overflow-hidden bg-transparent"}>
+      {showAmbientBackground ? (
+        <>
+          <div className="absolute inset-0 bg-[radial-gradient(88%_58%_at_50%_18%,rgba(255,255,255,0.34)_0%,rgba(255,255,255,0.08)_42%,rgba(255,255,255,0)_70%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(247,244,237,0.14)_0%,rgba(239,243,234,0.05)_54%,rgba(235,239,230,0)_100%)]" />
+        </>
+      ) : null}
 
       <div
         className={`absolute left-1/2 -translate-x-1/2 -translate-y-1/2 ${
@@ -261,6 +273,7 @@ export const MyScapeBoard = ({
                 isEditMode={isEditMode}
                 selected={selectedId === item.id}
                 dragging={isDragging}
+                entryAnimation={entryAnimation}
                 onPointerDown={onItemPointerDown}
                 onSelect={onSelectItem}
               />

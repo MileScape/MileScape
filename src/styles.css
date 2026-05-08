@@ -162,6 +162,26 @@ input {
   color: #365342;
 }
 
+.journey-runner-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 44px;
+  width: 44px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.journey-runner-slider::-moz-range-thumb {
+  height: 44px;
+  width: 44px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 ::selection {
   background: rgba(120, 146, 132, 0.22);
 }

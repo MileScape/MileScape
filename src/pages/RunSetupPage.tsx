@@ -2,7 +2,8 @@ import { motion } from "framer-motion";
 import { ChevronsLeftRight, Watch } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import runnerIcon from "../assets/runner-slider.svg";
+import runnerMan from "../assets/runner_man.png";
+import runnerWoman from "../assets/runner_woman.png";
 import { RouteArtwork } from "../components/route/RouteArtwork";
 import { MapHeroShell } from "../components/ui/MapHeroShell";
 import { Button } from "../components/ui/Button";
@@ -36,11 +37,23 @@ const getRouteTitleSizeClassName = (routeName: string, variant: "compact" | "her
   return "text-[2.35rem]";
 };
 
+const journeyRunnerImages = {
+  woman: runnerWoman,
+  man: runnerMan,
+} as const;
+
+type JourneyRunnerId = keyof typeof journeyRunnerImages;
+
+const isJourneyRunnerId = (value: unknown): value is JourneyRunnerId =>
+  typeof value === "string" && value in journeyRunnerImages;
+
 export const RunSetupPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { routes, playableRoutes, state, completeRun, selectRoute, t } = useAppState();
-  const routeState = location.state as { initialDistanceRatio?: number } | null;
+  const routeState = location.state as { initialDistanceRatio?: number; runnerId?: string } | null;
+  const runnerId = isJourneyRunnerId(routeState?.runnerId) ? routeState.runnerId : "woman";
+  const runnerImage = journeyRunnerImages[runnerId];
   const initialDistanceRatio =
     typeof routeState?.initialDistanceRatio === "number"
       ? Math.min(Math.max(routeState.initialDistanceRatio, 0), 1)
@@ -59,6 +72,78 @@ export const RunSetupPage = () => {
   const carouselScrollSelectionRef = useRef(false);
   const initialRouteIdRef = useRef<string | null>(null);
   const [showSwipeGuide, setShowSwipeGuide] = useState(false);
+
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    const { documentElement, body } = document;
+    const previousHtmlOverflow = documentElement.style.overflow;
+    const previousHtmlOverscroll = documentElement.style.overscrollBehavior;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyOverscroll = body.style.overscrollBehavior;
+    const previousBodyPosition = body.style.position;
+    const previousBodyTop = body.style.top;
+    const previousBodyWidth = body.style.width;
+
+    const allowRangeControl = (target: EventTarget | null) =>
+      target instanceof Element && Boolean(target.closest('input[type="range"]'));
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    const handleTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      touchStartX = touch?.clientX ?? 0;
+      touchStartY = touch?.clientY ?? 0;
+    };
+
+    const preventPageScroll = (event: TouchEvent | WheelEvent) => {
+      if (allowRangeControl(event.target)) {
+        return;
+      }
+
+      if (event instanceof TouchEvent) {
+        const touch = event.touches[0];
+        const deltaX = Math.abs((touch?.clientX ?? touchStartX) - touchStartX);
+        const deltaY = Math.abs((touch?.clientY ?? touchStartY) - touchStartY);
+
+        if (deltaX > deltaY) {
+          return;
+        }
+      }
+
+      if (event instanceof WheelEvent && Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+        return;
+      }
+
+      event.preventDefault();
+    };
+
+    documentElement.style.overflow = "hidden";
+    documentElement.style.overscrollBehavior = "none";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchmove", preventPageScroll, { passive: false });
+    window.addEventListener("wheel", preventPageScroll, { passive: false });
+
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", preventPageScroll);
+      window.removeEventListener("wheel", preventPageScroll);
+      documentElement.style.overflow = previousHtmlOverflow;
+      documentElement.style.overscrollBehavior = previousHtmlOverscroll;
+      body.style.overflow = previousBodyOverflow;
+      body.style.overscrollBehavior = previousBodyOverscroll;
+      body.style.position = previousBodyPosition;
+      body.style.top = previousBodyTop;
+      body.style.width = previousBodyWidth;
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
 
   useEffect(() => {
     setSelectedDistance((current) => Math.min(current, state.sliderMaxDistanceKm));
@@ -295,7 +380,7 @@ export const RunSetupPage = () => {
 
   return (
     <>
-      <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-canvas">
+      <div className="relative flex h-[100dvh] max-h-[100dvh] min-h-0 touch-pan-x flex-col overflow-hidden overscroll-none bg-canvas">
         <motion.div
           className="relative shrink-0 overflow-hidden"
           animate={{ height: isSubmitting ? "calc(100vh - 104px)" : "62vh" }}
@@ -371,12 +456,12 @@ export const RunSetupPage = () => {
                     />
                   </div>
                   <motion.img
-                    src={runnerIcon}
+                    src={runnerImage}
                     alt=""
                     aria-hidden="true"
-                    className="absolute top-1/2 h-[30px] w-[30px] -translate-y-[80%]"
+                    className="absolute top-1/2 h-14 w-20 -translate-y-[68%] object-contain object-bottom"
                     initial={{ left: 0 }}
-                    animate={{ left: "calc(100% - 30px)" }}
+                    animate={{ left: "calc(100% - 80px)" }}
                     transition={{ duration: runSimulationDurationSeconds, ease: "easeInOut" }}
                   />
                 </div>
@@ -508,7 +593,12 @@ export const RunSetupPage = () => {
           )}
 
           {!isSubmitting ? (
-            <DistanceSlider value={selectedDistance} onChange={setSelectedDistance} max={state.sliderMaxDistanceKm} />
+            <DistanceSlider
+              value={selectedDistance}
+              onChange={setSelectedDistance}
+              max={state.sliderMaxDistanceKm}
+              runnerImage={runnerImage}
+            />
           ) : null}
 
           {!isSubmitting ? <div className="mt-8">
